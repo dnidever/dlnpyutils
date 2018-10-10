@@ -360,6 +360,18 @@ def basiclogger(name=None):
     return logger
 
 
+# Delete files
+def remove(files=None,allow=True):
+    """ Delete a list of files."""
+    if files is None: raise ValueError("No files input")
+    nfiles = np.array(files).size
+    for f in np.array(files,ndmin=1):
+        if os.path.exists(f):
+            os.remove(f)
+        else:
+            if allow is False: raise Exception(f+" does not exist")
+
+        
 
 
 
