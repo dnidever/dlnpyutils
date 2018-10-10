@@ -12,6 +12,7 @@ import os
 import sys
 import numpy as np
 import warnings
+import socket
 #from astropy.io import fits
 #from astropy.wcs import WCS
 #from astropy.utils.exceptions import AstropyWarning
@@ -26,14 +27,24 @@ import subprocess
 from dlnpyutils.dlnpyutils import *
 
         
-def mkjobstr(n=None):
-    """ This returns the job structure schema or an instance of the job structure."""
+def mkstatstr(n=None):
+    """ This returns the stat structure schema or an instance of the job structure."""
     dtype = np.dtype([('jobid',np.str,20),('name',np.str,100),('user',np.str,100),('timeuse',np.str,100),('status',np.str),('queue',np.str)])
     if n is None:
         return dtype
     else:
         statstr = np.zeros(n,dtype=dtype)    
         return statstr
+
+def mkjobstr(n=None):
+    """ This returns the job structure schema or an instance of the job structure."""
+    dtype = np.dtype([('host',np.str,20),('jobid',(np.str,100)),('input',np.str,100),('dir',np.str,100),('name',np.str,100),('scriptname',np.str),
+                      ('logfile',np.str),('submitted',np.bool),('done',np.bool),('begtime',np.float64),('endtime',np.float64),('duration',float)])
+    if n is None:
+        return dtype
+    else:
+        jobstr = np.zeros(n,dtype=dtype)    
+        return jobstr
 
 
 def check_diskspace(indir=None,updatestatus=False):
@@ -51,8 +62,7 @@ def check_killfile(jobs=None,hyperthread=True):
     """ This checks for a kill file and if found kills all the active jobs. """
     if jobs is None: raise ValueError("No jobs structure input")
     killfile = 'killjobs'
-    kill = os.path.exists(killfile)
-    if (kill==1):
+    if os.path.exists(killfile) is True:
         sub = np.where((jobs['submitted']==1) & (jobs['done']==0))
         nsub = len(sub)
         print('Kill file found.  Killing all '+str(nsub)+' job(s)')
@@ -142,11 +152,10 @@ def makescript(input=None,indir=None,name=None,scriptname=None,idle=False,prefix
 
     # Make scriptnames
     scriptname = strjoin(strjoin(indir,name),'.sh')
-    scriptname = indir+'/'+name+'.sh'
     # Script loop
     for i in range(ninput):
-        base = name[i]
-        sname = indir[i]+'/'+base+'.sh'
+        base = str(name[i])
+        sname = str(indir[i])+'/'+base+'.sh'
 
         #------
         # PBS
@@ -155,7 +164,7 @@ def makescript(input=None,indir=None,name=None,scriptname=None,idle=False,prefix
             # IDL command
             if idle is True:
                 # Making an IDL batch file
-                bname = indir[i]+'/'+base+'.batch'
+                bname = str(indir[i])+'/'+base+'.batch'
                 writelines(bname,input[i])
                 # The execution command
                 cmd = 'idl < '+base+'.batch'
@@ -185,7 +194,7 @@ def makescript(input=None,indir=None,name=None,scriptname=None,idle=False,prefix
             lines.append('echo "------------------------"\n')
             lines.append('\n')
             lines.append('cd '+indir[i]+'\n')
-            for j=0,len(cmd)-1 do lines.append(cmd[j]+'\n')
+            for j in range(len(cmd)): lines.append(cmd[j]+'\n')
             lines.append('\n')
             lines.append('# print end time\n')
             lines.append('echo\n')
@@ -194,7 +203,7 @@ def makescript(input=None,indir=None,name=None,scriptname=None,idle=False,prefix
             # Writing the file
             writelines(scriptname[i],lines)
             # Print info
-            print('PBS script written to: '+scriptname[i])
+            print('PBS script written to: '+str(scriptname[i]))
             
         #----------------
         # Hyperthreaded
@@ -208,33 +217,36 @@ def makescript(input=None,indir=None,name=None,scriptname=None,idle=False,prefix
             # lines
             if cmd.find(';') != -1: cmd=cmd.split(';')
             # IDL files should end in .batch
-            if idle is True: scriptname[i]=indir[i]+'/'+base+'.batch'
+            if idle is True: scriptname[i] = str(indir[i])+'/'+base+'.batch'
             # Writing the file
             writelines(scriptname[i],cmd)
             # Make SHELL scripts executable
-            if idle is False: FILE_CHMOD,scriptname[i],'755'o
+            if idle is False: os.chmod(scriptname[i],0755)
             # Print info
-            print('HYPERTHREAD script written to: '+scriptname[i])
+            print('HYPERTHREAD script written to: '+str(scriptname[i]))
 
     # Erase the temporary files that MAKETEMP makes
-    file_delete,name,/allow
-    # Go back to original directory
-    CD,curdir
+    remove(name,allow=True)
 
     return scriptname
 
+
 def submitjob(idle=False,hyperthread=True):
     """ This submits new jobs. """
+    curdir = os.getcwd()
     # Submitting the job
     if hypterthread is False:
         out = subprocess.check_output(['qsub',scriptname[0]],stderr=subprocess.STDOUT,shell=False)        
         jobid = out[0]
         logfile = scriptname[0]+'.log'
     else:
-        if idle is True: batchprog='./idlbatch' else: batchprog='./runbatch'
-        if cdtodir is True: cd,dirs[newind[i]]
+        if idle is True:
+            batchprog = './idlbatch'
+        else:
+            batchprog = './runbatch'
+        if cdtodir is True: os.chdir(dirs[newind[i]])
         out = subprocess.check_output([batchprog,scriptname[0]],stderr=subprocess.STDOUT,shell=False)
-        if cdtodir is True: cd,curdir
+        if cdtodir is True: os.chdir(curdir)
         # Get the JOBID
         jobid_ind = np.where(grep(out,'^JOBID=',/boolean)==1)
         njobid_ind = len(jobid_ind)
@@ -244,7 +256,8 @@ def submitjob(idle=False,hyperthread=True):
         logfile = strmid(out[logfile_ind[0]],10)
 
     # Check that there weren't any errors
-    dum = where(errout ne '',nerror)
+    dum, = np.where(errout!='')
+    nerror = len(dum)
 
     # Printing info
     print('Submitted '+scriptname[0]+'  JobID='+jobid[0])
@@ -294,9 +307,8 @@ def checkstat(statstr=None,jobid=None,hyperthread=True):
         # Some jobs in queue
         if statlines is not None:
             arr = statlines
-            arr = strsplitter(statlines,' ',/extract)
-            statstr = jobstr
-            statstr = mkjobstr(nstat)
+            arr = arr.split(' ')
+            statstr = mkstatstr(nstat)
             statstr['jobid'] = arr[0]
             statstr['name'] = arr[1]
             statstr['user'] = arr[2]
@@ -305,7 +317,7 @@ def checkstat(statstr=None,jobid=None,hyperthread=True):
             statstr['queue'] = arr[5]
         # No jobs in queue
         else:
-            statstr = mkjobstr(1)
+            statstr = mkstatstr(1)
 
     # Hyperthreaded.  Need a jobid
     #-----------------------------
@@ -313,7 +325,7 @@ def checkstat(statstr=None,jobid=None,hyperthread=True):
         # No JOBID input
         if njobid==0:
             print('Need JOBID with /hyperthread')
-            return mkjobstr(1)
+            return mkstatstr(1)
 
         out = subprocess.check_output(['ps','-o','pid,user,etime,command','-p',str(jobid[0])],
                                       stderr=subprocess.STDOUT,shell=False)
@@ -329,7 +341,7 @@ def checkstat(statstr=None,jobid=None,hyperthread=True):
         # Some jobs in queue
         if statlines is not None:
             arr = statlines.split()
-            statstr = mkjobstr(nstat)
+            statstr = mkstatstr(nstat)
             statstr['jobid'] = arr[0]
             statstr['user'] = arr[1]
             # CAN'T get the name.
@@ -338,14 +350,13 @@ def checkstat(statstr=None,jobid=None,hyperthread=True):
             statstr['queue'] = 'hyperthread'
         # No jobs in queue
         else:
-            statstr = mkjobstr(1)
+            statstr = mkstatstr(1)
 
     return statstr
 
 
-def job_daemon(input,dirs,jobs=jobs,idle=idle,prefix=prefix,nmulti=nmulti,
-               hyperthread=hyperthread,waittime=waittime,statustime=statustime,
-               inpname=inpname,cdtodir=cdtodir)
+def job_daemon(input=None,dirs=None,inpname=None,idle=False,prefix=None,nmulti=1,hyperthread=True,
+               cdtodir=False,waittime=0.2,statustime=60)
     """This program is a simple batch job manager
 
     NOTE:  If you want to "kill" all of the jobs create a file "killjobs"
@@ -378,27 +389,22 @@ def job_daemon(input,dirs,jobs=jobs,idle=idle,prefix=prefix,nmulti=nmulti,
 
     """
 
-  
     # How many input lines
-    ninput = len(input)
-    if ninput eq 0:
-        error = 'Not enough inputs'
-        print,'Syntax - job_daemon,input,dirs,jobs=jobs,idle=idle,prefix=prefix,nmulti=nmulti,'
-        print,'                    hyperthread=hyperthread,waittime=waittime,statustime=statustime,'
-        print,'                    inpname=inpname,error=error'
-        return
+    if input is None:
+        raise ValueError("Nothing input")
+    ninput = np.array(input).size
 
-        # Current directory
-        CD,current=curdir
+    # Current directory
+    curdir = os.getcwd()
 
-        # Checking DIRS array
-        ndirs = len(dirs)
-        if ndirs gt 0 then if ndirs ne ninput:
-        error = 'DIRS array must be same size as INPUT'
-        print,error
-        return
-    if ndirs eq 0 then dirs = replicate(curdir,ninput)
-    if ndirs eq 1 then dirs = replicate(dirs,ninput)
+    # Checking DIRS array
+    if dirs is None:
+        dirs = np.repeat(curdir,ninput)
+    else:
+        ndirs = np.array(dirs).size
+        if ndirs!=ninput:
+            raise ValueError('DIRS array must be same size as INPUT')            
+        if ndirs==1: dirs = np.repeat(dirs,ninput)
 
     # Check INPNAME array
     ninpname = len(inpname)
@@ -408,28 +414,25 @@ def job_daemon(input,dirs,jobs=jobs,idle=idle,prefix=prefix,nmulti=nmulti,
         return
 
     # Defaults
-    if len(nmulti) eq 0 then nmulti=8           # number of jobs to submit at a time
-    if len(waittime) eq 0 then waittime=0.2     # wait time
-    waittime = waittime > 0.1
-    if len(statustime) eq 0 then statustime=60  # status time
-    statustime = statustime > 1
+    if waittime<0.1: waittime=0.1
+    if statustime<1: statustime=1
 
     # Host name
-    host = getenv('HOST')
+    hostname = socket.gethostname()
+    host = hostname.split('.')[0]
 
     # Which IDL are we using?
-    if keyword_set(idle):
-        SPAWN,['which','idl'],out,errout,/noshell
-        if STRPOS(out[0],'aliased to') ne -1 then $
-        out = first_el(strsplit(out[0],' ',/extract),/last)
-        idlprog = FILE_SEARCH(out[0],count=nidlprog)
-        if (nidlprog eq 0):
-            error = 'IDL PROGRAM NOT AVAILABLE'
-            print,error
-            return
+    if idle is true:
+        try:
+            out = subprocess.check_output(['which','idl'],stderr=subprocess.STDOUT,shell=False)
+        except subprocess.CalledProcessError, e:
+            raise Exception("IDL program not available")
+        idlprog = out.strip()
+        if os.path.exists(idlprog) is False:
+            raise Exception("IDL program "+idlprog+" not found")
 
     # Create RUNBATCH and IDLBATCH if using /hyperthread
-    if keyword_set(hyperthread):
+    if (hyperthread is True):
         if (idle is False) & (os.path.exists('runbatch') is False):
             lines = []
             lines.append("if test $# -eq 0\n")
@@ -441,7 +444,7 @@ def job_daemon(input,dirs,jobs=jobs,idle=idle,prefix=prefix,nmulti=nmulti,
             lines.append("  echo JOBID=$!\n")
             lines.append("fi\n")
             writelines('runbatch',lines)
-            FILE_CHMOD,'runbatch','755'o
+            os.chmod('runbatch',0755)
         if (idle is True) & (os.path.exists('idlbatch') is False):
             lines = []
             lines.append("if test $# -eq 0\n")
@@ -453,7 +456,7 @@ def job_daemon(input,dirs,jobs=jobs,idle=idle,prefix=prefix,nmulti=nmulti,
             lines.append("  echo JOBID=$!\n")
             lines.append("fi\n")
             writelines('idlbatch',lines)
-            FILE_CHMOD,'idlbatch','755'o
+            os.chmod('idlbatch',0755)
 
     print('---------------------------------')
     print(' RUNNING JOB_DAEMON for '+str(ninput)+' JOB(S)')
@@ -461,43 +464,38 @@ def job_daemon(input,dirs,jobs=jobs,idle=idle,prefix=prefix,nmulti=nmulti,
     print('Host='+host)
     print('Nmulti='+str(nmulti))
     
+    t0 = time.time()
     timesincelaststatus = time.time()  # initializing the update time
-
 
     #--------
     # DAEMON
     #--------
-
     # -Keep submitting jobs until nmulti is reached
     # -Check every minute or so to see how many jobs are still
     #  running.  If it falls below nmulti and more jobs are left then
     #  submit more jobs
     # -Don't return until all jobs are done.
 
-
     # Initialize the "jobs" structure
     # id will be the ID from Pleione
-    dum = {host:host,jobid:'',input:'',dir:'',name:'',scriptname:'',logfile:'',submitted:0,done:0,$
-           begtime:0.0d0,endtime:0.0d0,duration:0.0}
-    jobs = replicate(dum,ninput)
-    jobs.input = input
+    jobs = mkjobstr(ninput)
+    jobs['input'] = input
     njobs = ninput
 
     # Loop until all jobs are done
     # On each loop check the pleione queue and figure out what to do
-    count = 0LL
+    count = np.longlong(0)
     endflag = 0
-    WHILE (endflag eq 0):
-
+    while (endflag==0):
         # Status update
         dtstatus_sec = ( time.time()-timesincelaststatus )*3600L*24L
-        if dtstatus_sec>statustime:
-            updatestatus = 1
+        if (dtstatus_sec>statustime):
+            updatestatus = True
             timesincelaststatus = time.time()
             print('')
             print(time.ctime())
         else:
-            updatestatus = 0
+            updatestatus = False
   
         # Check disk space
         check_diskspace()
@@ -507,59 +505,51 @@ def job_daemon(input,dirs,jobs=jobs,idle=idle,prefix=prefix,nmulti=nmulti,
   
         # Check status of running jobs
         #-----------------------------
-        sub = where(jobs.submitted eq 1 and jobs.done eq 0,nsub)
-        for i=0,nsub-1:
-
+        sub, = np.where((jobs['submitted'] is True) & (jobs['done'] is False))
+        nsub = len(sub)
+        for i in range(nsub):
             # Checking status
-            jobid = jobs[sub[i]].jobid
-            JOB_CHECKSTAT,statstr,jobid=jobid,hyperthread=hyperthread
-
+            jobid = jobs[sub[i]]['jobid']
+            statstr = checkstat(jobid,hyperthread=hyperthread)
             # Job done
-            if statstr.jobid eq '':
+            if statstr['jobid']=='':
                 print,systime(0)+'  Input ',strtrim(sub[i]+1,2),' ',jobs[sub[i]].name,' JobID=',jobs[sub[i]].jobid,' FINISHED'
-                jobs[sub[i]].done=1
-                jobs[sub[i]].endtime = systime(/julian,/utc)
-                jobs[sub[i]].duration = ( jobs[sub[i]].endtime - jobs[sub[i]].begtime )*3600*24 # in sec
-
+                jobs[sub[i]]['done'] = True
+                jobs[sub[i]]['endtime'] = time.time()
+                jobs[sub[i]]['duration'] = ( jobs[sub[i]]['endtime'] - jobs[sub[i]]['begtime'] )*3600*24 # in sec
             # Check for errors as well!! and put in jobs structure
 
         # Current status
         #---------------
-        dum = where(jobs.submitted eq 1 and jobs.done eq 0,Ninqueue)  # Number of jobs still in queue
-        dum = where(jobs.submitted eq 0,Nnosubmit)                    # Number of jobs left to do
-        dum = where(jobs.done eq 1,nfinished)                         # Number of jobs finished
+        n_inqueue = np.sum((jobs['submitted'] is True) & (jobs['done'] is False))  # Number of jobs still in queue  
+        n_nosubmit = np.sum(jobs['submitted'] is False)                            # Number of jobs left to do 
+        n_finished = np.sum(jobs['done'] is True)                                  # Number of jobs finished 
         # Print the status
-        if updatestatus: print('Jobs Summary: ',strtrim(ninput,2),' total, ',strtrim(nfinished,2),
-                                   ' finished, ',strtrim(Ninqueue,2),' running, ',strtrim(Nnosubmit,2),' left')
+        if updatestatus is True:
+            print('Jobs Summary: %d total, %d, finished, %d running, %d left') % (n_input,n_finished,n_inqueue,n_nosubmit))
 
         # Submit new jobs
         #----------------
-        Nnew = (nmulti-ninqueue) > 0
-        Nnew = Nnew < Nnosubmit
-        If (Nnew gt 0):
-
+        nnew = limit(nmulti-n_inqueue,0,nosubmit)
+        if (nnew>0):
             # Get the indices of new jobs to be submitted
-            nosubmit = where(jobs.submitted eq 0)
-            newind = nosubmit[0:nnew-1]
-
+            nosubmit, = np.where(jobs['submitted'] is False)
+            newind = nosubmit[0:nnew]
             # Update immediately if there are new jobs to submit
-            print,''
-            print,systime(0)
-            print,'Updating Queue: '+strtrim(ninqueue,2),' JOB(S) running, out of ',strtrim(nmulti,2),' Maximum. Submitting ',strtrim(nnew,2),' more job(s)'
+            print('')
+            print(time.ctime())
+            print('Updating Queue: '+str(n_inqueue)+' JOB(S) running, out of '+str(nmulti)+' Maximum. Submitting '+str(nnew)+' more job(s)'
 
             # Loop through the new submits
-            For i=0,nnew-1:
-
-                print,''
-                cmd = jobs[newind[i]].input
-                if keyword_set(idle) then cmd='IDL>'+cmd
+            for i in range(nnew):
+                print('')
+                cmd = jobs[newind[i]]['input']
+                if idle is True: cmd = 'IDL>'+str(cmd)
                 # Update immediately
-                print,'Input ',strtrim(newind[i]+1,2),'  Command: >>',cmd,'<<'
-
+                print('Input '+str(newind[i]+1)+'  Command: >>'+str(cmd)+'<<'
                 # Make script
-                lsst_undefine,name,scriptname
                 if ninpname gt 0 then name=inpname[newind[i]]  # use input name
-                makescript(jobs[newind[i]].input,dir=dirs[newind[i]],name=name,scriptname=scriptname,
+                makescript(jobs[newind[i]]['input'],dir=dirs[newind[i]],name=name,scriptname=scriptname,
                                prefix=prefix,idle=idle,hyperthread=hyperthread)
                 # Check that the script exists
                 test = FILE_TEST(scriptname)
@@ -568,24 +558,25 @@ def job_daemon(input,dirs,jobs=jobs,idle=idle,prefix=prefix,nmulti=nmulti,
                 submitjob()
 
                 # Updating the jobs structure
-                jobs[newind[i]].submitted = 1
-                jobs[newind[i]].jobid = jobid
-                jobs[newind[i]].name = name[0]
-                jobs[newind[i]].dir = dirs[newind[i]]
-                jobs[newind[i]].scriptname = scriptname[0]
-                jobs[newind[i]].logfile = logfile
-                jobs[newind[i]].begtime = systime(/julian,/utc)
+                jobs[newind[i]]['submitted'] = True
+                jobs[newind[i]]['jobid'] = jobid
+                jobs[newind[i]]['name'] = name[0]
+                jobs[newind[i]]['dir'] = dirs[newind[i]]
+                jobs[newind[i]]['scriptname'] = scriptname[0]
+                jobs[newind[i]]['logfile'] = logfile
+                jobs[newind[i]]['begtime'] = time.time()
 
-        print,''
+        print('')
+        # Are we done?
+        #-------------
+        ndone = np.sum(jobs['done'] is True)
+        if (ndone==njobs): endflag=1
+        # Wait a bit
+        #--------------
+        if (endflag==0): time.sleep(waittime)
+        # Increment the counter
+        count += 1
 
-    # Are we done?
-    #-------------
-    dum = where(jobs.done eq 1,ndone)
-    if ndone eq njobs then endflag=1
-
-    # Wait a bit
-    #--------------
-    if endflag eq 0 then wait,waittime
-
-    # Increment the counter
-    count++
+    print('DONE')
+    print('dt = '+str(time.time()-t0)+' sec')
+    return jobs
