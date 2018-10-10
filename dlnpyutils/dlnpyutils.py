@@ -85,7 +85,7 @@ def stat(a=None,silent=False):
 def strlen(a):
     """ Calculate the string lengths of a string array."""
     if a is None: raise ValueError("a must be input")
-    n = len(np.array(a))
+    n = np.array(a).size
     out = np.zeros(n,int)
     for i in range(n):
         out[i] = len(a[i])
@@ -93,16 +93,26 @@ def strlen(a):
       
 
 def strjoin(a=None,b=None,sep=None):
-    """ Join two lists/arrays of strings"""
+    """ Join two string lists/arrays or scalars"""
     if (a is None) | (b is None): raise ValueError("a and b must be input")
+    na = np.array(a).size
+    nb = np.array(b).size
     if sep is None: sep=''
-    n = len(np.array(a))
+    n = np.array(a).size
     len1 = strlen(a)
     len2 = strlen(b)
-    nlen = np.max([len1+len2])+len(sep)
+    nlen = np.max(len1)+np.max(len2)+len(sep)
     out = np.zeros(n,(np.str,nlen))
     for i in range(n):
-        out[i] = sep.join((a[i],b[i]))
+        if na>1:
+            a1 = a[i]
+        else:
+            a1 = a[0]
+        if nb>1:
+            b1 = b[i]
+        else:
+            b1 = b[0]
+        out[i] = sep.join((a1,b1))
     if type(a) is list: return list(out)
     return out
 
@@ -112,7 +122,7 @@ def strsplit(lst=None,delim=None,asarray=False):
     if (lst is None): raise ValueError("lst must be input")
     out = [l.split(delim) for l in lst]
     if asarray is True:
-        nlst = len(np.array(lst))
+        nlst = np.array(lst).size
         nel = [len(o) for o in out]
         nlen = np.max(strlen(lst))
         outarr = np.zeros((nlst,np.max(nel)),(np.str,nlen))
