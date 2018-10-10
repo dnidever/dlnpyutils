@@ -107,6 +107,24 @@ def strjoin(a=None,b=None,sep=None):
     return out
 
 
+def strsplit(lst=None,delim=None,asarray=False):
+    """ Split a string array."""
+    if (lst is None): raise ValueError("lst must be input")
+    out = [l.split(delim) for l in lst]
+    if asarray is True:
+        nlst = len(np.array(lst))
+        nel = [len(o) for o in out]
+        nlen = np.max(strlen(lst))
+        outarr = np.zeros((nlst,np.max(nel)),(np.str,nlen))
+        for i in range(nlst):
+            temp = np.array(out[i])
+            ntemp = len(temp)
+            outarr[i,0:ntemp] = temp
+        return outarr
+    else:
+        return out
+
+
 # Standard grep function that works on string list
 def grep(lines=None,expr=None,index=False):
     """
