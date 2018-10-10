@@ -81,6 +81,7 @@ def stat(a=None,silent=False):
         print('----------------------')
     return
 
+
 def strlen(a):
     """ Calculate the string lengths of a string array."""
     if a is None: raise ValueError("a must be input")
@@ -91,16 +92,21 @@ def strlen(a):
     return out
       
 
-def strjoin(a=None,b=None):
+def strjoin(a=None,b=None,sep=None):
     """ Join two lists/arrays of strings"""
     if (a is None) | (b is None): raise ValueError("a and b must be input")
+    if sep is None: sep=''
     n = len(np.array(a))
-    out = np.zeros(n,(np.str,100))
+    len1 = strlen(a)
+    len2 = strlen(b)
+    nlen = np.max([len1+len2])+len(sep)
+    out = np.zeros(n,(np.str,nlen))
     for i in range(n):
-        out[i] = ''.join((a[i],b[i]))
+        out[i] = sep.join((a[i],b[i]))
     if type(a) is list: return list(out)
     return out
-        
+
+
 # Standard grep function that works on string list
 def grep(lines=None,expr=None,index=False):
     """
