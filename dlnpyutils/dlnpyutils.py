@@ -13,7 +13,7 @@ import logging
 import os
 import sys
 import numpy as np
-#import warnings
+import warnings
 #from astropy.io import fits
 #from astropy.utils.exceptions import AstropyWarning
 #import time
@@ -27,6 +27,15 @@ import numpy as np
 #from scipy.ndimage.filters import convolve
 import astropy.stats
 
+# Ignore these warnings, it's a bug
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
+
+# Size, number of elements
+def size(a=None):
+    """Returns the number of elements"""
+    if a is None: return 0
+    return np.array(a,ndmin=1).size
 
 # Median Absolute Deviation
 def mad(data, axis=None, func=None, ignore_nan=False):
@@ -82,23 +91,24 @@ def stat(a=None,silent=False):
     return
 
 
-def strlen(a):
+def strlen(lst):
     """ Calculate the string lengths of a string array."""
-    if a is None: raise ValueError("a must be input")
-    n = np.array(a).size
+    if lst is None: raise ValueError("lst must be input")
+    n = size(lst)
     out = np.zeros(n,int)
-    for i in range(n):
-        out[i] = len(a[i])
+    for i,a in enumerate(np.array(lst,ndmin=1)):
+        out[i] = len(a)
+    if n==1: out=int(out)
     return out
       
 
 def strjoin(a=None,b=None,sep=None):
     """ Join two string lists/arrays or scalars"""
     if (a is None) | (b is None): raise ValueError("a and b must be input")
-    na = np.array(a).size
-    nb = np.array(b).size
+    na = size(a)
+    nb = size(b)
     if sep is None: sep=''
-    n = np.array(a).size
+    n = np.max([na,nb])
     len1 = strlen(a)
     len2 = strlen(b)
     nlen = np.max(len1)+np.max(len2)+len(sep)
@@ -107,13 +117,14 @@ def strjoin(a=None,b=None,sep=None):
         if na>1:
             a1 = a[i]
         else:
-            a1 = a[0]
+            a1 = np.array(a,ndmin=1)[0]
         if nb>1:
             b1 = b[i]
         else:
-            b1 = b[0]
+            b1 = np.array(b,ndmin=1)[0]
         out[i] = sep.join((a1,b1))
-    if type(a) is list: return list(out)
+    if (n==1) & (type(a) is str) & (type(b) is str): return out[0]  # scalar
+    if (type(a) is list) | (type(b) is list): return list(out)
     return out
 
 
@@ -134,6 +145,14 @@ def strsplit(lst=None,delim=None,asarray=False):
     else:
         return out
 
+def first_el(lst):
+    """ Return the first element"""
+    if lst is None: return None
+    if size(lst)>1: return lst[0]
+    if (size(lst)==1) & (type(lst) is list): return lst.pop() 
+    if (size(lst)==1) & (type(lst) is np.ndarray): return lst.item()
+    return lst
+        
 
 # Standard grep function that works on string list
 def grep(lines=None,expr=None,index=False):
