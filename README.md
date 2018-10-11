@@ -1,7 +1,7 @@
 # David Nidever's Python Utility Functions
 
 This package has a bunch of small functions that I find useful while working in python.
-Currently they are all in single package and module calls "dlnpyutils".
+Most of the functions are in a module called "dlnpyutilts".
 
 # Installation
 
@@ -22,6 +22,7 @@ from dlnpyutils.dlnpyutils import *
 
 # Some of the functions
 
+ dlnpyutils:
  - mad: median absolute deviation of array
  - minmax: minimum and maximum of an array
  - stat: many useful statistics of an array
@@ -36,3 +37,5 @@ from dlnpyutils.dlnpyutils import *
  - basiclogger: return a basic logger to the screen and optionally a file
  - remove: delete multiple files and allow for non-existence
 
+ job_daemon:
+ This is a simple batch job manager.
