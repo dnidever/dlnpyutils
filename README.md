@@ -22,5 +22,17 @@ from dlnpyutils.dlnpyutils import *
 
 # Some of the functions
 
- - strjoin
+ - mad: median absolute deviation of array
+ - minmax: minimum and maximum of an array
+ - stat: many useful statistics of an array
+ - strlen: number of characters in a string array or list
+ - strjoin: combine string arrays or scalars
+ - strsplit: split string arrays
+ - grep: grep on a string array
+ - readlines: read a file into a string array
+ - writelines: write a string array to a file
+ - remove_indices: remove certain indices from an array
+ - numlines: return the number of lines in a file
+ - basiclogger: return a basic logger to the screen and optionally a file
+ - remove: delete multiple files and allow for non-existence
 
