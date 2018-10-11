@@ -145,6 +145,33 @@ def strsplit(lst=None,delim=None,asarray=False):
     else:
         return out
 
+def pathjoin(indir=None,name=None):
+    """ Join two or more pathname components, inserting '/' as needed
+    Same as os.path.join but also works on arrays/lists."""
+    if indir is None: raise ValueError("must input indir")
+    if name is None: raise ValueError("must input name")
+    nindir = size(indir)
+    nname = size(name)
+    n = np.max([nindir,nname])
+    len1 = strlen(indir)
+    len2 = strlen(name)
+    nlen = np.max(len1)+np.max(len2)
+    out = np.zeros(n,(np.str,nlen))
+    for i in range(n):
+        if nindir>1:
+            indir1 = indir[i]
+        else:
+            indir1 = np.array(indir,ndmin=1)[0]
+        if indir1[-1] != '/': indir1+='/'
+        if nname>1:
+            name1 = nname[i]
+        else:
+            name1 = np.array(name,ndmin=1)[0]
+        out[i] = indir1+name1
+    if (n==1) & (type(indir) is str) & (type(name) is str): return out[0]  # scalar
+    if (type(indir) is list) | (type(name) is list): return list(out)
+    return out
+
 def first_el(lst):
     """ Return the first element"""
     if lst is None: return None
