@@ -91,7 +91,7 @@ def stat(a=None,silent=False):
     return
 
 
-def strlen(lst):
+def strlen(lst=None):
     """ Calculate the string lengths of a string array."""
     if lst is None: raise ValueError("lst must be input")
     n = size(lst)
@@ -100,7 +100,14 @@ def strlen(lst):
         out[i] = len(a)
     if n==1: out=int(out)
     return out
-      
+
+
+def strip(lst=None,chars=None):
+    """ Strip on a scalar or list."""
+    if lst is None: raise ValueError("lst must be input")
+    if type(lst) is str: return lst.strip(chars)
+    return [o.strip(chars) for o in np.array(lst,ndmin=1)]
+
 
 def strjoin(a=None,b=None,sep=None):
     """ Join two string lists/arrays or scalars"""
@@ -131,7 +138,10 @@ def strjoin(a=None,b=None,sep=None):
 def strsplit(lst=None,delim=None,asarray=False):
     """ Split a string array."""
     if (lst is None): raise ValueError("lst must be input")
-    out = [l.split(delim) for l in lst]
+    if size(lst)==1:
+        out = lst.split(delim)
+    else:
+        out = [l.split(delim) for l in lst]
     if asarray is True:
         nlst = np.array(lst).size
         nel = [len(o) for o in out]

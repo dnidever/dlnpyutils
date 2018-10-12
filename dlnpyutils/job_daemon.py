@@ -26,23 +26,25 @@ warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
         
 
 def mkstatstr(n=None):
-    """ This returns the stat structure schema or an instance of the job structure."""
-    dtype = np.dtype([('jobid',np.str,20),('name',np.str,100),('user',np.str,100),('timeuse',np.str,100),('status',np.str),('queue',np.str)])
+    """ This returns the stat structure schema or an instance of the stat structure."""
+    dtype = np.dtype([('jobid',np.str,20),('name',np.str,100),('user',np.str,100),('timeuse',np.str,100),('status',np.str,10),('queue',np.str,20)])
     if n is None:
         return dtype
     else:
         statstr = np.zeros(n,dtype=dtype)    
         return statstr
 
+
 def mkjobstr(n=None):
     """ This returns the job structure schema or an instance of the job structure."""
-    dtype = np.dtype([('host',np.str,20),('jobid',(np.str,100)),('input',np.str,100),('dir',np.str,100),('name',np.str,100),('scriptname',np.str),
+    dtype = np.dtype([('host',np.str,20),('jobid',(np.str,100)),('input',np.str,100),('dir',np.str,100),('name',np.str,100),('scriptname',np.str,200),
                       ('logfile',np.str),('submitted',np.bool),('done',np.bool),('begtime',np.float64),('endtime',np.float64),('duration',float)])
     if n is None:
         return dtype
     else:
         jobstr = np.zeros(n,dtype=dtype)    
         return jobstr
+
 
 def mkrunbatch():
     curdir = os.getcwd()
@@ -60,6 +62,7 @@ def mkrunbatch():
         writelines(batchfile,lines,overwrite=True)
         os.chmod(batchfile,0755)
     return batchfile
+
 
 def mkidlbatch():
     curdir = os.getcwd()
@@ -84,6 +87,7 @@ def mkidlbatch():
         writelines(batchfile,lines,overwrite=True)
         os.chmod(batchfile,0755)
     return batchfile
+
 
 def check_diskspace(indir=None,updatestatus=False):
     """ This checks if there's enough free disk space. """
@@ -348,20 +352,26 @@ def checkstat(jobid=None,hyperthread=True):
     If no jobs are found in the queue then an empty
     statstr structure is returned.
 
-    INPUTS:
-    =jobid   Specific JOBID to check.
-    /stp     Stop at the end of the program.
-    /hyperthread  Not on a PBS machine but one with multipe hyperthreaded
-                    processors running simultaneously.
+    Parameters
+    ----------
+    jobid : string or int
+          Specific JOBID to check.
+    hyperthread : bool, optional
+          Not on a PBS machine but one with multipe hyperthreaded
+          processors running simultaneously.  Default is True.
 
-    OUTPUTS:
-    statstr  Stat structure.
+    Results
+    -------
+    statstr : numpy structured array
+          Status structure.
 
-    USAGE:
-    IDL>job_checkstat,statstr,jobid=jobid,stp=stp
+    Example
+    -------
 
-    By D.Nidever   February 2008
-    Updated for LSST stack  Nov 2015
+    .. code-block:: python
+
+        stat = job_checkstat(jobid)
+
     """
     if jobid is None: raise ValueError("Must input jobid")
     njobid = size(jobid)
@@ -404,22 +414,29 @@ def checkstat(jobid=None,hyperthread=True):
             print('Need JOBID with /hyperthread')
             return mkstatstr(1)
 
-        out = subprocess.check_output(['ps','-o','pid,user,etime,command','-p',str(jobid[0])],
-                                      stderr=subprocess.STDOUT,shell=False)
+        try:
+            out = subprocess.check_output(['ps','-o','pid,user,etime,command','-p',str(first_el(jobid))],
+                                          stderr=subprocess.STDOUT,shell=False)
+        except:
+            print('problem')
+            statstr = mkstatstr(1)
+            statstr['jobid'] = jobid
+            statstr['queue'] = 'hyperthread'
+            return statstr
         # can put in the column that you want
         # ps -o etime -p jobid
-        out = [o.strip() for o in out]
+        out = strsplit(out,'\n')
+        out = strip(out)
         gd = grep(out,'^'+str(jobid),index=True)
         ngd = len(gd)
         if ngd>0:
-            statlines = out[gd[0]]
-            nstat = len(statlines)
+            statlines = np.array(out,ndmin=1)[gd[0]]
         else:
             statlines = None
         # Some jobs in queue
         if statlines is not None:
             arr = statlines.split()
-            statstr = mkstatstr(nstat)
+            statstr = mkstatstr(1)
             statstr['jobid'] = arr[0]
             statstr['user'] = arr[1]
             # CAN'T get the name.
@@ -429,11 +446,12 @@ def checkstat(jobid=None,hyperthread=True):
         # No jobs in queue
         else:
             statstr = mkstatstr(1)
-
+            statstr['jobid'] = jobid
+            statstr['queue'] = 'hyperthread'
     return statstr
 
 
-def job_daemon(input=None,dirs=None,inpname=None,idle=False,prefix=None,nmulti=1,hyperthread=True,
+def job_daemon(input=None,dirs=None,inpname=None,nmulti=1,prefix="job",hyperthread=True,idle=False,
                cdtodir=False,waittime=0.2,statustime=60):
     """This program is a simple batch job manager
 
@@ -443,30 +461,42 @@ def job_daemon(input=None,dirs=None,inpname=None,idle=False,prefix=None,nmulti=1
 
     Parameters
     ----------
-    input     A string array with the IDL commands (i.e. jobs) to be run.
-    dirs      The directories in which the commands are to be run.
-    idle     This is an IDL command, otherwise a SHELL command.
-    prefix   The prefix for the PBS script names
-    nmulti   How many nodes to run these jobs on.  Default is 8.
-    hyperthread  Not on a PBS server but one that has multiple processors
-                   hyperthreaded.  Run multiple jobs at the same time on
-                   the same server.
-    inpname  The name to be used for the script (without the path or
-                   the .sh/.batch ending.  This is normally autogenerated.
-    statustime   The time between status updates.  However, the status
-                    will always be updated if something has actually changed.
-    waittime     Time to wait between checking the running jobs.  Default
-                    is 0.2 sec.
+    input : string array/list
+          A string array with the IDL commands (i.e. jobs) to be run.
+    dirs : string array/list
+          The directories in which the commands are to be run.
+    inpname : string array/list, optional
+           The name to be used for the script (without the path or
+           the .sh/.batch ending.  This is normally autogenerated.
+    nmulti : int, optional
+           How many nodes to run these jobs on.  Default is 1.
+    prefix : string
+          The prefix for the script names.  Default is "job".
+    hyperthread : bool, optional
+           Not on a PBS server but one that has multiple processors
+           hyperthreaded.  Run multiple jobs at the same time on
+           the same server.  Default is True.
+    idle : bool, optional
+         This is an IDL command, otherwise a SHELL command.  Default is False.
+    statustime : float or int, optional
+           The time between status updates.  However, the status
+           will always be updated if something has actually changed.
+           Default is 60.
+    waittime : float or int, optional
+           Time to wait between checking the running jobs.  Default is 0.2 sec.
 
     Results
     -------
-    jobs      The jobs structure with information on the JOBID, script
-                name, etc.
+    jobs : numpy structured array
+          The jobs structure with information on the JOBID, script name, etc.
     Jobs are run in a batch mode.
 
     Example
     -------
-    jobs = job_daemon(input,dirs,jobs=jobs,idle=idle,prefix=prefix,nmulti=nmulti)
+
+    .. code-block:: python
+
+        jobs = job_daemon(input,dirs,hyperthread=True,nmulti=5)
 
     """
 
@@ -502,7 +532,7 @@ def job_daemon(input=None,dirs=None,inpname=None,idle=False,prefix=None,nmulti=1
     host = hostname.split('.')[0]
 
     # Which IDL are we using?
-    if idle is true:
+    if idle is True:
         try:
             out = subprocess.check_output(['which','idl'],stderr=subprocess.STDOUT,shell=False)
         except subprocess.CalledProcessError, e:
@@ -510,11 +540,6 @@ def job_daemon(input=None,dirs=None,inpname=None,idle=False,prefix=None,nmulti=1
         idlprog = out.strip()
         if os.path.exists(idlprog) is False:
             raise Exception("IDL program "+idlprog+" not found")
-
-    # Create RUNBATCH and IDLBATCH if using hyperthread
-    if (hyperthread is True):
-        if (idle is False) & (os.path.exists('runbatch') is False): mkrunbatch()
-        if (idle is True) & (os.path.exists('idlbatch') is False): mkidlbatch()
 
     print('---------------------------------')
     print(' RUNNING JOB_DAEMON for '+str(ninput)+' JOB(S)')
@@ -569,7 +594,7 @@ def job_daemon(input=None,dirs=None,inpname=None,idle=False,prefix=None,nmulti=1
             jobid = jobs[sub[i]]['jobid']
             statstr = checkstat(jobid,hyperthread=hyperthread)
             # Job done
-            if statstr['jobid']=='':
+            if statstr['status']=='':
                 print,systime(0)+'  Input ',strtrim(sub[i]+1,2),' ',jobs[sub[i]].name,' JobID=',jobs[sub[i]].jobid,' FINISHED'
                 jobs[sub[i]]['done'] = True
                 jobs[sub[i]]['endtime'] = time.time()
