@@ -45,30 +45,45 @@ def mkjobstr(n=None):
         return jobstr
 
 def mkrunbatch():
-    lines = []
-    lines.append("if test $# -eq 0\n")
-    lines.append("then\n")
-    lines.append("  echo 'Syntax - runbatch program'\n")
-    lines.append("else\n")
-    lines.append("  echo 'Log file: '$1'.log'\n")
-    lines.append("  ( nohup  $1 > $1.log 2>&1 ) &\n")
-    lines.append("  echo JOBID=$!\n")
-    lines.append("fi\n")
-    writelines('runbatch',lines,overwrite=True)
-    os.chmod('runbatch',0755)
+    curdir = os.getcwd()
+    batchfile = os.path.join(curdir,'runbatch')
+    if os.path.exists(batchfile) is False:
+        lines = []
+        lines.append("if test $# -eq 0\n")
+        lines.append("then\n")
+        lines.append("  echo 'Syntax - runbatch program'\n")
+        lines.append("else\n")
+        lines.append("  echo 'Log file: '$1'.log'\n")
+        lines.append("  ( nohup  $1 > $1.log 2>&1 ) &\n")
+        lines.append("  echo 'JOBID='$!\n")
+        lines.append("fi\n")
+        writelines(batchfile,lines,overwrite=True)
+        os.chmod(batchfile,0755)
+    return batchfile
 
 def mkidlbatch():
-    lines = []
-    lines.append("if test $# -eq 0\n")
-    lines.append("then\n")
-    lines.append("  echo 'Syntax - idlbatch idl.batch'\n")
-    lines.append("else\n")
-    lines.append("  echo 'Log file: '$1'.log'\n")
-    lines.append("  ( nohup "+idlprog+" < $1 > $1.log 2>&1 ) &\n")
-    lines.append("  echo JOBID=$!\n")
-    lines.append("fi\n")
-    writelines('idlbatch',lines,overwrite=True)
-    os.chmod('idlbatch',0755)
+    curdir = os.getcwd()
+    batchfile = os.path.join(curdir,'idlbatch')
+    if os.path.exists(batchfile) is False:
+        try:
+            out = subprocess.check_output(['which','idl'],stderr=subprocess.STDOUT,shell=False)
+        except subprocess.CalledProcessError, e:
+            raise Exception("IDL program not available")
+        idlprog = out.strip()
+        if os.path.exists(idlprog) is False:
+            raise Exception("IDL program "+idlprog+" not found")
+        lines = []
+        lines.append("if test $# -eq 0\n")
+        lines.append("then\n")
+        lines.append("  echo 'Syntax - idlbatch idl.batch'\n")
+        lines.append("else\n")
+        lines.append("  echo 'Log file: '$1'.log'\n")
+        lines.append("  ( nohup "+idlprog+" < $1 > $1.log 2>&1 ) &\n")
+        lines.append("  echo 'JOBID='$!\n")
+        lines.append("fi\n")
+        writelines(batchfile,lines,overwrite=True)
+        os.chmod(batchfile,0755)
+    return batchfile
 
 def check_diskspace(indir=None,updatestatus=False):
     """ This checks if there's enough free disk space. """
@@ -294,30 +309,33 @@ def submitjob(scriptname=None,indir=None,hyperthread=True,idle=False):
     # Submitting the job
     if hyperthread is False:
         try:
-            out = subprocess.check_output(['qsub',scriptname],stderr=subprocess.STDOUT,shell=False)        
+            out = subprocess.check_output('qsub '+scriptname,stderr=subprocess.STDOUT,shell=True)
         except subprocess.CalledProcessError, e:
             raise Exception("Problem submitting PBS job")
         jobid = first_el(out)
         logfile = scriptname+'.log'
     else:
         if idle is True:
-            batchprog = './idlbatch'
+            batchprog = mkidlbatch()
         else:
-            batchprog = './runbatch'
+            batchprog = mkrunbatch()
         if indir is not None: os.chdir(indir)
         try:
-            out = subprocess.check_output([batchprog,scriptname],stderr=subprocess.STDOUT,shell=False)
+            out = subprocess.check_output(batchprog+' '+scriptname,stderr=subprocess.STDOUT,shell=True)
         except:
             raise Exception("Problem submitting shell job")
-        if cdtodir is True: os.chdir(curdir)
+        if indir is not None: os.chdir(curdir)
         # Get the JOBID
+        out = out.split('\n')
         jobid_ind = grep(out,'^JOBID=',index=True)
         njobid_ind = len(jobid_ind)
-        jobid = out[jobid_ind[0]][0:7]
+        jobid = out[jobid_ind[0]].split('=')[1]
+        jobid = jobid.strip()
         # Get the logfile
         logfile_ind = grep(out,'^Log file: ',index=True)
         nlogfile_ind = len(logfile_ind)
-        logfile = out[logfile_ind[0]][0:11]
+        logfile = out[logfile_ind[0]].split(':')[1]
+        logfile = logfile.strip()
     # Printing info
     print('Submitted '+scriptname+'  JobID='+jobid)
     return jobid, logfile

@@ -223,7 +223,7 @@ def grep(lines=None,expr=None,index=False):
     if expr is None: raise ValueError("expr must be input")
     out = []
     cnt = 0L
-    for l in lines:
+    for l in np.array(lines,ndmin=1):
         m = re.search(expr,l)
         if m != None:
             if index is False:
