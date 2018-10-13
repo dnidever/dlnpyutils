@@ -427,6 +427,53 @@ def remove(files=None,allow=True):
         else:
             if allow is False: raise Exception(f+" does not exist")
 
+def lt(x,limit):
+    """Takes the lesser of x or limit"""
+    if np.array(x).size>1:
+        out = [i if (i<limit) else limit for i in x]
+    else:
+        out = x if (x<limit) else limit
+    if type(x) is np.ndarray: return np.array(out)
+    return out
+    
+def gt(x,limit):
+    """Takes the greater of x or limit"""
+    if np.array(x).size>1:
+        out = [i if (i>limit) else limit for i in x]
+    else:
+        out = x if (x>limit) else limit
+    if type(x) is np.ndarray: return np.array(out)
+    return out        
+
+def limit(x,llimit,ulimit):
+    """Require x to be within upper and lower limits"""
+    return lt(gt(x,llimit),ulimit)
+    
+def gaussian(x, amp, cen, sig, const=0):
+    """1-D gaussian: gaussian(x, amp, cen, sig)"""
+    return (amp / (np.sqrt(2*np.pi) * sig)) * np.exp(-(x-cen)**2 / (2*sig**2)) + const
+
+def gaussfit(x,y,initpar,sigma=None, bounds=None):
+    """Fit 1-D Gaussian to X/Y data"""
+    #gmodel = Model(gaussian)
+    #result = gmodel.fit(y, x=x, amp=initpar[0], cen=initpar[1], sig=initpar[2], const=initpar[3])
+    #return result
+    return curve_fit(gaussian, x, y, p0=initpar, sigma=sigma, bounds=bounds)
+
+def poly(x,coef):
+    """ Evaluate a polynomial."""
+    y = x.copy()*0.0
+    for i in range(len(coef)):
+        y += coef[i]*x**i
+    return y
+        
+# Derivate of slope of an array
+def slope(array):
+    """Derivate of slope of an array: slp = slope(array)"""
+    n = len(array)
+    return array[1:n]-array[0:n-1]
+
+
         
 
 
