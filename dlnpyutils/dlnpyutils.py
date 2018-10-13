@@ -461,21 +461,15 @@ def gaussfit(x,y,initpar,sigma=None, bounds=None):
     return curve_fit(gaussian, x, y, p0=initpar, sigma=sigma, bounds=bounds)
 
 def poly(x,coef):
-    """ Evaluate a polynomial."""
+    """ Evaluate a polynomial function of a variable."""
     y = x.copy()*0.0
     for i in range(len(coef)):
         y += coef[i]*x**i
     return y
         
-# Derivate of slope of an array
+# Derivative or slope of an array
 def slope(array):
-    """Derivate of slope of an array: slp = slope(array)"""
+    """Derivative or slope of an array: slp = slope(array)"""
     n = len(array)
     return array[1:n]-array[0:n-1]
-
-
-        
-
-
-
 
