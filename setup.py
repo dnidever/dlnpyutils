@@ -9,6 +9,6 @@ setup(name='dlnpyutils',
       author_email='dnidever@noao.edu',
       url='https://github.com/dnidever/dlnpyutils',
       packages=['dlnpyutils'],
-      scrits=['bin/job_daemon'],
+      scripts=['bin/job_daemon'],
       requires=['numpy','astropy','scipy']
 )
