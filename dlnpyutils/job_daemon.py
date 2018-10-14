@@ -680,36 +680,3 @@ def job_daemon(input=None,dirs=None,inpname=None,nmulti=4,prefix="job",hyperthre
     print('DONE')
     print('dt = '+str(time.time()-t0)+' sec')
     return jobs
-
-
-# Main command-line program
-if __name__ == "__main__":
-    from argparse import ArgumentParser
-    parser = ArgumentParser(description='A simple batch job manager.')
-    parser.add_argument('input', type=str, nargs='?', help='File with commands or scripts to run')
-    parser.add_argument('dirs', type=str, nargs='?', help='Directory (or file of directories) in which the commands are to be run')
-    parser.add_argument('--name', type=str, default=None, help='File with script names')
-    parser.add_argument('--nmulti', type=int, default=4, help='Number of simultaneous jobs to run')
-    parser.add_argument('--prefix', type=str, default='job', help='Job name prefix')
-    parser.add_argument('--statustime', type=float, default=60, help='Time between status updates')
-    parser.add_argument('--waittime', type=float, default=0.2, help='Time to wait between checking the status of running jobs')
-    parser.add_argument('--idle', type=str, default=False, help='IDL program')
-    parser.add_argument('--hyperthread', type=str, default=True, help='')
-    args = parser.parse_args()
-
-    # Load the input and directories
-    if os.path.isfile(args.input) is False: raise ValueError(args.input+" not found")
-    cmds = strip(readlines(args.input))
-    if os.path.isfile(args.dirs) is True:
-        indirs = strip(readlines(args.dirs))
-    else:
-        # Single directory input
-        if os.path.isdir(args.dirs) is True:
-            indirs = np.repeat(args.dirs,size(cmds))
-        else:
-            raise ValueError(args.dirs+" not found")
-
-    # Run job_daemon
-    jobs = job_daemon(cmds,indirs,inpname=args.name,nmulti=args.nmulti,prefix=args.prefix,
-                      hyperthread=args.hyperthread,idle=args.idle,waittime=args.waittime,
-                      statustime=args.statustime)
