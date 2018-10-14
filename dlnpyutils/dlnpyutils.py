@@ -165,7 +165,7 @@ def pathjoin(indir=None,name=None):
     n = np.max([nindir,nname])
     len1 = strlen(indir)
     len2 = strlen(name)
-    nlen = np.max(len1)+np.max(len2)
+    nlen = np.max(len1)+np.max(len2)+1
     out = np.zeros(n,(np.str,nlen))
     for i in range(n):
         if nindir>1:
