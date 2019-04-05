@@ -1,7 +1,7 @@
 # David Nidever's Python Utility Functions
 
 This package has a bunch of small functions that I find useful while working in python.
-Currently they are all in single package and module calls "dlnpyutils".
+Currently they are all in single package and module called "dlnpyutils".
 
 # Installation
 
