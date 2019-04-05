@@ -13,7 +13,7 @@ import logging
 import os
 import sys
 import numpy as np
-#import warnings
+import warnings
 #from astropy.io import fits
 #from astropy.utils.exceptions import AstropyWarning
 #import time
@@ -27,6 +27,15 @@ import numpy as np
 #from scipy.ndimage.filters import convolve
 import astropy.stats
 
+# Ignore these warnings, it's a bug
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
+
+# Size, number of elements
+def size(a=None):
+    """Returns the number of elements"""
+    if a is None: return 0
+    return np.array(a,ndmin=1).size
 
 # Median Absolute Deviation
 def mad(data, axis=None, func=None, ignore_nan=False):
@@ -82,23 +91,31 @@ def stat(a=None,silent=False):
     return
 
 
-def strlen(a):
+def strlen(lst=None):
     """ Calculate the string lengths of a string array."""
-    if a is None: raise ValueError("a must be input")
-    n = np.array(a).size
+    if lst is None: raise ValueError("lst must be input")
+    n = size(lst)
     out = np.zeros(n,int)
-    for i in range(n):
-        out[i] = len(a[i])
+    for i,a in enumerate(np.array(lst,ndmin=1)):
+        out[i] = len(a)
+    if n==1: out=int(out)
     return out
-      
+
+
+def strip(lst=None,chars=None):
+    """ Strip on a scalar or list."""
+    if lst is None: raise ValueError("lst must be input")
+    if type(lst) is str: return lst.strip(chars)
+    return [o.strip(chars) for o in np.array(lst,ndmin=1)]
+
 
 def strjoin(a=None,b=None,sep=None):
     """ Join two string lists/arrays or scalars"""
     if (a is None) | (b is None): raise ValueError("a and b must be input")
-    na = np.array(a).size
-    nb = np.array(b).size
+    na = size(a)
+    nb = size(b)
     if sep is None: sep=''
-    n = np.array(a).size
+    n = np.max([na,nb])
     len1 = strlen(a)
     len2 = strlen(b)
     nlen = np.max(len1)+np.max(len2)+len(sep)
@@ -107,20 +124,24 @@ def strjoin(a=None,b=None,sep=None):
         if na>1:
             a1 = a[i]
         else:
-            a1 = a[0]
+            a1 = np.array(a,ndmin=1)[0]
         if nb>1:
             b1 = b[i]
         else:
-            b1 = b[0]
+            b1 = np.array(b,ndmin=1)[0]
         out[i] = sep.join((a1,b1))
-    if type(a) is list: return list(out)
+    if (n==1) & (type(a) is str) & (type(b) is str): return out[0]  # scalar
+    if (type(a) is list) | (type(b) is list): return list(out)
     return out
 
 
 def strsplit(lst=None,delim=None,asarray=False):
     """ Split a string array."""
     if (lst is None): raise ValueError("lst must be input")
-    out = [l.split(delim) for l in lst]
+    if size(lst)==1:
+        out = lst.split(delim)
+    else:
+        out = [l.split(delim) for l in lst]
     if asarray is True:
         nlst = np.array(lst).size
         nel = [len(o) for o in out]
@@ -134,6 +155,41 @@ def strsplit(lst=None,delim=None,asarray=False):
     else:
         return out
 
+def pathjoin(indir=None,name=None):
+    """ Join two or more pathname components, inserting '/' as needed
+    Same as os.path.join but also works on arrays/lists."""
+    if indir is None: raise ValueError("must input indir")
+    if name is None: raise ValueError("must input name")
+    nindir = size(indir)
+    nname = size(name)
+    n = np.max([nindir,nname])
+    len1 = strlen(indir)
+    len2 = strlen(name)
+    nlen = np.max(len1)+np.max(len2)+1
+    out = np.zeros(n,(np.str,nlen))
+    for i in range(n):
+        if nindir>1:
+            indir1 = indir[i]
+        else:
+            indir1 = np.array(indir,ndmin=1)[0]
+        if indir1[-1] != '/': indir1+='/'
+        if nname>1:
+            name1 = nname[i]
+        else:
+            name1 = np.array(name,ndmin=1)[0]
+        out[i] = indir1+name1
+    if (n==1) & (type(indir) is str) & (type(name) is str): return out[0]  # scalar
+    if (type(indir) is list) | (type(name) is list): return list(out)
+    return out
+
+def first_el(lst):
+    """ Return the first element"""
+    if lst is None: return None
+    if size(lst)>1: return lst[0]
+    if (size(lst)==1) & (type(lst) is list): return lst.pop() 
+    if (size(lst)==1) & (type(lst) is np.ndarray): return lst.item()
+    return lst
+        
 
 # Standard grep function that works on string list
 def grep(lines=None,expr=None,index=False):
@@ -177,7 +233,7 @@ def grep(lines=None,expr=None,index=False):
     if expr is None: raise ValueError("expr must be input")
     out = []
     cnt = 0L
-    for l in lines:
+    for l in np.array(lines,ndmin=1):
         m = re.search(expr,l)
         if m != None:
             if index is False:
@@ -371,8 +427,49 @@ def remove(files=None,allow=True):
         else:
             if allow is False: raise Exception(f+" does not exist")
 
+def lt(x,limit):
+    """Takes the lesser of x or limit"""
+    if np.array(x).size>1:
+        out = [i if (i<limit) else limit for i in x]
+    else:
+        out = x if (x<limit) else limit
+    if type(x) is np.ndarray: return np.array(out)
+    return out
+    
+def gt(x,limit):
+    """Takes the greater of x or limit"""
+    if np.array(x).size>1:
+        out = [i if (i>limit) else limit for i in x]
+    else:
+        out = x if (x>limit) else limit
+    if type(x) is np.ndarray: return np.array(out)
+    return out        
+
+def limit(x,llimit,ulimit):
+    """Require x to be within upper and lower limits"""
+    return lt(gt(x,llimit),ulimit)
+    
+def gaussian(x, amp, cen, sig, const=0):
+    """1-D gaussian: gaussian(x, amp, cen, sig)"""
+    return (amp / (np.sqrt(2*np.pi) * sig)) * np.exp(-(x-cen)**2 / (2*sig**2)) + const
+
+def gaussfit(x,y,initpar,sigma=None, bounds=None):
+    """Fit 1-D Gaussian to X/Y data"""
+    #gmodel = Model(gaussian)
+    #result = gmodel.fit(y, x=x, amp=initpar[0], cen=initpar[1], sig=initpar[2], const=initpar[3])
+    #return result
+    return curve_fit(gaussian, x, y, p0=initpar, sigma=sigma, bounds=bounds)
+
+def poly(x,coef):
+    """ Evaluate a polynomial function of a variable."""
+    y = x.copy()*0.0
+    for i in range(len(coef)):
+        y += coef[i]*x**i
+    return y
         
-
-
-
+# Derivative or slope of an array
+def slope(array):
+    """Derivative or slope of an array: slp = slope(array)"""
+    n = len(array)
+    return array[1:n]-array[0:n-1]
 
