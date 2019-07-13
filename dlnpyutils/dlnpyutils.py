@@ -551,3 +551,16 @@ def roi_cut(xcut,ycut,x,y):
     cutind, = np.where(inside)
 
     return ind, cutind
+
+# Determine if a variable is defined
+#def varexists(varname):
+#    exists = True
+#    try:
+#        exec('a = '+varname)
+#    except:
+#        exists = False
+#    return exists
+#
+#    #exists = False
+#    #if (varname in locals()) or (varname in globals()): exists=True
+#    #return exists
