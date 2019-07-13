@@ -506,3 +506,48 @@ def rebin(arr, new_shape):
     if arr.ndim==1:
         shape = (np.array(new_shape,ndmin=1)[0], arr.shape[0] // np.array(new_shape,ndmin=1)[0])
         return arr.reshape(shape).mean(-1)
+
+def roi_cut(xcut,ycut,x,y):
+    """
+    Use cuts in a 2D plane to select points from arrays.
+
+    Parameters
+    ----------
+    xcut : numpy array
+         Array of x-values for the cut
+    ycut : numpy array
+         Array of y-values for the cut
+    x : numpy array or list
+         Array of x-values that should be cut
+    y : numpy array or list
+         Array of y-values that should be cut
+
+    Returns
+    -------
+    ind : numpy array
+       The indices of values OUTSIDE the cut
+    cutind : 
+       The indices of values INSIDE the cut
+
+    Example
+    -------
+
+    .. code-block:: python
+
+        ind, cutind = roi_cut(xcut,ycut,x,y)
+
+    """
+
+    from matplotlib.path import Path
+
+    tupVerts = zip(xcut,ycut)
+
+    points = np.vstack((x,y)).T
+    
+    p = Path(tupVerts) # make a polygon
+    inside = p.contains_points(points)
+
+    ind, = np.where(~inside)
+    cutind, = np.where(inside)
+
+    return ind, cutind
