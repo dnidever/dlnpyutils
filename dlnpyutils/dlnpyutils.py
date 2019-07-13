@@ -466,10 +466,43 @@ def poly(x,coef):
     for i in range(len(coef)):
         y += coef[i]*x**i
     return y
-        
+
+def poly_fit(x,y,nord,robust=False,sigma=None,bounds=(-np.inf,np.inf)):
+    initpar = np.zeros(nord+1)
+    # Normal polynomial fitting
+    if robust is False:
+        #coef = curve_fit(poly, x, y, p0=initpar, sigma=sigma, bounds=bounds)
+        weights = None
+        if sigma is not None: weights=1/sigma
+        coef = np.polyfit(x,y,nord,w=weights)
+    # Fit with robust polynomial
+    else:
+        res_robust = least_squares(poly_resid, initpar, loss='soft_l1', f_scale=0.1, args=(x,y,sigma))
+        if res_robust.success is False:
+            raise Exception("Problem with least squares polynomial fitting. Status="+str(res_robust.status))
+        coef = res_robust.x
+    return coef
+
 # Derivative or slope of an array
 def slope(array):
     """Derivative or slope of an array: slp = slope(array)"""
     n = len(array)
     return array[1:n]-array[0:n-1]
 
+# Gaussian filter
+def gsmooth(data,fwhm,axis=-1,mode='reflect',cval=0.0,truncate=4.0):
+    return gaussian_filter1d(data,fwhm/2.35,axis=axis,mode=mode,cval=cval,truncate=truncate)
+
+# Rebin data
+def rebin(arr, new_shape):
+    if arr.ndim>2:
+        raise Exception("Maximum 2D arrays")
+    if arr.ndim==0:
+        raise Exception("Must be an array")
+    if arr.ndim==2:
+        shape = (new_shape[0], arr.shape[0] // new_shape[0],
+                 new_shape[1], arr.shape[1] // new_shape[1])
+        return arr.reshape(shape).mean(-1).mean(1)
+    if arr.ndim==1:
+        shape = (np.array(new_shape,ndmin=1)[0], arr.shape[0] // np.array(new_shape,ndmin=1)[0])
+        return arr.reshape(shape).mean(-1)
