@@ -552,15 +552,23 @@ def roi_cut(xcut,ycut,x,y):
 
     return ind, cutind
 
-# Determine if a variable is defined
-#def varexists(varname):
-#    exists = True
-#    try:
-#        exec('a = '+varname)
-#    except:
-#        exists = False
-#    return exists
-#
-#    #exists = False
-#    #if (varname in locals()) or (varname in globals()): exists=True
-#    #return exists
+
+def create_index(arr):
+    """ Create an index of array values like reverse indices."""
+
+    narr = size(arr)
+    si = np.argsort(arr)
+    sarr = arr[si]
+    brklo, = np.where(sarr != np.roll(sarr,1))
+    nbrk = len(brklo)
+    if nbrk>0:
+        brkhi = np.hstack((brklo[1:nbrk]-1,narr-1))
+        num = brkhi-brklo+1
+        index = {'index':si,'value':sarr[brklo],'num':num,'lo':brklo,'hi':brkhi}
+        #index = {index:si,value:sarr[brklo],num:num,lo:brklo,hi:brkhi}
+    else:
+        index = {'index':si,'value':arr[0],'num':narr,'lo':0L,'hi':narr-1}
+        #index = {index:si,value:arr[0],num:narr,lo:0L,hi:narr-1}
+
+    return index
+
