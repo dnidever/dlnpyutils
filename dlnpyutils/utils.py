@@ -554,21 +554,23 @@ def roi_cut(xcut,ycut,x,y):
 
 
 def create_index(arr):
-    """ Create an index of array values like reverse indices."""
+    """
+    Create an index of array values like reverse indices.
+
+    arr[index['index'][index['lo'][2]:index['hi'][2]+1]]
+    """
 
     narr = size(arr)
     si = np.argsort(arr)
-    sarr = arr[si]
+    sarr = np.array(arr)[si]
     brklo, = np.where(sarr != np.roll(sarr,1))
     nbrk = len(brklo)
     if nbrk>0:
         brkhi = np.hstack((brklo[1:nbrk]-1,narr-1))
         num = brkhi-brklo+1
         index = {'index':si,'value':sarr[brklo],'num':num,'lo':brklo,'hi':brkhi}
-        #index = {index:si,value:sarr[brklo],num:num,lo:brklo,hi:brkhi}
     else:
         index = {'index':si,'value':arr[0],'num':narr,'lo':0L,'hi':narr-1}
-        #index = {index:si,value:arr[0],num:narr,lo:0L,hi:narr-1}
 
     return index
 
