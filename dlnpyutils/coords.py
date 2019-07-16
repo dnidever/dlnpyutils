@@ -10,6 +10,7 @@ __version__ = '20190723'  # yyyymmdd
 
 import numpy as np
 from scipy.spatial import cKDTree
+import utils
 
 def rotsph(lon,lat,clon,clat,anode=None,reverse=False,original=False):
     '''
@@ -80,7 +81,7 @@ def rotsph(lon,lat,clon,clat,anode=None,reverse=False,original=False):
         phi = phip + np.arctan2( -np.cos(delta)*np.sin(alpha-alphap), np.sin(delta)*np.cos(deltap)- \
                                  np.cos(delta)*np.sin(deltap)*np.cos(alpha-alphap) )
 
-        theta = np.arcsin( limit((np.sin(delta)*np.sin(deltap)+np.cos(delta)*np.cos(deltap)*np.cos(alpha-alphap)),-1,1) )
+        theta = np.arcsin( utils.limit((np.sin(delta)*np.sin(deltap)+np.cos(delta)*np.cos(deltap)*np.cos(alpha-alphap)),-1,1) )
 
         # Preparing the output
         nlon = phi*radeg
@@ -194,7 +195,7 @@ def rotsphcen(lon,lat,clon,clat,polar=False,gnomic=False,reverse=False):
         if reverse is False:
             # Run rotsph.pro and specify the center of the field (the origin) as the
             #  the Npole
-            phi, theta = rotsph(lon,lat,clon[0],clat[0],original=True)
+            phi, theta = rotsph(lon,lat,clon,clat,original=True)
             # phi is now going clockwise and from South
             orig_phi = phi
             phi = -phi+180.0      # counterclockwise
@@ -236,7 +237,7 @@ def rotsphcen(lon,lat,clon,clat,polar=False,gnomic=False,reverse=False):
                 # y = R*cos(phi)
                 #nlon = rad*sin(phi/radeg)
                 #nlat = rad*cos(phi/radeg)
-                rad = sqrt(lon**2.0+lat**2.0)
+                rad = np.sqrt(lon**2.0+lat**2.0)
                 phi = radeg*np.arctan2(lon,lat)      # in degrees
                 # Scale the radius
                 #rad = radeg * cos(theta/radeg)/sin(theta/radeg)
@@ -247,7 +248,7 @@ def rotsphcen(lon,lat,clon,clat,polar=False,gnomic=False,reverse=False):
 
             #Run rotsph.pro and specify the center of the field (the origin) as the
             #  the Npole
-            nlon, nlat = rotsph(phi,theta,clon[0],clat[0],reverse=True,original=True)
+            nlon, nlat = rotsph(phi,theta,clon,clat,reverse=True,original=True)
 
     return nlon, nlat
 
