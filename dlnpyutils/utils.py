@@ -320,6 +320,7 @@ def writelines(filename=None,lines=None,overwrite=True):
 def remove_indices(lst=None,index=None):
     """
     This will remove elements from a list given their indices.
+    Use numpy.delete() for numpy arrays instead.
 
     Parameters
     ----------
@@ -352,6 +353,7 @@ def remove_indices(lst=None,index=None):
     newlst = []
     for i in range(len(lst)):
        if i not in index: newlst.append(lst[i])
+    if type(lst) is np.ndarray: newlst = np.array(newlst)
     return newlst
 
 
@@ -573,4 +575,185 @@ def create_index(arr):
         index = {'index':si,'value':arr[0],'num':narr,'lo':0L,'hi':narr-1}
 
     return index
+
+
+def match(a,b,epsilon=0):
+    """
+    Routine to match values in two vectors.
+    
+    CALLING SEQUENCE:
+        match, a, b, suba, subb, [ COUNT =, /SORT, EPSILON =  ]
+  
+    INPUTS:
+        a,b - two vectors to match elements, numeric or string data types
+    
+    OUTPUTS:
+      suba - subscripts of elements in vector a with a match
+                  in vector b
+      subb - subscripts of the positions of the elements in
+                  vector b with matchs in vector a.
+  
+          suba and subb are ordered such that a[suba] equals b[subb]
+          suba and subb are set to !NULL if there are no matches (or set to -1
+                if prior to IDL Version 8.0)
+  
+    OPTIONAL INPUT KEYWORD:
+          /SORT - By default, MATCH uses two different algorithm: (1) the
+                  /REVERSE_INDICES keyword to HISTOGRAM is used for integer data,
+                  while (2) a sorting algorithm is used for non-integer data.  The
+                  histogram algorithm is usually faster, except when the input
+                  vectors are sparse and contain very large numbers, possibly
+                  causing memory problems.   Use the /SORT keyword to always use
+                  the sort algorithm.
+          epsilon - if values are within epsilon, they are considered equal. Used only
+                  only for non-integer matching.  Note that input vectors should
+                  be unique to within epsilon to provide one-to-one mapping.
+                  Default=0.
+   
+    OPTIONAL KEYWORD OUTPUT:
+          COUNT - set to the number of matches, integer scalar
+   
+    SIDE EFFECTS:
+          The obsolete system variable !ERR is set to the number of matches;
+          however, the use !ERR is deprecated in favor of the COUNT keyword
+   
+    RESTRICTIONS:
+          The vectors a and b should not have duplicate values within them.
+          You can use rem_dup function to remove duplicate values
+          in a vector
+   
+    EXAMPLE:
+          If a = [3,5,7,9,11]   & b = [5,6,7,8,9,10]
+          then
+                  IDL> match, a, b, suba, subb, COUNT = count
+   
+          will give suba = [1,2,3], subb = [0,2,4],  COUNT = 3
+          and       a[suba] = b[subb] = [5,7,9]
+   
+   
+    METHOD:
+          For non-integer data types, the two input vectors are combined and
+          sorted and the consecutive equal elements are identified.   For integer
+          data types, the /REVERSE_INDICES keyword to HISTOGRAM of each array
+          is used to identify where the two arrays have elements in common.
+
+    HISTORY:
+         D. Lindler  Mar. 1986.
+         Fixed "indgen" call for very large arrays   W. Landsman  Sep 1991
+         Added COUNT keyword    W. Landsman   Sep. 1992
+         Fixed case where single element array supplied   W. Landsman Aug 95
+         Use a HISTOGRAM algorithm for integer vector inputs for improved
+               performance                W. Landsman         March 2000
+         Work again for strings           W. Landsman         April 2000
+         Use size(/type)                  W. Landsman         December 2002
+         Work for scalar integer input    W. Landsman         June 2003
+         Assume since V5.4, use COMPLEMENT to WHERE() W. Landsman Apr 2006
+         Added epsilon keyword            Kim Tolbert         March 14, 2008
+         Fix bug with Histogram method with all negative values W. Landsman/
+         R. Gutermuth, return !NULL for no matches  November 2017
+         Added epsilon test in na=1||nb=1 section (missed that when added
+               epsilon in 2008)           Kim Tolbert         July 10, 2018
+  
+    """
+
+    #da = size(a,/type) & db =size(b,/type)
+    #if keyword_set(sort) then hist = 0b else $
+    #  hist = (( da LE 3 ) || (da GE 12)) &&  ((db LE 3) || (db GE 12 ))
+
+    na = size(a)             # number of elements in a
+    nb = size(b)             # number of elements in b
+    
+    # Check for a single element array
+    if (na==1) | (nb==1):
+        if (nb>1):
+            if epsilon==0.0:
+                subb, = np.where(b==a)
+                nw = len(subb)
+            else:
+                subb, = np.where(np.abs(b-a) < epsilon)
+                nw = len(subb)
+            if (nw>0):
+                suba = np.zeros(w,long)
+            else:
+                suba = np.array([])
+        else:
+            if epsilon==0.0:
+                suba, = np.where(a==b)
+                nw = len(suba)
+            else:
+                suba, = np.where(np.abs(a-b) < epsilon)
+                nw = len(suba)
+            if (nw>0):
+                subb, = np.zero(nw,long)
+            else:
+                subb = np.array([])
+        count = nw
+        return suba,subb
+
+    c = np.hstack((np.array(a),np.array(b)))                     # combined list of a and b
+    ind = np.hstack((np.arange(na),np.arange(nb)))               # combined list of indices
+    vec = np.hstack((np.zeros(na,bool),np.zeros(nb,bool)+True))  # flag of which vector in  combined
+    #list   False - a   True - b
+
+    # sort combined list
+    sub = np.argsort(c)
+    c = c[sub]
+    ind = ind[sub]
+    vec = vec[sub]
+
+    # find duplicates in sorted combined list
+    n = na + nb                            #t otal elements in c
+    if epsilon == 0.0:
+      firstdup, = np.where( (c == np.roll(c,-1)) & (vec != np.roll(vec,-1)) )
+      count = len(firstdup)
+    else:
+      firstdup, = np.where( (np.abs(c - np.roll(c,-1)) < epsilon) & (vec != np.roll(vec,-1)) )
+      count = len(firstdup)
+
+    if count==0:               # any found?
+      suba = np.array([])
+      subb = np.array([])
+      return suba,subb
+
+    dup = np.zeros( count*2, long )        # both duplicate values
+    even = np.arange( len(firstdup))*2     # Changed to LINDGEN 6-Sep-1991
+    dup[even] = firstdup
+    dup[even+1] = firstdup+1
+    ind = ind[dup]                         # indices of duplicates
+    vec = vec[dup]                         # vector id of duplicates
+    vone, = np.where(vec)
+    vzero, = np.where(~vec)
+    subb = ind[vone]                       # b subscripts
+    suba = ind[vzero]
+
+
+    # # Integer calculation using histogram.
+    # else:
+    #
+    #     minab = min(a, MAX=maxa) > min(b, MAX=maxb) #Only need intersection of ranges
+    #     maxab = maxa < maxb
+    #
+    #     #If either set is empty, or their ranges don't intersect:
+    #     #  result = NULL (which is denoted by integer = -1)
+    #     !ERR = -1
+    #     if !VERSION.RELEASE GE '8.0' then begin
+    #        suba = !NULL
+    #        subb = !NULL
+    #     endif else begin
+    #        suba = -1
+    #        subb = -1
+    #     endelse
+    #     COUNT = 0L
+    #     if maxab lt minab then return       #No overlap
+    #
+    #     ha = histogram([a], MIN=minab, MAX=maxab, reverse_indices=reva)
+    #     hb = histogram([b], MIN=minab, MAX=maxab, reverse_indices=revb)
+    #
+    #     r = where((ha ne 0) and (hb ne 0), count)
+    #
+    #     if count gt 0 then begin
+    #        suba = reva[reva[r]]
+    #        subb = revb[revb[r]]
+    
+    return suba, subb
 

@@ -9,7 +9,7 @@ __authors__ = 'David Nidever <dnidever@noao.edu>'
 __version__ = '20190723'  # yyyymmdd
 
 import numpy as np
-
+from scipy.spatial import cKDTree
 
 def rotsph(lon,lat,clon,clat,anode=None,reverse=False,original=False):
     '''
@@ -328,3 +328,110 @@ def isLeft(x1, y1, x2, y2, x3, y3):
     return ( (x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1) )
 
 
+def xmatch(ra1,dec1,ra2,dec2,dcr):
+    """
+    Cross-match two sets of RA/DEC coordinates
+    """
+
+    scipy.spatial.KDTree.query()
+    astropy.match_coordinates_
+
+    # srcmatch, match_sph, take each element in 1st list and find closest neighbor in second list
+    #  within a certain distance
+
+
+# from astroML
+def crossmatch(X1, X2, max_distance=np.inf):
+    """Cross-match the values between X1 and X2
+
+    By default, this uses a KD Tree for speed.
+
+    Parameters
+    ----------
+    X1 : array_like
+        first dataset, shape(N1, D)
+    X2 : array_like
+        second dataset, shape(N2, D)
+    max_distance : float (optional)
+        maximum radius of search.  If no point is within the given radius,
+        then inf will be returned.
+
+    Returns
+    -------
+    dist, ind: ndarrays
+        The distance and index of the closest point in X2 to each point in X1
+        Both arrays are length N1.
+        Locations with no match are indicated by
+        dist[i] = inf, ind[i] = N2
+    """
+    X1 = np.asarray(X1, dtype=float)
+    X2 = np.asarray(X2, dtype=float)
+
+    N1, D = X1.shape
+    N2, D2 = X2.shape
+
+    if D != D2:
+        raise ValueError('Arrays must have the same second dimension')
+
+    kdt = cKDTree(X2)
+
+    dist, ind = kdt.query(X1, k=1, distance_upper_bound=max_distance)
+
+    return dist, ind
+
+# from astroML, modified by D. Nidever
+def xmatch(ra1, dec1, ra2, dec2, dcr=np.inf):
+    """Cross-match angular values between RA1/DEC1 and RA2/DEC2
+
+    by default, this uses a KD Tree for speed.  Because the
+    KD Tree only handles cartesian distances, the angles
+    are projected onto a 3D sphere.
+
+    Parameters
+    ----------
+    ra1/dec1 : array_like
+        first dataset, arrays of RA and DEC
+        both measured in degrees
+    ra2/dec2 : array_like
+        second dataset, arrays of RA and DEC
+        both measured in degrees
+    dcr : float (optional)
+        maximum radius of search, measured in arcsec.
+
+    Returns
+    -------
+    ind1, ind2, dist: ndarrays
+        The indices for RA1/DEC1 (ind1) and for RA2/DEC2 (ind2) of the
+        matches, and the distances (in arcsec).
+    """
+    X1 = np.vstack((ra1,dec1)).T
+    X2 = np.vstack((ra2,dec2)).T
+    
+    X1 = X1 * (np.pi / 180.)
+    X2 = X2 * (np.pi / 180.)
+    max_distance = dcr / 3600 * (np.pi / 180.)
+
+    # Convert 2D RA/DEC to 3D cartesian coordinates
+    Y1 = np.transpose(np.vstack([np.cos(X1[:, 0]) * np.cos(X1[:, 1]),
+                                 np.sin(X1[:, 0]) * np.cos(X1[:, 1]),
+                                 np.sin(X1[:, 1])]))
+    Y2 = np.transpose(np.vstack([np.cos(X2[:, 0]) * np.cos(X2[:, 1]),
+                                 np.sin(X2[:, 0]) * np.cos(X2[:, 1]),
+                                 np.sin(X2[:, 1])]))
+
+    # law of cosines to compute 3D distance
+    max_y = np.sqrt(2 - 2 * np.cos(max_distance))
+    dist, ind = crossmatch(Y1, Y2, max_y)
+
+    # convert distances back to angles using the law of tangents
+    not_inf = ~np.isinf(dist)
+    x = 0.5 * dist[not_inf]
+    dist[not_inf] = (180. / np.pi * 2 * np.arctan2(x,
+                                  np.sqrt(np.maximum(0, 1 - x ** 2))))
+
+    # Change to the output that I want
+    ind1 = np.arange(len(ra1))[not_inf]
+    ind2 = ind[not_inf]
+    mindist = dist[not_inf] * 3600.0   # in arcsec
+    
+    return ind1, ind2, mindist
