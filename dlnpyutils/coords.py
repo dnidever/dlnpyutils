@@ -409,7 +409,7 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=np.inf):
     
     X1 = X1 * (np.pi / 180.)
     X2 = X2 * (np.pi / 180.)
-    max_distance = dcr / 3600 * (np.pi / 180.)
+    max_distance = (dcr / 3600) * (np.pi / 180.)
 
     # Convert 2D RA/DEC to 3D cartesian coordinates
     Y1 = np.transpose(np.vstack([np.cos(X1[:, 0]) * np.cos(X1[:, 1]),

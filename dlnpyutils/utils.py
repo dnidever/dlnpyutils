@@ -431,6 +431,7 @@ def remove(files=None,allow=True):
 
 def lt(x,limit):
     """Takes the lesser of x or limit"""
+    # np.minimum() also does this
     if np.array(x).size>1:
         out = [i if (i<limit) else limit for i in x]
     else:
@@ -440,6 +441,7 @@ def lt(x,limit):
     
 def gt(x,limit):
     """Takes the greater of x or limit"""
+    # np.maximum() also does this
     if np.array(x).size>1:
         out = [i if (i>limit) else limit for i in x]
     else:
