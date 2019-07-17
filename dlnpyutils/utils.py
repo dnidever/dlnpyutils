@@ -544,7 +544,7 @@ def roi_cut(xcut,ycut,x,y):
 
     from matplotlib.path import Path
 
-    tupVerts = zip(xcut,ycut)
+    tupVerts = list(zip(xcut,ycut))
 
     points = np.vstack((x,y)).T
     
@@ -675,7 +675,7 @@ def match(a,b,epsilon=0):
                 subb, = np.where(np.abs(b-a) < epsilon)
                 nw = len(subb)
             if (nw>0):
-                suba = np.zeros(w,long)
+                suba = np.zeros(w,int)
             else:
                 suba = np.array([])
         else:
@@ -686,7 +686,7 @@ def match(a,b,epsilon=0):
                 suba, = np.where(np.abs(a-b) < epsilon)
                 nw = len(suba)
             if (nw>0):
-                subb, = np.zero(nw,long)
+                subb, = np.zero(nw,int)
             else:
                 subb = np.array([])
         count = nw
@@ -717,7 +717,7 @@ def match(a,b,epsilon=0):
       subb = np.array([])
       return suba,subb
 
-    dup = np.zeros( count*2, long )        # both duplicate values
+    dup = np.zeros( count*2, int )        # both duplicate values
     even = np.arange( len(firstdup))*2     # Changed to LINDGEN 6-Sep-1991
     dup[even] = firstdup
     dup[even+1] = firstdup+1
