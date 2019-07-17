@@ -62,7 +62,7 @@ def mkrunbatch():
         lines.append("  echo 'JOBID='$!\n")
         lines.append("fi\n")
         writelines(batchfile,lines,overwrite=True)
-        os.chmod(batchfile,0755)
+        os.chmod(batchfile,0o755)
     return batchfile
 
 
@@ -72,7 +72,7 @@ def mkidlbatch():
     if os.path.exists(batchfile) is False:
         try:
             out = subprocess.check_output(['which','idl'],stderr=subprocess.STDOUT,shell=False)
-        except subprocess.CalledProcessError, e:
+        except subprocess.CalledProcessError:
             raise Exception("IDL program not available")
         idlprog = out.strip()
         if os.path.exists(idlprog) is False:
@@ -87,7 +87,7 @@ def mkidlbatch():
         lines.append("  echo 'JOBID='$!\n")
         lines.append("fi\n")
         writelines(batchfile,lines,overwrite=True)
-        os.chmod(batchfile,0755)
+        os.chmod(batchfile,0o755)
     return batchfile
 
 
@@ -269,7 +269,7 @@ def makescript(input=None,indir=None,name=None,prefix=None,hyperthread=True,idle
             # Writing the file
             writelines(scriptname[i],cmd,overwrite=True)
             # Make SHELL scripts executable
-            if idle is False: os.chmod(scriptname[i],0755)
+            if idle is False: os.chmod(scriptname[i],0o755)
             # Print info
             print('HYPERTHREAD script written to: '+str(scriptname[i]))
 
@@ -318,7 +318,7 @@ def submitjob(scriptname=None,indir=None,hyperthread=True,idle=False):
     if hyperthread is False:
         try:
             out = subprocess.check_output('qsub '+scriptname,stderr=subprocess.STDOUT,shell=True)
-        except subprocess.CalledProcessError, e:
+        except subprocess.CalledProcessError:
             raise Exception("Problem submitting PBS job")
         jobid = first_el(out)
         logfile = scriptname+'.log'
@@ -573,7 +573,7 @@ def job_daemon(input=None,dirs=None,inpname=None,nmulti=4,prefix="job",hyperthre
     if idle is True:
         try:
             out = subprocess.check_output(['which','idl'],stderr=subprocess.STDOUT,shell=False)
-        except subprocess.CalledProcessError, e:
+        except subprocess.CalledProcessError:
             raise Exception("IDL program not available")
         idlprog = out.strip()
         if os.path.exists(idlprog) is False:

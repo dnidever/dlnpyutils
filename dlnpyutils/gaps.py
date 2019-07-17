@@ -24,26 +24,25 @@ def gap(data, refs=None, nrefs=20, ks=range(1,11)):
     shape = data.shape
     if refs==None:
         tops = data.max(axis=0)
-	bots = data.min(axis=0)
-	dists = scipy.matrix(scipy.diag(tops-bots))
+        bots = data.min(axis=0)
+        dists = scipy.matrix(scipy.diag(tops-bots))
 	
-
-	rands = scipy.random.random_sample(size=(shape[0],shape[1],nrefs))
-	for i in range(nrefs):
-	    rands[:,:,i] = rands[:,:,i]*dists+bots
+        rands = scipy.random.random_sample(size=(shape[0],shape[1],nrefs))
+        for i in range(nrefs):
+            rands[:,:,i] = rands[:,:,i]*dists+bots
     else:
-	rands = refs
+        rands = refs
 
     gaps = scipy.zeros((len(ks),))
     for (i,k) in enumerate(ks):
-	(kmc,kml) = scipy.cluster.vq.kmeans2(data, k)
-	disp = sum([dst(data[m,:],kmc[kml[m],:]) for m in range(shape[0])])
+        (kmc,kml) = scipy.cluster.vq.kmeans2(data, k)
+        disp = sum([dst(data[m,:],kmc[kml[m],:]) for m in range(shape[0])])
 
-	refdisps = scipy.zeros((rands.shape[2],))
-	for j in range(rands.shape[2]):
-	    (kmc,kml) = scipy.cluster.vq.kmeans2(rands[:,:,j], k)
-	    refdisps[j] = sum([dst(rands[m,:,j],kmc[kml[m],:]) for m in range(shape[0])])
-	#gaps[i] = scipy.log(scipy.mean(refdisps))-scipy.log(disp)
+        refdisps = scipy.zeros((rands.shape[2],))
+        for j in range(rands.shape[2]):
+            (kmc,kml) = scipy.cluster.vq.kmeans2(rands[:,:,j], k)
+            refdisps[j] = sum([dst(rands[m,:,j],kmc[kml[m],:]) for m in range(shape[0])])
+        #gaps[i] = scipy.log(scipy.mean(refdisps))-scipy.log(disp)
         gaps[i] = scipy.mean(scipy.log(refdisps))-scipy.log(disp)
     return gaps
 

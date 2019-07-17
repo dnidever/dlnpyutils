@@ -232,7 +232,7 @@ def grep(lines=None,expr=None,index=False):
     if lines is None: raise ValueError("lines must be input")
     if expr is None: raise ValueError("expr must be input")
     out = []
-    cnt = 0L
+    cnt = 0
     for l in np.array(lines,ndmin=1):
         m = re.search(expr,l)
         if m != None:
@@ -574,7 +574,7 @@ def create_index(arr):
         num = brkhi-brklo+1
         index = {'index':si,'value':sarr[brklo],'num':num,'lo':brklo,'hi':brkhi}
     else:
-        index = {'index':si,'value':arr[0],'num':narr,'lo':0L,'hi':narr-1}
+        index = {'index':si,'value':arr[0],'num':narr,'lo':0,'hi':narr-1}
 
     return index
 
