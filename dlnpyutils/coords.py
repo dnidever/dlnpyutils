@@ -10,7 +10,7 @@ __version__ = '20190723'  # yyyymmdd
 
 import numpy as np
 from scipy.spatial import cKDTree
-import utils
+from . import utils
 
 def rotsph(lon,lat,clon,clat,anode=None,reverse=False,original=False):
     '''
