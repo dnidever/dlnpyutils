@@ -572,9 +572,11 @@ def create_index(arr):
     if nbrk>0:
         brkhi = np.hstack((brklo[1:nbrk]-1,narr-1))
         num = brkhi-brklo+1
-        index = {'index':si,'value':sarr[brklo],'num':num,'lo':brklo,'hi':brkhi}
+        index = {'index':np.atleast1_1d(si),'value':np.atleast_1d(sarr[brklo]),
+                 'num':np.atleast_1d(num),'lo':np.atleast_1d(brklo),'hi':np.atleast_1d(brkhi)}
     else:
-        index = {'index':si,'value':arr[0],'num':narr,'lo':0,'hi':narr-1}
+        index = {'index':np.atleast_1d(si),'value':np.atleast_1d(arr[0]),
+                 'num':np.atleast_1d(narr),'lo':np.atleast_1d(0),'hi':np.atleast_1d(narr-1)}
 
     return index
 
