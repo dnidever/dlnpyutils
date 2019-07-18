@@ -521,9 +521,11 @@ def gaussfit(x,y,initpar,sigma=None, bounds=None):
 
 def poly(x,coef):
     """ Evaluate a polynomial function of a variable."""
+    # p(x) = p[0] * x**deg + ... + p[deg]
     y = x.copy()*0.0
-    for i in range(len(coef)):
-        y += coef[i]*x**i
+    n = len(x)
+    for i in range(n):
+        y += coef[i]*x**(n-1-i)
     return y
 
 def poly_resid(coef,x,y,sigma=1.0):
@@ -538,6 +540,7 @@ def poly_fit(x,y,nord,robust=False,sigma=None,bounds=(-np.inf,np.inf)):
         #coef = curve_fit(poly, x, y, p0=initpar, sigma=sigma, bounds=bounds)
         weights = None
         if sigma is not None: weights=1/sigma
+        if len(x)>
         coef, cov = np.polyfit(x,y,nord,w=weights,cov=True)
         perr = np.sqrt(np.diag(cov))
     # Fit with robust polynomial
