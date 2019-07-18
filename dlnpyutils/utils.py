@@ -519,10 +519,13 @@ def gaussfit(x,y,initpar,sigma=None, bounds=None):
     if binned is True: func=gaussbin
     return curve_fit(func, x, y, p0=initpar, sigma=sigma, bounds=bounds)
 
-def poly(x,coef):
+def poly(x,coef,*args):
     """ Evaluate a polynomial function of a variable."""
     # p(x) = p[0] * x**deg + ... + p[deg]
-    y = x.copy()*0.0
+    y = np.array(x).copy()*0.0
+    # concatenate coefficients
+    if len(args)>0:
+        coef = np.hstack((coef,np.array(args)))
     n = len(coef)
     for i in range(n):
         y += coef[i]*x**(n-1-i)
@@ -536,13 +539,20 @@ def poly_resid(coef,x,y,sigma=1.0):
 def poly_fit(x,y,nord,robust=False,sigma=None,bounds=(-np.inf,np.inf)):
     initpar = np.zeros(nord+1)
     # Normal polynomial fitting
-    #    #coef = curve_fit(poly, x, y, p0=initpar, sigma=sigma, bounds=bounds)
-    #    weights = None
-    #    if sigma is not None: weights=1/sigma
-    #    #if len(x)>
-    #    coef, cov = np.polyfit(x,y,nord,w=weights,cov=True)
-    #    perr = np.sqrt(np.diag(cov))
-    # the polyfit covariance values are crazy
+    #if sigma is None: sigma=np.zeros(len(x))+1
+    #coef, cov = curve_fit(poly, x, y, p0=initpar, sigma=sigma, bounds=bounds)
+    #perr = np.sqrt(np.diag(cov))
+    #return coef, perr
+
+    #weights = None
+    #if sigma is not None: weights=1/sigma
+    ##coef, cov = np.polyfit(x,y,nord,w=weights) #,cov=True)
+    #coef = np.polyfit(x,y,nord,w=weights)
+    #perr = coef.copy()*0.0
+    ##    perr = np.sqrt(np.diag(cov))
+    ## the polyfit covariance values are crazy
+    #return coef, perr
+
     loss = 'linear'
     if robust: loss='soft_l1'
     if sigma is None: sigma=np.zeros(len(x))+1
