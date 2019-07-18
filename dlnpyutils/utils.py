@@ -14,19 +14,20 @@ import os
 import sys
 import numpy as np
 import warnings
-#from astropy.io import fits
+from astropy.io import fits
+from astropy.table import Table, Column
+from astropy import modeling
+from glob import glob
+from scipy.signal import medfilt
+from scipy.ndimage.filters import median_filter,gaussian_filter1d
+from scipy.optimize import curve_fit, least_squares
+from scipy.special import erf
+from scipy.interpolate import interp1d
 #from astropy.utils.exceptions import AstropyWarning
-#import time
-#import shutil
-#import re
-#import subprocess
-#import glob
-#import logging
 #import socket
 #from scipy.signal import convolve2d
 #from scipy.ndimage.filters import convolve
 import astropy.stats
-from scipy.optimize import least_squares
 
 # Ignore these warnings, it's a bug
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
@@ -458,12 +459,63 @@ def gaussian(x, amp, cen, sig, const=0):
     """1-D gaussian: gaussian(x, amp, cen, sig)"""
     return (amp / (np.sqrt(2*np.pi) * sig)) * np.exp(-(x-cen)**2 / (2*sig**2)) + const
 
+def gaussbin(x, amp, cen, sig, const=0, dx=1.0):
+    """1-D gaussian with pixel binning
+    
+    This function returns a binned Gaussian
+    par = [height, center, sigma]
+    
+    Parameters
+    ----------
+    x : array
+       The array of X-values.
+    amp : float
+       The Gaussian height/amplitude.
+    cen : float
+       The central position of the Gaussian.
+    sig : float
+       The Gaussian sigma.
+    const : float, optional, default=0.0
+       A constant offset.
+    dx : float, optional, default=1.0
+      The width of each "pixel" (scalar).
+    
+    Returns
+    -------
+    geval : array
+          The binned Gaussian in the pixel
+
+    """
+
+    xcen = np.array(x)-cen             # relative to the center
+    x1cen = xcen - 0.5*dx  # left side of bin
+    x2cen = xcen + 0.5*dx  # right side of bin
+
+    t1cen = x1cen/(np.sqrt(2.0)*sig)  # scale to a unitless Gaussian
+    t2cen = x2cen/(np.sqrt(2.0)*sig)
+
+    # For each value we need to calculate two integrals
+    #  one on the left side and one on the right side
+
+    # Evaluate each point
+    #   ERF = 2/sqrt(pi) * Integral(t=0-z) exp(-t^2) dt
+    #   negative for negative z
+    geval_lower = erf(t1cen)
+    geval_upper = erf(t2cen)
+
+    geval = amp*np.sqrt(2.0)*sig * np.sqrt(np.pi)/2.0 * ( geval_upper - geval_lower )
+    geval += const   # add constant offset
+
+    return geval
+
 def gaussfit(x,y,initpar,sigma=None, bounds=None):
     """Fit 1-D Gaussian to X/Y data"""
     #gmodel = Model(gaussian)
     #result = gmodel.fit(y, x=x, amp=initpar[0], cen=initpar[1], sig=initpar[2], const=initpar[3])
     #return result
-    return curve_fit(gaussian, x, y, p0=initpar, sigma=sigma, bounds=bounds)
+    func = gaussian
+    if binned is True: func=gaussbin
+    return curve_fit(func, x, y, p0=initpar, sigma=sigma, bounds=bounds)
 
 def poly(x,coef):
     """ Evaluate a polynomial function of a variable."""
@@ -471,6 +523,11 @@ def poly(x,coef):
     for i in range(len(coef)):
         y += coef[i]*x**i
     return y
+
+def poly_resid(coef,x,y,sigma=1.0):
+    sig = sigma
+    if sigma is None: sig=1.0
+    return (poly(x,coef)-y)/sig
 
 def poly_fit(x,y,nord,robust=False,sigma=None,bounds=(-np.inf,np.inf)):
     initpar = np.zeros(nord+1)
