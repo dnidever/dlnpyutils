@@ -540,7 +540,7 @@ def poly_fit(x,y,nord,robust=False,sigma=None,bounds=(-np.inf,np.inf)):
         #coef = curve_fit(poly, x, y, p0=initpar, sigma=sigma, bounds=bounds)
         weights = None
         if sigma is not None: weights=1/sigma
-        if len(x)>
+        #if len(x)>
         coef, cov = np.polyfit(x,y,nord,w=weights,cov=True)
         perr = np.sqrt(np.diag(cov))
     # Fit with robust polynomial
