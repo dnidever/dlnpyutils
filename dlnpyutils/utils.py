@@ -26,6 +26,7 @@ import warnings
 #from scipy.signal import convolve2d
 #from scipy.ndimage.filters import convolve
 import astropy.stats
+from scipy.optimize import least_squares
 
 # Ignore these warnings, it's a bug
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
