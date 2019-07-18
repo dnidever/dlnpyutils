@@ -536,14 +536,27 @@ def poly_fit(x,y,nord,robust=False,sigma=None,bounds=(-np.inf,np.inf)):
         #coef = curve_fit(poly, x, y, p0=initpar, sigma=sigma, bounds=bounds)
         weights = None
         if sigma is not None: weights=1/sigma
-        coef = np.polyfit(x,y,nord,w=weights)
+        coef, cov = np.polyfit(x,y,nord,w=weights,cov=True)
+        perr = np.sqrt(np.diag(cov))
     # Fit with robust polynomial
     else:
         res_robust = least_squares(poly_resid, initpar, loss='soft_l1', f_scale=0.1, args=(x,y,sigma))
         if res_robust.success is False:
             raise Exception("Problem with least squares polynomial fitting. Status="+str(res_robust.status))
+            return initpar+np.nan
         coef = res_robust.x
-    return coef
+        # Calculate the covariance matrix
+        #  this is how scipy.optimize.curve_fit computes the covariance matrix
+        #  https://github.com/scipy/scipy/blob/2526df72e5d4ca8bad6e2f4b3cbdfbc33e805865/scipy/optimize/minpack.py#L739
+        _, s, VT = svd(res_robust.jac, full_matrices=False)
+        threshold = np.finfo(float).eps * max(res_robust.jac.shape) * s[0]
+        s = s[s > threshold]
+        VT = VT[:s.size]
+        pcov = np.dot(VT.T / s**2, VT)
+        # Compute errors on the parameters
+        perr = np.sqrt(np.diag(pcov))
+
+    return coef, perr
 
 # Derivative or slope of an array
 def slope(array):
