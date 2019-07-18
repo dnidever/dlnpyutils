@@ -523,7 +523,7 @@ def poly(x,coef):
     """ Evaluate a polynomial function of a variable."""
     # p(x) = p[0] * x**deg + ... + p[deg]
     y = x.copy()*0.0
-    n = len(x)
+    n = len(coef)
     for i in range(n):
         y += coef[i]*x**(n-1-i)
     return y
