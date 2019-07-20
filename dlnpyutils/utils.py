@@ -457,23 +457,85 @@ def limit(x,llimit,ulimit):
     """Require x to be within upper and lower limits"""
     return lt(gt(x,llimit),ulimit)
 
-def wtmean(x,sigma):
+def quadratic_bisector(x,y):
+    """ Calculate the axis of symmetric or bisector of parabola"""
+    #https://www.azdhs.gov/documents/preparedness/state-laboratory/lab-licensure-certification/technical-resources/
+    #    calibration-training/12-quadratic-least-squares-regression-calib.pdf
+    #quadratic regression statistical equation
+    n = len(x)
+    if n<3:
+        return None
+    Sxx = np.sum(x**2) - np.sum(x)**2/n
+    Sxy = np.sum(x*y) - np.sum(x)*np.sum(y)/n
+    Sxx2 = np.sum(x**3) - np.sum(x)*np.sum(x**2)/n
+    Sx2y = np.sum(x**2 * y) - np.sum(x**2)*np.sum(y)/n
+    Sx2x2 = np.sum(x**4) - np.sum(x**2)**2/n
+    #a = ( S(x^2*y)*S(xx)-S(xy)*S(xx^2) ) / ( S(xx)*S(x^2x^2) - S(xx^2)^2 )
+    #b = ( S(xy)*S(x^2x^2) - S(x^2y)*S(xx^2) ) / ( S(xx)*S(x^2x^2) - S(xx^2)^2 )
+    denom = Sxx*Sx2x2 - Sxx2**2
+    if denom==0:
+        return np.nan
+    a = ( Sx2y*Sxx - Sxy*Sxx2 ) / denom
+    b = ( Sxy*Sx2x2 - Sx2y*Sxx2 ) / denom
+    if a==0:
+        return np.nan
+    return -b/(2*a)
+
+def wtmean(x,sigma,error=False):
     """ Calculate weighted mean and error"""
     n = len(x)
     wt = 1/sigma**2
     xmn = np.sum(wt*x)/np.sum(wt)
-    xerr = np.sqrt( np.sum( ((x-xmn)**2)*wt)*n / ((n-1)*np.sum(wt))) / np.sqrt(n)
-    return xmn,xerr
+    if error:
+        xerr = np.sqrt( np.sum( ((x-xmn)**2)*wt)*n / ((n-1)*np.sum(wt))) / np.sqrt(n)
+        return xmn,xerr
+    else:
+        return xmn
 
-def wtslope(x,y,sigma):
+def wtslope(x,y,sigma,error=False):
     """ Calculate weighted slope and error"""
     wt = 1/sigma**2
     mnx = np.sum(wt*x)/np.sum(wt)
     mny = np.sum(wt*y)/np.sum(wt)
     wtx =  (np.sum(wt*x*y)/np.sum(wt)-mnx*mny)/(np.sum(wt*x**2)/np.sum(wt)-mnx**2)
-    wtxerr = 1.0/np.sqrt( np.sum(wt*x**2)-mnx**2 * np.sum(wt))
-    return wtx, wtxerr
-    
+    if error:
+        wtxerr = 1.0/np.sqrt( np.sum(wt*x**2)-mnx**2 * np.sum(wt))
+        return wtx, wtxerr
+    else:
+        return wtx
+
+def robust_slope(x,y,sigma,limits=None,npt=15):
+    """ Calculate robust weighted slope"""
+    # Maybe add sigma outlier rejection in the future
+    n = len(x)
+    # Calculate weighted pmx/pmxerr
+    wt_slp,wt_slperr = wtslope(x,y,sigma,error=True)
+    wt_y, wt_yerr = wtmean(y,sigma,error=True)
+    # Unweighted slope
+    uwt_slp = wtslope(x,y,sigma*0+1)
+    # Calculate robust loss metric for range of slope values
+    if limits is None:
+        limits = np.array([np.min([0.5*wt_slp,0.5*uwt_slp]), np.max([1.5*wt_slp,1.5*uwt_slp])])
+    slp_step = (np.max(limits)-np.min(limits))/(npt-1)
+    slp_arr = np.arange(npt)*slp_step + np.min(limits)
+    # Vectorize it
+    resid = np.outer(y,np.ones(npt))-np.outer(x,np.ones(npt))*np.outer(np.ones(n),slp_arr)
+    mnresid = np.mean(resid,axis=0)
+    resid -= np.outer(np.ones(n),mnresid)
+    chisq = np.sum( np.abs(resid) / np.outer(sigma,np.ones(npt)) ,axis=0)
+    bestind = np.argmin(chisq)
+    best_slp = slp_arr[bestind]
+    # Get parabola bisector
+    lo = np.maximum(0,bestind-2)
+    hi = np.maximum(bestind+2,n)
+    quad_slp = quadratic_bisector(slp_arr[lo:hi],chisq[lo:hi])
+    # Problem with parabola bisector, use best point instead                                                                                                                 
+    if np.isnan(quad_slp) | (np.abs(quad_slp-best_slp)> slp_step):
+        best_slp = best_slp
+    else:
+        best_slp = quad_slp
+    return best_slp, wt_slperr
+
 def gaussian(x, amp, cen, sig, const=0):
     """1-D gaussian: gaussian(x, amp, cen, sig)"""
     return (amp / (np.sqrt(2*np.pi) * sig)) * np.exp(-(x-cen)**2 / (2*sig**2)) + const
@@ -553,45 +615,52 @@ def poly_resid(coef,x,y,sigma=1.0):
     if sigma is None: sig=1.0
     return (poly(x,coef)-y)/sig
 
-def poly_fit(x,y,nord,robust=False,sigma=None,bounds=(-np.inf,np.inf)):
-    initpar = np.zeros(nord+1)
+def poly_fit(x,y,nord,robust=False,sigma=None,initpar=None,bounds=(-np.inf,np.inf),error=False,max_nfev=None):
+    if initpar is None: initpar = np.zeros(nord+1)
     # Normal polynomial fitting
     #if sigma is None: sigma=np.zeros(len(x))+1
     #coef, cov = curve_fit(poly, x, y, p0=initpar, sigma=sigma, bounds=bounds)
     #perr = np.sqrt(np.diag(cov))
     #return coef, perr
 
-    weights = None
-    if sigma is not None: weights=1/sigma**2
-    if len(x)>nord+3:
-        coef, cov = np.polyfit(x,y,nord,w=weights,cov='unscaled')
-        perr = np.sqrt(np.diag(cov))
-    else:
-        coef = np.polyfit(x,y,nord,w=weights)
-        perr = coef.copy()*0.0
-    # the polyfit covariance values are crazy
-    return coef, perr
+    #weights = None
+    #if sigma is not None: weights=1/sigma**2
+    #if error:
+    #    if len(x)>nord+3:
+    #        coef, cov = np.polyfit(x,y,nord,w=weights,cov='unscaled')
+    #        perr = np.sqrt(np.diag(cov))
+    #    else:
+    #        coef = np.polyfit(x,y,nord,w=weights)
+    #        perr = coef.copy()*0.0
+    #
+    #    return coef, perr
+    #else:
+    #    coef = np.polyfit(x,y,nord,w=weights)
+    #    return coef
 
     loss = 'linear'
     if robust: loss='soft_l1'
     if sigma is None: sigma=np.zeros(len(x))+1
-    res = least_squares(poly_resid, initpar, loss=loss, f_scale=0.1, args=(x,y,sigma))
+    res = least_squares(poly_resid, initpar, loss=loss, f_scale=0.1, args=(x,y,sigma), max_nfev=max_nfev)
     if res.success is False:
+        import pdb; pdb.set_trace()
         raise Exception("Problem with least squares polynomial fitting. Status="+str(res.status))
         return initpar+np.nan
     coef = res.x
     # Calculate the covariance matrix
     #  this is how scipy.optimize.curve_fit computes the covariance matrix
     #  https://github.com/scipy/scipy/blob/2526df72e5d4ca8bad6e2f4b3cbdfbc33e805865/scipy/optimize/minpack.py#L739
-    _, s, VT = svd(res.jac, full_matrices=False)
-    threshold = np.finfo(float).eps * max(res.jac.shape) * s[0]
-    s = s[s > threshold]
-    VT = VT[:s.size]
-    pcov = np.dot(VT.T / s**2, VT)
-    # Compute errors on the parameters
-    perr = np.sqrt(np.diag(pcov))
-
-    return coef, perr
+    if error:
+        _, s, VT = svd(res.jac, full_matrices=False)
+        threshold = np.finfo(float).eps * max(res.jac.shape) * s[0]
+        s = s[s > threshold]
+        VT = VT[:s.size]
+        pcov = np.dot(VT.T / s**2, VT)
+        # Compute errors on the parameters
+        perr = np.sqrt(np.diag(pcov))
+        return coef, perr
+    else:
+        return coef
 
 # Derivative or slope of an array
 def slope(array):
