@@ -457,8 +457,16 @@ def limit(x,llimit,ulimit):
     """Require x to be within upper and lower limits"""
     return lt(gt(x,llimit),ulimit)
 
+def wtmean(x,sigma):
+    """ Calculate weighted mean and error"""
+    n = len(x)
+    wt = 1/sigma**2
+    xmn = np.sum(wt*x)/np.sum(wt)
+    xerr = np.sqrt( np.sum( ((x-xmn)**2)*wt)*n / ((n-1)*np.sum(wt))) / np.sqrt(n)
+    return xmn,xerr
+
 def wtslope(x,y,sigma):
-    """ Calculate weighted pmra/pmraerr"""
+    """ Calculate weighted slope and error"""
     wt = 1/sigma**2
     mnx = np.sum(wt*x)/np.sum(wt)
     mny = np.sum(wt*y)/np.sum(wt)
