@@ -456,6 +456,15 @@ def gt(x,limit):
 def limit(x,llimit,ulimit):
     """Require x to be within upper and lower limits"""
     return lt(gt(x,llimit),ulimit)
+
+def wtslope(x,y,sigma):
+    """ Calculate weighted pmra/pmraerr"""
+    wt = 1/sigma**2
+    mnx = np.sum(wt*x)/np.sum(wt)
+    mny = np.sum(wt*y)/np.sum(wt)
+    wtx =  (np.sum(wt*x*y)/np.sum(wt)-mnx*mny)/(np.sum(wt*x**2)/np.sum(wt)-mnx**2)
+    wtxerr = 1.0/np.sqrt( np.sum(wt*x**2)-mnx**2 * np.sum(wt))
+    return wtx, wtxerr
     
 def gaussian(x, amp, cen, sig, const=0):
     """1-D gaussian: gaussian(x, amp, cen, sig)"""
@@ -544,14 +553,16 @@ def poly_fit(x,y,nord,robust=False,sigma=None,bounds=(-np.inf,np.inf)):
     #perr = np.sqrt(np.diag(cov))
     #return coef, perr
 
-    #weights = None
-    #if sigma is not None: weights=1/sigma
-    ##coef, cov = np.polyfit(x,y,nord,w=weights) #,cov=True)
-    #coef = np.polyfit(x,y,nord,w=weights)
-    #perr = coef.copy()*0.0
-    ##    perr = np.sqrt(np.diag(cov))
-    ## the polyfit covariance values are crazy
-    #return coef, perr
+    weights = None
+    if sigma is not None: weights=1/sigma**2
+    if len(x)>nord+3:
+        coef, cov = np.polyfit(x,y,nord,w=weights,cov='unscaled')
+        perr = np.sqrt(np.diag(cov))
+    else:
+        coef = np.polyfit(x,y,nord,w=weights)
+        perr = coef.copy()*0.0
+    # the polyfit covariance values are crazy
+    return coef, perr
 
     loss = 'linear'
     if robust: loss='soft_l1'
