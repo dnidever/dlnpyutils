@@ -508,6 +508,8 @@ def robust_slope(x,y,sigma,limits=None,npt=15):
     """ Calculate robust weighted slope"""
     # Maybe add sigma outlier rejection in the future
     n = len(x)
+    if n==2:
+        return wtslope(x,y,sigma,error=True)
     # Calculate weighted pmx/pmxerr
     wt_slp,wt_slperr = wtslope(x,y,sigma,error=True)
     wt_y, wt_yerr = wtmean(y,sigma,error=True)
