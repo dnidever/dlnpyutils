@@ -481,18 +481,25 @@ def quadratic_bisector(x,y):
         return np.nan
     return -b/(2*a)
 
-def wtmean(x,sigma,error=False):
+def wtmean(x,sigma,error=False,reweight=False):
     """ Calculate weighted mean and error"""
     n = len(x)
     wt = 1/sigma**2
     xmn = np.sum(wt*x)/np.sum(wt)
+    # Reweight the points based on the residuals
+    #  using formula similar to the one given by
+    #  Stetson (1996) pg.4
+    if reweight:
+        resid = x-xmn
+        wfac = 1/(1+np.abs(resid)**2/np.mean(sigma))
+        xmn = np.sum(wt*wfac*x)/np.sum(wt*wfac)
     if error:
         xerr = np.sqrt( np.sum( ((x-xmn)**2)*wt)*n / ((n-1)*np.sum(wt))) / np.sqrt(n)
         return xmn,xerr
     else:
         return xmn
 
-def wtslope(x,y,sigma,error=False):
+def wtslope(x,y,sigma,error=False,reweight=False):
     """ Calculate weighted slope and error"""
     n = len(x)
     wt = 1/sigma**2
@@ -500,24 +507,36 @@ def wtslope(x,y,sigma,error=False):
     mnx = np.sum(wt*x)/totwt
     mny = np.sum(wt*y)/totwt
     wtx =  (np.sum(wt*x*y)/totwt-mnx*mny)/(np.sum(wt*x**2)/totwt-mnx**2)
+    # Reweight the points based on the residuals
+    #  using formula similar to the one given by
+    #  Stetson (1996) pg.4
+    if reweight:
+        resid = y-wtx*x
+        resid -= np.mean(resid)
+        wt2 = wt/(1+np.abs(resid)**2/np.mean(sigma))
+        totwt2 = np.sum(wt2)
+        mnx2 = np.sum(wt2*x)/totwt2
+        mny2 = np.sum(wt2*y)/totwt2
+        wtx =  (np.sum(wt2*x*y)/totwt2-mnx2*mny2)/(np.sum(wt2*x**2)/totwt2-mnx2**2)
     if error:
         wtxerr = 1.0/np.sqrt( np.sum(wt*x**2)-mnx**2 * np.sum(wt))
         return wtx, wtxerr
     else:
         return wtx
 
-def robust_slope(x,y,sigma,limits=None,npt=15):
+def robust_slope(x,y,sigma,limits=None,npt=15,reweight=False):
     """ Calculate robust weighted slope"""
     # Maybe add sigma outlier rejection in the future
     n = len(x)
     if n==2:
-        return wtslope(x,y,sigma,error=True)
+        return wtslope(x,y,sigma,error=True,reweight=reweight)
     # Calculate weighted pmx/pmxerr
-    wt_slp,wt_slperr = wtslope(x,y,sigma,error=True)
-    wt_y, wt_yerr = wtmean(y,sigma,error=True)
+    wt_slp,wt_slperr = wtslope(x,y,sigma,error=True,reweight=reweight)
+    wt_y, wt_yerr = wtmean(y,sigma,error=True,reweight=reweight)
     # Unweighted slope
-    uwt_slp = wtslope(x,y,sigma*0+1)
+    uwt_slp = wtslope(x,y,sigma*0+1,reweight=reweight)
     # Calculate robust loss metric for range of slope values
+    #   chisq = Sum( abs(y-(x*slp-mean(x*slp)))/sigma )
     if limits is None:
         limits = np.array([np.min([0.5*wt_slp,0.5*uwt_slp]), np.max([1.5*wt_slp,1.5*uwt_slp])])
     slp_step = (np.max(limits)-np.min(limits))/(npt-1)
@@ -525,7 +544,7 @@ def robust_slope(x,y,sigma,limits=None,npt=15):
     # Vectorize it
     resid = np.outer(y,np.ones(npt))-np.outer(x,np.ones(npt))*np.outer(np.ones(n),slp_arr)
     mnresid = np.mean(resid,axis=0)
-    resid -= np.outer(np.ones(n),mnresid)
+    resid -= np.outer(np.ones(n),mnresid)    # remove the mean
     chisq = np.sum( np.abs(resid) / np.outer(sigma,np.ones(npt)) ,axis=0)
     bestind = np.argmin(chisq)
     best_slp = slp_arr[bestind]
