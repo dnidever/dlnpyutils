@@ -494,10 +494,12 @@ def wtmean(x,sigma,error=False):
 
 def wtslope(x,y,sigma,error=False):
     """ Calculate weighted slope and error"""
+    n = len(x)
     wt = 1/sigma**2
-    mnx = np.sum(wt*x)/np.sum(wt)
-    mny = np.sum(wt*y)/np.sum(wt)
-    wtx =  (np.sum(wt*x*y)/np.sum(wt)-mnx*mny)/(np.sum(wt*x**2)/np.sum(wt)-mnx**2)
+    totwt = np.sum(wt)
+    mnx = np.sum(wt*x)/totwt
+    mny = np.sum(wt*y)/totwt
+    wtx =  (np.sum(wt*x*y)/totwt-mnx*mny)/(np.sum(wt*x**2)/totwt-mnx**2)
     if error:
         wtxerr = 1.0/np.sqrt( np.sum(wt*x**2)-mnx**2 * np.sum(wt))
         return wtx, wtxerr
