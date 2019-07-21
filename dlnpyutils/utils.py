@@ -481,20 +481,35 @@ def quadratic_bisector(x,y):
         return np.nan
     return -b/(2*a)
 
-def wtmean(x,sigma,error=False,reweight=False):
+def wtmean(x,sigma,error=False,reweight=False,magnitude=False):
     """ Calculate weighted mean and error"""
     n = len(x)
     wt = 1/sigma**2
-    xmn = np.sum(wt*x)/np.sum(wt)
+    # Magnitudes
+    if magnitude:
+        fmn = np.sum( 2.5118864**x * wt) / np.sum(wt)
+        xmn = 2.50*np.log10(fmn)
+    else:
+        xmn = np.sum(wt*x)/np.sum(wt)
     # Reweight the points based on the residuals
     #  using formula similar to the one given by
     #  Stetson (1996) pg.4
     if reweight:
-        resid = x-xmn
-        wfac = 1/(1+np.abs(resid)**2/np.mean(sigma))
-        xmn = np.sum(wt*wfac*x)/np.sum(wt*wfac)
+        if magnitude:
+            resid = x-xmn
+            wt2 = wt/(1+np.abs(resid)**2/np.mean(sigma))            
+            fmn2 = np.sum( 2.5118864**x * wt2) / np.sum(wt2)
+            xmn = 2.50*np.log10(fmn2)
+        else:
+            resid = x-xmn
+            wt2 = wt/(1+np.abs(resid)**2/np.mean(sigma))
+            xmn = np.sum(wt2*x)/np.sum(wt2)
+    # Include uncertainty
     if error:
-        xerr = np.sqrt( np.sum( ((x-xmn)**2)*wt)*n / ((n-1)*np.sum(wt))) / np.sqrt(n)
+        if magnitude:
+            xerr = np.sqrt(1.0/np.sum(wt))
+        else:
+            xerr = np.sqrt( np.sum( ((x-xmn)**2)*wt)*n / ((n-1)*np.sum(wt))) / np.sqrt(n)
         return xmn,xerr
     else:
         return xmn
