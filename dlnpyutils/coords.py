@@ -329,18 +329,6 @@ def isLeft(x1, y1, x2, y2, x3, y3):
     return ( (x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1) )
 
 
-def xmatch(ra1,dec1,ra2,dec2,dcr):
-    """
-    Cross-match two sets of RA/DEC coordinates
-    """
-
-    scipy.spatial.KDTree.query()
-    astropy.match_coordinates_
-
-    # srcmatch, match_sph, take each element in 1st list and find closest neighbor in second list
-    #  within a certain distance
-
-
 # from astroML
 def crossmatch(X1, X2, max_distance=np.inf):
     """Cross-match the values between X1 and X2
