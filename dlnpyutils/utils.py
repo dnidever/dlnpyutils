@@ -94,6 +94,17 @@ def stat(a=None,silent=False):
         print('----------------------')
     return
 
+def where(statement,comp=False):
+    """ Wrapper around numpy.where() to be more like IDL"""
+    # If comp=True then the complement will be returned
+    gd = np.where(statement)
+    ngd = len(gd)
+    if comp:
+        bd = np.where(~statement)
+        nbd = len(bd)
+        return gd,ngd,bd,nbd
+    else:
+        return gd,ngd
 
 def strlen(lst=None):
     """ Calculate the string lengths of a string array."""
