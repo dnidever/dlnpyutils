@@ -97,10 +97,10 @@ def stat(a=None,silent=False):
 def where(statement,comp=False):
     """ Wrapper around numpy.where() to be more like IDL"""
     # If comp=True then the complement will be returned
-    gd = np.where(statement)
+    gd, = np.where(statement)
     ngd = len(gd)
     if comp:
-        bd = np.where(~statement)
+        bd, = np.where(~statement)
         nbd = len(bd)
         return gd,ngd,bd,nbd
     else:
