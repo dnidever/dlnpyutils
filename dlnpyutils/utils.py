@@ -17,6 +17,7 @@ import warnings
 from astropy.io import fits
 from astropy.table import Table, Column
 from astropy import modeling
+from astropy.convolution import Gaussian1DKernel, convolve
 from glob import glob
 from scipy.signal import medfilt
 from scipy.ndimage.filters import median_filter,gaussian_filter1d
