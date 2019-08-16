@@ -718,11 +718,15 @@ def slope(array):
     return array[1:n]-array[0:n-1]
 
 # Gaussian filter
-def gsmooth(data,fwhm,axis=-1,mode='reflect',cval=0.0,truncate=4.0,squared=False):
+def gsmooth(data,fwhm,mask=mask,boundary='extend',fill=0.0,truncate=4.0,squared=False):
+    # Create kernel
+    g = Gaussian1DKernel(stddev=fwhm/2.35,x_size=truncate)
     if squared is False:
-        return gaussian_filter1d(data,fwhm/2.35,axis=axis,mode=mode,cval=cval,truncate=truncate)
+        return convolve(data, g, mask=mask, boundary=boundary, fill_value=fill)
+        #return gaussian_filter1d(data,fwhm/2.35,axis=axis,mode=mode,cval=cval,truncate=truncate)
     else:
-        return gaussian_filter1d(data,fwhm/2.35,axis=axis,mode=mode,cval=cval,truncate=truncate)**2
+        return convolve(data, g**2, mask=mask, boundary=boundary, fill_value=fill)
+        #return gaussian_filter1d(data,fwhm/2.35,axis=axis,mode=mode,cval=cval,truncate=truncate)**2
     
 # Rebin data
 def rebin(arr, new_shape):
