@@ -43,7 +43,7 @@ def size(a=None):
     return np.array(a,ndmin=1).size
 
 # Median Absolute Deviation
-def mad(data, axis=None, func=None, ignore_nan=False):
+def mad(data, axis=None, func=None, ignore_nan=True):
     """ Calculate the median absolute deviation."""
     if type(data) is not np.ndarray: raise ValueError("data must be a numpy array")    
     return 1.4826 * astropy.stats.median_absolute_deviation(data,axis=axis,func=func,ignore_nan=ignore_nan)

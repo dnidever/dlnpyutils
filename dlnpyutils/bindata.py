@@ -4,6 +4,7 @@ import numpy as np
 from scipy._lib.six import callable, xrange
 from scipy._lib._numpy_compat import suppress_warnings
 from collections import namedtuple
+from . import utils as dln
 
 __all__ = ['binned_statistic',
            'binned_statistic_2d',
@@ -14,11 +15,15 @@ BinnedStatisticResult = namedtuple('BinnedStatisticResult',
                                    ('statistic', 'bin_edges', 'binnumber'))
 
 
-# Median Absolute Deviation
-def mad(data, axis=None, func=None, ignore_nan=False):
+# Median Absolute Deviation, NAN-resistant
+def mad(data):
     """ Calculate the median absolute deviation."""
     #if type(data) is not np.ndarray: raise ValueError("data must be a numpy array")
-    return 1.4826 * np.median(np.abs(data-np.median(data)))
+    gd,ngd = dln.where(np.isfinite(data))
+    if ngd>1:
+        return 1.4826 * np.median(np.abs(data[gd]-np.median(data[gd])))
+    else:
+        return np.nan
     #return 1.4826 * astropy.stats.median_absolute_deviation(data,axis=axis,func=func,ignore_nan=ignore_nan)
 
 
@@ -462,7 +467,7 @@ def binned_statistic_dd(sample, values, statistic='mean',
     .. versionadded:: 0.11.0
 
     """
-    known_stats = ['mean', 'median', 'count', 'sum', 'std','min','max','mad','percentile']
+    known_stats = ['mean', 'median', 'count', 'sum', 'std','min','max','mad','nanmedian','percentile']
     if not callable(statistic) and statistic not in known_stats:
         raise ValueError('invalid statistic %r' % (statistic,))
 
@@ -589,6 +594,11 @@ def binned_statistic_dd(sample, values, statistic='mean',
         for i in np.unique(binnumbers):
             for vv in xrange(Vdim):
                 result[vv, i] = np.median(values[vv, binnumbers == i])
+    elif statistic == 'nanmedian':
+        result.fill(np.nan)
+        for i in np.unique(binnumbers):
+            for vv in xrange(Vdim):
+                result[vv, i] = np.nanmedian(values[vv, binnumbers == i])                
     elif statistic == 'mad':
         result.fill(np.nan)
         for i in np.unique(binnumbers):
