@@ -719,7 +719,7 @@ def slope(array):
     return array[1:n]-array[0:n-1]
 
 # Gaussian filter
-def gsmooth(data,fwhm,mask=mask,boundary='extend',fill=0.0,truncate=4.0,squared=False):
+def gsmooth(data,fwhm,mask=None,boundary='extend',fill=0.0,truncate=4.0,squared=False):
     # Create kernel
     g = Gaussian1DKernel(stddev=fwhm/2.35,x_size=truncate)
     if squared is False:
