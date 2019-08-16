@@ -636,7 +636,7 @@ def binned_statistic_dd(sample, values, statistic='mean',
 
     # Remove outliers (indices 0 and -1 for each bin-dimension).
     core = [slice(None)] + Ndim * [slice(1, -1)]
-    result = result[core]
+    result = result[tuple(core)]
 
     # Unravel binnumbers into an ndarray, each row the bins for each dimension
     if(expand_binnumbers and Ndim > 1):
