@@ -720,6 +720,7 @@ def slope(array):
 
 # Gaussian filter
 def gsmooth(data,fwhm,mask=None,boundary='extend',fill=0.0,truncate=4.0,squared=False):
+    # astropy.convolve automatically ignores NaNs
     # Create kernel
     xsize = np.ceil(fwhm/2.35*truncate*2)
     if xsize % 2 == 0: xsize+=1   # must be odd
