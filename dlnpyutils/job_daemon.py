@@ -346,6 +346,7 @@ def submitjob(scriptname=None,indir=None,hyperthread=True,idle=False):
         logfile = logfile.strip()
     # Printing info
     print('Submitted '+scriptname+'  JobID='+jobid)
+
     return jobid, logfile
 
 
@@ -428,8 +429,8 @@ def getstat(jobid=None,hyperthread=True):
             return statstr
         # can put in the column that you want
         # ps -o etime -p jobid
-        out = strsplit(out,'\n')
-        out = strip(out)
+        out = dln.strsplit(out.decode(),'\n')
+        out = dln.strip(out)
         gd = dln.grep(out,'^'+str(jobid),index=True)
         ngd = len(gd)
         if ngd>0:
