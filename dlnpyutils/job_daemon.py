@@ -112,11 +112,11 @@ def check_killfile(jobs=None,hyperthread=True):
         print('Kill file found.  Killing all '+str(nsub)+' job(s)')
         for i in range(nsub):
             # Killing the job
-            print('Killing '+jobs[sub[i]]['name']+'  JobID='+jobs[sub[i]]['jobid'])
+            print('Killing '+jobs['name'][sub[i]]+'  JobID='+jobs['jobid'][sub[i]])
             if hyperthread is False:
-                out = subprocess.check_output(['qdel',jobs[sub[i]]['jobid']],stdout=sf,stderr=subprocess.STDOUT,shell=False)
+                out = subprocess.check_output(['qdel',jobs['jobid'][sub[i]]],stdout=sf,stderr=subprocess.STDOUT,shell=False)
             else:
-                out = subprocess.check_output(['kill','-9',jobs[sub[i]]['jobid']],stderr=subprocess.STDOUT,shell=False)
+                out = subprocess.check_output(['kill','-9',jobs['jobid'][sub[i]]],stderr=subprocess.STDOUT,shell=False)
         # Remove the kill file
         print('Deleting kill file "'+killfile+'"')
         os.remove(killfile)
@@ -467,10 +467,10 @@ def checkjobs(jobs=None,hyperthread=True):
         # Job done
         if statstr['status']=='':
             if nfinished==0: print('')
-            print(time.ctime()+'  Input '+str(sub[i]+1)+' '+jobs[sub[i]]['name']+' JobID='+jobs[sub[i]]['jobid']+' FINISHED')
-            jobs[sub[i]]['done'] = True
-            jobs[sub[i]]['endtime'] = time.time()/3600/24   # in days
-            jobs[sub[i]]['duration'] = (jobs[sub[i]]['endtime'] - jobs[sub[i]]['begtime'])*3600*24   # in sec
+            print(time.ctime()+'  Input '+str(sub[i]+1)+' '+jobs['name'][sub[i]]+' JobID='+jobs['jobid'][sub[i]]+' FINISHED')
+            jobs['done'][sub[i]] = True
+            jobs['endtime'][sub[i]] = time.time()/3600/24   # in days
+            jobs['duration'][sub[i]] = (jobs['endtime'][sub[i]] - jobs['begtime'][sub[i]])*3600*24   # in sec
             nfinished += 1
             # Check for errors as well!! and put in jobs structure
     return jobs
@@ -659,13 +659,13 @@ def job_daemon(input=None,dirs=None,inpname=None,nmulti=4,prefix="job",hyperthre
                 # Submitting the job
                 jobid, logfile = submitjob(scriptname,dirs[newind[i]],hyperthread=hyperthread,idle=idle)
                 # Updating the jobs structure
-                jobs[newind[i]]['submitted'] = True
-                jobs[newind[i]]['jobid'] = jobid
-                jobs[newind[i]]['name'] = name
-                jobs[newind[i]]['dir'] = dirs[newind[i]]
-                jobs[newind[i]]['scriptname'] = scriptname
-                jobs[newind[i]]['logfile'] = logfile
-                jobs[newind[i]]['begtime'] = time.time()/3600/24   # in days
+                jobs['submitted'][newind[i]] = True
+                jobs['jobid'][newind[i]] = jobid
+                jobs['name'][newind[i]] = name
+                jobs['dir'][newind[i]] = dirs[newind[i]]
+                jobs['scriptname'][newind[i]] = scriptname
+                jobs['logfile'][newind[i]] = logfile
+                jobs['begtime'][newind[i]] = time.time()/3600/24   # in days
 
         # Are we done?
         #-------------
