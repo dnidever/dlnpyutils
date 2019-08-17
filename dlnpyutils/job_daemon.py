@@ -61,7 +61,7 @@ def mkrunbatch():
         lines.append("  ( nohup  $1 > $1.log 2>&1 ) &\n")
         lines.append("  echo 'JOBID='$!\n")
         lines.append("fi\n")
-        writelines(batchfile,lines,overwrite=True)
+        dln.writelines(batchfile,lines,overwrite=True)
         os.chmod(batchfile,0o755)
     return batchfile
 
@@ -74,7 +74,7 @@ def mkidlbatch():
             out = subprocess.check_output(['which','idl'],stderr=subprocess.STDOUT,shell=False)
         except subprocess.CalledProcessError:
             raise Exception("IDL program not available")
-        idlprog = out.strip()
+        idlprog = out.decode().strip()
         if os.path.exists(idlprog) is False:
             raise Exception("IDL program "+idlprog+" not found")
         lines = []
@@ -187,7 +187,7 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
     if (nname==0):
         name = np.zeros(ninp,dtype=(np.str,200))
         if prefix is not None:
-            pre = first_el(prefix)
+            pre = dln.first_el(prefix)
         else:
             pre = 'job'
         for i in range(ninp):
@@ -196,7 +196,7 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
             name[i] = os.path.basename(tfile)
 
     # Make scriptnames
-    scriptname = np.array(strjoin(pathjoin(indir,name),'.sh'),ndmin=1)
+    scriptname = np.array(dln.strjoin(dln.pathjoin(indir,name),'.sh'),ndmin=1)
     # Script loop
     for i,input1 in enumerate(np.array(inp,ndmin=1)):
         base = str(name[i])
@@ -274,7 +274,7 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
             print('HYPERTHREAD script written to: '+str(scriptname[i]))
 
     # Erase the temporary files that mkstemp makes
-    dln.remove(pathjoin(indir,name),allow=True)
+    dln.remove(dln.pathjoin(indir,name),allow=True)
 
     if dln.size(scriptname)==1: scriptname=scriptname[0]
     return scriptname
@@ -320,7 +320,7 @@ def submitjob(scriptname=None,indir=None,hyperthread=True,idle=False):
             out = subprocess.check_output('qsub '+scriptname,stderr=subprocess.STDOUT,shell=True)
         except subprocess.CalledProcessError:
             raise Exception("Problem submitting PBS job")
-        jobid = out[0]
+        jobid = dln.first_el(out)
         logfile = scriptname+'.log'
     else:
         if idle is True:
@@ -334,7 +334,7 @@ def submitjob(scriptname=None,indir=None,hyperthread=True,idle=False):
             raise Exception("Problem submitting shell job")
         if indir is not None: os.chdir(curdir)
         # Get the JOBID
-        out = out.split('\n')
+        out = out.decode().split('\n')
         jobid_ind = dln.grep(out,'^JOBID=',index=True)
         njobid_ind = len(jobid_ind)
         jobid = out[jobid_ind[0]].split('=')[1]
@@ -419,7 +419,7 @@ def getstat(jobid=None,hyperthread=True):
             return mkstatstr(1)
 
         try:
-            out = subprocess.check_output(['ps','-o','pid,user,etime,command','-p',str(first_el(jobid))],
+            out = subprocess.check_output(['ps','-o','pid,user,etime,command','-p',str(dln.first_el(jobid))],
                                           stderr=subprocess.STDOUT,shell=False)
         except:
             statstr = mkstatstr(1)
@@ -618,7 +618,7 @@ def job_daemon(inp=None,dirs=None,inpname=None,nmulti=4,prefix="job",hyperthread
             updatestatus = False
   
         # Check disk space
-        check_diskspace(first_el(dirs))
+        check_diskspace(dln.first_el(dirs))
         # Check for kill file
         if check_killfile(jobs) is True: return jobs
 
