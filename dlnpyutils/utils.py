@@ -139,7 +139,7 @@ def strjoin(a=None,b=None,c=None,sep=None):
     t2 = type(b)
     if nc>0:
         len3 = strlen(c)
-        t2 = type(c)
+        t3 = type(c)
     else:
         len3 = 0
         t3 = t2
