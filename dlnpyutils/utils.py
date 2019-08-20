@@ -469,7 +469,7 @@ def exists(files=None):
     nfiles = np.array(files).size
     out = np.zeros(nfiles,np.bool)+False
     for i,f in enumerate(np.array(files,ndmin=1)):
-        if os.path.exists(f): out[i] = os.path.exists(f)
+        if os.path.exists(f): out[i] = True
     return out
 
 def lt(x,limit):
