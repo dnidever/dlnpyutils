@@ -125,29 +125,46 @@ def strip(lst=None,chars=None):
     return [o.strip(chars) for o in np.array(lst,ndmin=1)]
 
 
-def strjoin(a=None,b=None,sep=None):
+def strjoin(a=None,b=None,c=None,sep=None):
     """ Join two string lists/arrays or scalars"""
     if (a is None) | (b is None): raise ValueError("a and b must be input")
     na = size(a)
     nb = size(b)
+    nc = size(c)
     if sep is None: sep=''
-    n = np.max([na,nb])
+    n = np.max([na,nb,nc])
     len1 = strlen(a)
+    t1 = type(a)
     len2 = strlen(b)
-    nlen = np.max(len1)+np.max(len2)+len(sep)
+    t2 = type(b)
+    if nc>0:
+        len3 = strlen(c)
+        t3 = type(c)
+    else:
+        len3 = 0
+        t3 = t2
+    nlen = np.max(len1)+np.max(len2)+np.max(len3)+len(sep)
     out = np.zeros(n,(np.str,nlen))
     for i in range(n):
         if na>1:
             a1 = a[i]
         else:
             a1 = np.array(a,ndmin=1)[0]
+        arr = tuple(a1)
         if nb>1:
             b1 = b[i]
         else:
             b1 = np.array(b,ndmin=1)[0]
-        out[i] = sep.join((a1,b1))
-    if (n==1) & (type(a) is str) & (type(b) is str): return out[0]  # scalar
-    if (type(a) is list) | (type(b) is list): return list(out)
+        arr += tuple(b1)
+        if nc>0:
+            if nc>1:
+                c1 = c[i]
+            else:
+                c1 = np.array(c,ndmin=1)[0]
+            arr += tuple(c1)
+        out[i] = sep.join(arr)
+    if (n==1) & (t1 is str) & (t2 is str) & (t3 is str): return out[0]  # scalar
+    if (t1 is list) | (t2 is list) | (t3 is list): return list(out)
     return out
 
 
@@ -444,6 +461,16 @@ def remove(files=None,allow=True):
             os.remove(f)
         else:
             if allow is False: raise Exception(f+" does not exist")
+
+# Do files exist
+def exists(files=None):
+    """ Check if a list of files exist."""
+    if files is None: raise ValueError("No files input")
+    nfiles = np.array(files).size
+    out = np.zeros(nfiles,np.bool)+False
+    for i,f in enumerate(np.array(files,ndmin=1)):
+        if os.path.exists(f): out[i] = True
+    return out
 
 def lt(x,limit):
     """Takes the lesser of x or limit"""
