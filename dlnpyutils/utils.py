@@ -276,6 +276,10 @@ def grep(lines=None,expr=None,index=False):
         cnt = cnt+1
     return out
 
+# Create an empty file
+def touch(fname):
+    open(fname, 'wa').close()
+
 
 # Read in all lines of files
 def readlines(fil=None):
