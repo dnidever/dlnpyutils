@@ -276,6 +276,10 @@ def grep(lines=None,expr=None,index=False):
         cnt = cnt+1
     return out
 
+# Create an empty file
+def touch(fname):
+    open(fname, 'wa').close()
+
 
 # Read in all lines of files
 def readlines(fil=None):
@@ -753,10 +757,10 @@ def gsmooth(data,fwhm,mask=None,boundary='extend',fill=0.0,truncate=4.0,squared=
     if xsize % 2 == 0: xsize+=1   # must be odd
     g = Gaussian1DKernel(stddev=fwhm/2.35,x_size=xsize)
     if squared is False:
-        return convolve(data, g, mask=mask, boundary=boundary, fill_value=fill)
+        return convolve(data, g.array, mask=mask, boundary=boundary, fill_value=fill)
         #return gaussian_filter1d(data,fwhm/2.35,axis=axis,mode=mode,cval=cval,truncate=truncate)
     else:
-        return convolve(data, g**2, mask=mask, boundary=boundary, fill_value=fill)
+        return convolve(data, g.array**2, mask=mask, boundary=boundary, fill_value=fill, normalize_kernel=False)
         #return gaussian_filter1d(data,fwhm/2.35,axis=axis,mode=mode,cval=cval,truncate=truncate)**2
     
 # Rebin data
@@ -950,7 +954,7 @@ def match(a,b,epsilon=0):
                 suba, = np.where(np.abs(a-b) < epsilon)
                 nw = len(suba)
             if (nw>0):
-                subb, = np.zero(nw,int)
+                subb, = np.zeros(nw,int)
             else:
                 subb = np.array([])
         count = nw
