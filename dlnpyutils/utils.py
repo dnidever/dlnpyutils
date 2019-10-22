@@ -1023,3 +1023,39 @@ def match(a,b,epsilon=0):
     
     return suba, subb
 
+def concatenate(a,b=None):
+    # Concatenate two or more numpy structured arrays
+    # Can input two numpy structured arrays or a list of them
+    if (b is None and type(a) is not list) | (b is not None and type(a) is list):
+        print('Must input two numpy structured arrays or a list of them')
+        return
+    if type(a) is not list: a=list(a)
+    if b is not None: a.append(b)
+
+    # Concatenate
+
+    # Get dtypes for all of the numpy structured arrays
+    ncat = dln.size(a)
+    dtypearr = []
+    ncols = []
+    for a1 in a:
+        dtype1 = a1.dtype
+        dtypearr.append(dtype1)
+        ncols.append(len(dtype1.names))
+    ncols = np.array(ncols)
+
+    #   make sure string columns are same length
+    dtype_list = []
+    for f in a.dtype.names:
+        if dtype[f].char == 'S':
+            isize = np.max([a.dtype[f].itemsize,b.dtype[f].itemsize,list3.dtype[f].itemsize])
+            dtype_list.append((f,'S'+str(isize)))
+        else:
+            dtype_list.append((f,a.dtype[f].str))
+    dtype = np.dtype(dtype_list)
+    nlstr = na+nb+nlist3
+    lstr = np.zeros(nlstr,dtype=dtype)
+    lstr[0:na]=a                     # load a
+    lstr[na:na+nb]=b                 # load b
+    lstr[na+nb:na+nb+nlist3]=list3   # load list3
+    del(a,b,list3)
