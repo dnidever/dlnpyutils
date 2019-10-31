@@ -1104,3 +1104,38 @@ def concatenate(a,b=None):
         count += n
     return lstr
 
+
+def onclick(event):
+    #print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
+    #      ('double' if event.dblclick else 'single', event.button,
+    #       event.x, event.y, event.xdata, event.ydata))
+
+    #global ix, iy
+    if event.xdata is None:
+        global cid
+        fig.canvas.mpl_disconnect(cid)
+        print('Done.  Coordinates are in global "coords" list')
+        return
+    ix, iy = event.xdata, event.ydata
+    print('x = %d, y = %d'%(ix, iy))
+
+    global coords
+    try:
+        dum = len(coords)
+    except:
+        coords = []
+    coords.append((ix, iy))
+
+    return
+
+def clicker():
+    # im=fits.getdata('F1-00507803_23.fits.fz') 
+    # fig = plt.figure()
+    # plt.imshow(im)
+    # clicker()
+    # then the coordinates will be the global "coords" list
+    global cid
+    cid = fig.canvas.mpl_connect('button_press_event', onclick)
+    coords = []
+
+
