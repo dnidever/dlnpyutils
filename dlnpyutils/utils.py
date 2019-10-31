@@ -1037,14 +1037,14 @@ def interp(x,y,xout,kind='cubic',bounds_error=False,assume_sorted=True,extrapola
         nfit = np.min([10,npix])
         # At the beginning
         if (np.min(xout)<np.min(x)):
-            coef1 = dln.poly_fit(x[0:nfit], y[0:nfit], exporder)
-            bd1, nbd1 = dln.where(xout < np.min(x))
-            yout[bd1] = dln.poly(xout[bd1],coef1)
+            coef1 = poly_fit(x[0:nfit], y[0:nfit], exporder)
+            bd1, nbd1 = where(xout < np.min(x))
+            yout[bd1] = poly(xout[bd1],coef1)
         # At the end
         if (np.max(xout)>np.max(x)):
-            coef2 = dln.poly_fit(x[npix-nfit:], y[npix-nfit:], exporder)
-            bd2, nbd2 = dln.where(xout > np.max(x))
-            yout[bd2] = dln.poly(xout[bd2],coef2)     
+            coef2 = poly_fit(x[npix-nfit:], y[npix-nfit:], exporder)
+            bd2, nbd2 = where(xout > np.max(x))
+            yout[bd2] = poly(xout[bd2],coef2)     
     return yout
 
 def concatenate(a,b=None):
