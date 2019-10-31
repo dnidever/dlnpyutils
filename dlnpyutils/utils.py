@@ -1027,3 +1027,22 @@ def match(a,b,epsilon=0):
     
     return suba, subb
 
+# Interpolation with extrapolation
+def interp(x,y,xout,kind='cubic',bounds_error=False,assume_sorted=True,extrapolate=True,exporder=2)):
+    yout = interp1d(x,y,kind=kind,bounds_error=bounds_error,fill_value=(np.nan,np.nan),assume_sorted=assume_sorted)(xout)
+    # Need to extrapolate
+    if ((np.min(xout)<np.min(x)) | (np.max(xout)>np.max(x))) & (extrapolate is True):
+        si = np.argsort(x)
+        npix = len(x)
+        nfit = np.min([10,npix])
+        # At the beginning
+        if (np.min(xout)<np.min(x)):
+            coef1 = dln.poly_fit(x[0:nfit], y[0:nfit], exporder)
+            bd1, nbd1 = dln.where(xout < np.min(x))
+            yout[bd1] = dln.poly(xout[bd1],coef1)
+        # At the end
+        if (np.max(xout)>np.max(x)):
+            coef2 = dln.poly_fit(x[npix-nfit:], y[npix-nfit:], exporder)
+            bd2, nbd2 = dln.where(xout > np.max(x))
+            yout[bd2] = dln.poly(xout[bd2],coef2)     
+    return yout
