@@ -1046,3 +1046,61 @@ def interp(x,y,xout,kind='cubic',bounds_error=False,assume_sorted=True,extrapola
             bd2, nbd2 = dln.where(xout > np.max(x))
             yout[bd2] = dln.poly(xout[bd2],coef2)     
     return yout
+
+def concatenate(a,b=None):
+    # Concatenate two or more numpy structured arrays
+    # Can input two numpy structured arrays or a list of them
+    if (b is None and type(a) is not list) | (b is not None and type(a) is list):
+        raise Exception('Must input two numpy structured arrays or a list of them')
+        return
+    if type(a) is not list: a=list(a)
+    if b is not None: a.append(b)
+
+    # Get dtypes for all of the numpy structured arrays
+    ncat = size(a)
+    dtypearr = []
+    ncols = []
+    nrows = []
+    for a1 in a:
+        dtype1 = a1.dtype
+        dtypearr.append(dtype1)
+        ncols.append(len(dtype1.names))
+        nrows.append(len(a1))
+    ncols = np.array(ncols)
+    nrows = np.array(nrows)
+    # Ncols not the same
+    if np.min(ncols) != np.max(ncols):
+        raise Exception('Number of columns are not the same: min='+str(np.min(ncols))+' max='+str(np.max(ncols)))
+    # Checking column names
+    colnames = np.zeros((ncat,ncols[0]),dtype=(np.str,100))
+    for i in range(ncat):
+        colnames[i,:] = a[i].dtype.names
+        if i>0:
+            if list(colnames[0,:]) != list(colnames[i,:]):
+                raise Exception('Column names are not the same')
+
+    # Make the final dtype
+    #   make sure string columns are same length
+    dtype_list = []
+    for f in a[0].dtype.names:
+        if a[0].dtype[f].char == 'S':
+            isize = []
+            for d1 in dtypearr:
+                isize.append(d1[f].itemsize)
+            maxsize = np.max(isize)
+            dtype_list.append((f,'S'+str(maxsize)))
+        else:
+            dtype_list.append((f,a[0].dtype[f].str))
+    dtype = np.dtype(dtype_list)
+
+    # Create the final structure and load the data
+    nlstr = np.sum(nrows)
+    lstr = np.zeros(nlstr,dtype=dtype)
+    count = 0
+    for i in range(ncat):
+        a1 = a[i]
+        n = len(a1)
+        lstr[count:count+n] = a[i]
+        count += n
+    return lstr
+
