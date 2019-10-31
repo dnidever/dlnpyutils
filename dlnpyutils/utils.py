@@ -1134,6 +1134,7 @@ def clicker():
     # plt.imshow(im)
     # clicker()
     # then the coordinates will be the global "coords" list
+    print('Click outside the plot to end')
     global cid
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
     coords = []
