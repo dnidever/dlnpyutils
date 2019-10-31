@@ -1028,7 +1028,7 @@ def match(a,b,epsilon=0):
     return suba, subb
 
 # Interpolation with extrapolation
-def interp(x,y,xout,kind='cubic',bounds_error=False,assume_sorted=True,extrapolate=True,exporder=2)):
+def interp(x,y,xout,kind='cubic',bounds_error=False,assume_sorted=True,extrapolate=True,exporder=2):
     yout = interp1d(x,y,kind=kind,bounds_error=bounds_error,fill_value=(np.nan,np.nan),assume_sorted=assume_sorted)(xout)
     # Need to extrapolate
     if ((np.min(xout)<np.min(x)) | (np.max(xout)>np.max(x))) & (extrapolate is True):
