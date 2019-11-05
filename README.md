@@ -10,7 +10,7 @@ Until I get this in pypi the best way is the usual git clone and setup install:
 ```
 git clone https://github.com/dnidever/dlnpyutils.git
 cd dlnpyutils
-python setupy.py install
+python setup.py install
 ```
 
 # Using the package
