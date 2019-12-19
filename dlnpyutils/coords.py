@@ -330,7 +330,7 @@ def isLeft(x1, y1, x2, y2, x3, y3):
 
 
 # from astroML
-def crossmatch(X1, X2, max_distance=np.inf):
+def crossmatch(X1, X2, max_distance=np.inf,k=1):
     """Cross-match the values between X1 and X2
 
     By default, this uses a KD Tree for speed.
@@ -364,17 +364,24 @@ def crossmatch(X1, X2, max_distance=np.inf):
 
     kdt = cKDTree(X2)
 
-    dist, ind = kdt.query(X1, k=1, distance_upper_bound=max_distance)
+    dist, ind = kdt.query(X1, k=k, distance_upper_bound=max_distance)
 
     return dist, ind
 
 # from astroML, modified by D. Nidever
-def xmatch(ra1, dec1, ra2, dec2, dcr=np.inf):
+def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
     """Cross-match angular values between RA1/DEC1 and RA2/DEC2
 
-    by default, this uses a KD Tree for speed.  Because the
+    Find the closest match in the second list for each element
+    in the first list and within the maximum distance.
+
+    By default, this uses a KD Tree for speed.  Because the
     KD Tree only handles cartesian distances, the angles
     are projected onto a 3D sphere.
+
+    This can return duplicate matches if there is an element
+    in the second list that is the closest match to two elements
+    of the first list.
 
     Parameters
     ----------
@@ -386,6 +393,7 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=np.inf):
         both measured in degrees
     dcr : float (optional)
         maximum radius of search, measured in arcsec.
+        This can be an array of the same size as ra1/dec1.
 
     Returns
     -------
@@ -398,7 +406,10 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=np.inf):
     
     X1 = X1 * (np.pi / 180.)
     X2 = X2 * (np.pi / 180.)
-    max_distance = (dcr / 3600) * (np.pi / 180.)
+    if utils.size(dcr)>1:
+        max_distance = (np.max(dcr) / 3600) * (np.pi / 180.)
+    else:
+        max_distance = (dcr / 3600) * (np.pi / 180.)
 
     # Convert 2D RA/DEC to 3D cartesian coordinates
     Y1 = np.transpose(np.vstack([np.cos(X1[:, 0]) * np.cos(X1[:, 1]),
@@ -410,17 +421,78 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=np.inf):
 
     # law of cosines to compute 3D distance
     max_y = np.sqrt(2 - 2 * np.cos(max_distance))
-    dist, ind = crossmatch(Y1, Y2, max_y)
-
+    k = 1 if unique is False else 10 
+    dist, ind = crossmatch(Y1, Y2, max_y, k=k)
+    
     # convert distances back to angles using the law of tangents
     not_inf = ~np.isinf(dist)
     x = 0.5 * dist[not_inf]
     dist[not_inf] = (180. / np.pi * 2 * np.arctan2(x,
                                   np.sqrt(np.maximum(0, 1 - x ** 2))))
+    dist[not_inf] *= 3600.0      # in arcsec
 
-    # Change to the output that I want
-    ind1 = np.arange(len(ra1))[not_inf]
-    ind2 = ind[not_inf]
-    mindist = dist[not_inf] * 3600.0   # in arcsec
+    # Allow duplicates
+    if unique is False:
     
+        # If DCR is an array then impose the max limits for each element
+        if utils.size(dcr)>1:
+            bd,nbd = utils.where(dist > dcr)
+            if nbd>0:
+                dist[bd] = np.inf
+                not_inf = ~np.isinf(dist)
+    
+        # Change to the output that I want
+        ind1 = np.arange(len(ra1))[not_inf]
+        ind2 = ind[not_inf]
+        mindist = dist[not_inf]
+
+    # Return unique one-to-one matches
+    else:
+
+        done = 0
+        niter = 1
+        # Loop until we converge
+        while (done==0):
+
+            # If DCR is an array then impose the max limits for each element
+            if utils.size(dcr)>1:
+                bd,nbd = utils.where(dist[:,0] > dcr)
+                if nbd>0:
+                    for i in range(nbd):
+                        dist[bd[i],:] = np.inf
+
+            # closest matches
+            not_inf1 = ~np.isinf(dist[:,0])
+            ind1 = np.arange(len(ra1))[not_inf1]
+            ind2 = ind[:,0][not_inf1]
+            mindist = dist[:,0][not_inf1]
+            index = utils.create_index(ind2)
+            # some duplicates to deal with
+            bd,nbd = utils.where(index['num']>1)
+            if nbd>0:
+                torem = []            
+                for i in range(nbd):
+                    indx = index['index'][index['lo'][bd[i]]:index['hi'][bd[i]]+1]
+                    # keep the one with the smallest minimum distance
+                    si = np.argsort(mindist[indx])
+                    torem.append(indx[si[1:]])
+                ntorem = utils.size(torem)
+                # For each object that was "removed" and is now unmatched, check the next possible
+                # match and move it up in the dist/ind list if it isn't INF
+                for i in range(ntorem):
+                    # There is a next possible match 
+                    if ~np.isinf(dist[torem[i],niter-1]):
+                        ind[torem[i],:] = np.hstack( (ind[torem[i],niter:].squeeze(), np.repeat(-1,niter)) )
+                        dist[torem[i],:] = np.hstack( (dist[torem[i],niter:].squeeze(), np.repeat(np.inf,niter)) )
+                    # All INFs
+                    else:
+                        ind[torem[i],:] = -1
+                        dist[torem[i],:] = np.inf
+            else:
+                ntorem = 0
+
+            niter += 1
+            # Are we done, no duplicates or hit the maximum 10
+            if (ntorem==0) | (niter>=10): done=1
+                                
     return ind1, ind2, mindist
