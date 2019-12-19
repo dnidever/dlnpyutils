@@ -496,3 +496,34 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
             if (ntorem==0) | (niter>=10): done=1
                                 
     return ind1, ind2, mindist
+
+def sphdist(lon1, lat1, lon2, lat2):
+    """Calculate the angular distance between two sets of points.
+
+    Parameters
+    ----------
+    lon1/lat1 : scalar or array_like
+        first dataset, arrays of LON/LAT or RA/DEC
+        both measured in degrees
+    lon2/lat2 : scalar array_like
+        second dataset, arrays of LON/LAT or RA/DEC
+        both measured in degrees
+
+    Returns
+    -------
+    dist: ndarrays
+        The angular distance in degrees.
+    """
+
+    if (utils.size(lon1) != utils.size(lat1)):
+        raise ValueError('lon1/lat1 must have same number of elements')
+    if (utils.size(lon2) != utils.size(lat2)):
+        raise ValueError('lon2/lat2 must have same number of elements')    
+    
+    # From this website;
+    # http://www2.sjsu.edu/faculty/watkins/sphere.htm
+
+    cosa = np.sin(np.deg2rad(lat1))*np.sin(np.deg2rad(lat2))+np.cos(np.deg2rad(lat1))*np.cos(np.deg2rad(lat2))*np.cos(np.deg2rad(lon1-lon2))
+    dist = np.rad2deg(np.arccos(cosa))
+
+    return dist
