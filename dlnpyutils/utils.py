@@ -1104,6 +1104,25 @@ def concatenate(a,b=None):
         count += n
     return lstr
 
+def addcatcols(cat,dt):
+    """ Add new columns to an existing numpty structured array catalog."""
+    ncat = len(cat)
+    odt = cat.dtype
+
+    # Concatenate the dtypes
+    dtype_list = []
+    for f in cat.dtype.names:
+        dtype_list.append((f,cat.dtype[f].str))
+    for f in dt.names:
+        dtype_list.append((f,dt[f].str))        
+    newdtype = np.dtype(dtype_list)    
+    
+    # Create the final structure and load the data
+    new = np.zeros(ncat,dtype=newdtype)
+    for n in cat.dtype.names: new[n] = cat[n]
+
+    return new    
+    
 
 def onclick(event):
     #print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
@@ -1140,3 +1159,32 @@ def clicker():
     coords = []
 
 
+def add_elements(cat,num=10000):
+    """ Add more elements to a catalog"""
+    ncat = len(cat)
+    old = cat.copy()
+    num = dln.gt(num,ncat)
+    cat = np.zeros(ncat+num,dtype=old.dtype)
+    cat[0:ncat] = old
+    del old
+    return cat 
+
+
+def ellipsecoords(pars,npoints=100):
+    """ Create coordinates of an ellipse."""
+    # [x,y,asemi,bsemi,theta]
+    # copied from ellipsecoords.pro
+    xc = pars[0]
+    yc = pars[1]
+    asemi = pars[2]
+    bsemi = pars[3]
+    pos_ang = pars[4]
+    phi = 2*np.pi*(np.arange(npoints)/(npoints-1))   # Divide circle into Npoints
+    ang = np.deg2rad(pos_ang)                             # Position angle in radians
+    cosang = np.cos(ang)
+    sinang = np.sin(ang)
+    x =  asemi*np.cos(phi)                              # Parameterized equation of ellipse
+    y =  bsemi*np.sin(phi)
+    xprime = xc + x*cosang - y*sinang               # Rotate to desired position angle
+    yprime = yc + x*sinang + y*cosang
+    return xprime, yprime
