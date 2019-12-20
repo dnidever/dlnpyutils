@@ -430,10 +430,14 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
     dist[not_inf] = (180. / np.pi * 2 * np.arctan2(x,
                                   np.sqrt(np.maximum(0, 1 - x ** 2))))
     dist[not_inf] *= 3600.0      # in arcsec
-
+    
     # Allow duplicates
     if unique is False:
-    
+
+        # no matches
+        if np.sum(not_inf)==0:
+            return [], [], [np.inf]
+        
         # If DCR is an array then impose the max limits for each element
         if utils.size(dcr)>1:
             bd,nbd = utils.where(dist > dcr)
@@ -449,6 +453,10 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
     # Return unique one-to-one matches
     else:
 
+        # no matches
+        if np.sum(~np.isinf(dist[:,0]))==0:
+            return [], [], [np.inf]
+        
         done = 0
         niter = 1
         # Loop until we converge
@@ -466,6 +474,9 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
             ind1 = np.arange(len(ra1))[not_inf1]
             ind2 = ind[:,0][not_inf1]
             mindist = dist[:,0][not_inf1]
+            if len(ind2)==0:
+                print('no elements')
+                import pdb; pdb.set_trace()
             index = utils.create_index(ind2)
             # some duplicates to deal with
             bd,nbd = utils.where(index['num']>1)
