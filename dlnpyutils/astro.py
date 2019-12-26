@@ -13,7 +13,7 @@ __version__ = '20191226'  # yyyymmdd
 #import os
 #import sys
 import numpy as np
-#import warnings
+import warnings
 #from astropy.io import fits
 #from astropy.table import Table, Column
 #from astropy import modeling
@@ -25,7 +25,7 @@ import numpy as np
 #from scipy.special import erf
 #from scipy.interpolate import interp1d
 #from scipy.linalg import svd
-#from astropy.utils.exceptions import AstropyWarning
+from astropy.utils.exceptions import AstropyWarning
 #import socket
 #from scipy.signal import convolve2d
 #from scipy.ndimage.filters import convolve
@@ -38,7 +38,7 @@ warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
 # Convert wavelengths in air to vacuum
-def airtovacuum(wave):
+def airtovac(wave):
     """
     Convert air wavelengths to vacuum wavelengths 
 
@@ -68,23 +68,24 @@ def airtovacuum(wave):
       Iterate for better precision W.L./D. Schlegel  Mar 2011
     """
 
-    wave_vac = wave.copy()
+    wave_air = np.atleast_1d(wave).copy()  # makes sure it's an array
+    wave_vac = np.atleast_1d(wave).copy()  # initialize
     
     g,ng = utils.where(wave_vac >= 2000)     #Only modify above 2000 A
     
     if ng>0:
         for iter in range(2):
             sigma2 = (1e4/wave_vac[g] )**2     # Convert to wavenumber squared
-
+            
             # Compute conversion factor
             fact = 1.0 +  5.792105e-2/(238.0185e0 - sigma2) + 1.67917e-3/( 57.362e0 - sigma2)
-    
+            
             wave_vac[g] = wave_air[g]*fact              # Convert Wavelength
-    
-  return wave_vac
+
+    return wave_vac
 
 
-def vactoair(wave):
+def vactoair(wave_vac):
     """
     Convert vacuum wavelengths to air wavelengths
 
@@ -116,8 +117,9 @@ def vactoair(wave):
     """
 
   
-    wave_air = wave_vac.copy()
-    g,ng = utils.where(wave_vac >= 2000)     # Only modify above 2000 A
+    wave_vac = np.atleast_1d(wave_vac).copy()  # makes sure it's an array
+    wave_air = np.atleast_1d(wave_vac).copy()  # initialize
+    g,ng = utils.where(wave_air >= 2000)     # Only modify above 2000 A
     
     if ng>0:
         sigma2 = (1e4/wave_vac[g] )**2   # Convert to wavenumber squared
@@ -128,5 +130,5 @@ def vactoair(wave):
         # Convert wavelengths
         wave_air[g] = wave_vac[g]/fact
 
-  return wave_air
+    return wave_air
 
