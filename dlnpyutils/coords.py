@@ -475,8 +475,9 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
             ind2 = ind[:,0][not_inf1]
             mindist = dist[:,0][not_inf1]
             if len(ind2)==0:
-                print('no elements')
-                import pdb; pdb.set_trace()
+                return [], [], [np.inf]
+                #print('no elements')
+                #import pdb; pdb.set_trace()
             index = utils.create_index(ind2)
             # some duplicates to deal with
             bd,nbd = utils.where(index['num']>1)
