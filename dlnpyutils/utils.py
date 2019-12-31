@@ -670,7 +670,7 @@ def gaussbin(x, amp, cen, sig, const=0, dx=1.0):
 
     return geval
 
-def gaussfit(x,y,initpar,sigma=None, bounds=None):
+def gaussfit(x,y,initpar,sigma=None, bounds=None, binned=False):
     """Fit 1-D Gaussian to X/Y data"""
     #gmodel = Model(gaussian)
     #result = gmodel.fit(y, x=x, amp=initpar[0], cen=initpar[1], sig=initpar[2], const=initpar[3])
