@@ -282,7 +282,7 @@ def touch(fname):
 
 
 # Read in all lines of files
-def readlines(fil=None):
+def readlines(fil=None,raw=False):
     """
     Read in all lines of a file.
     
@@ -290,7 +290,9 @@ def readlines(fil=None):
     ----------
     file : str
          The name of the file to load.
-   
+    raw : bool, optional, default is false
+         Do not trim \n off the ends of the lines.
+
     Returns
     -------
     lines : list
@@ -308,6 +310,8 @@ def readlines(fil=None):
     f = open(fil,'r')
     lines = f.readlines()
     f.close()
+    # Strip newline off
+    if raw is False: lines = [l.rstrip('\n') for l in lines]
     return lines
 
 
