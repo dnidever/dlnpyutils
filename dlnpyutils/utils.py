@@ -356,19 +356,24 @@ def writelines(filename=None,lines=None,overwrite=True,raw=False):
             for i in len(lines):
                 if l.endswith('\n') is False:
                     lines[i] += '\n'
-        # Make sure final element does not end in \n
-        n = size(lines)
-        if n>1:
-            if lines[-1].endswith('\n'):
-                lines[-1] = lines[-1][0:-1]
+            # Make sure final element does not end in \n
+            n = size(lines)
+            if n>1:
+                if lines[-1].endswith('\n'):
+                    lines[-1] = lines[-1][0:-1]
+            else:
+                if lines.endswith('\n'):
+                    lines = lines[0:-1]
+    # Convert string to list
+    if type(lines) is str: lines=list(lines)
+    # Convert numpy array and numbers to list of strings
+    if type(lines) is not list:
+        if hasattr(lines,'__iter__'):
+            lines = [str(l)+'\n' for l in lines]
+            # Make sure final element does not end in \n        
+            if lines[-1].endswith('\n'): lines[-1] = lines[-1][0:-1]        
         else:
-            if lines.endswith('\n'):
-                lines = lines[0:-1]
-    # Convert numpy array to list
-    if type(lines) is np.ndarray:
-        lines = [str(l)+'\n' for l in lines]
-        # Make sure final element does not end in \n        
-        if lines[-1].endswith('\n'): lines[-1] = lines[-1][0:-1]        
+            lines = str(lines)
     # Write the file
     f = open(filename,'w')
     f.writelines(lines)
