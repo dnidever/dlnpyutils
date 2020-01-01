@@ -347,6 +347,14 @@ def writelines(filename=None,lines=None,overwrite=True):
         else:
             print(filename+" already exists and overwrite=False")
             return
+    # List, make sure it ends with \n
+    if type(lines) is list:
+        for i in len(lines):
+            if l.endswith('\n') is False:
+                lines[i] += '\n'
+    # Convert numpy array to list
+    if type(lines) is np.ndarray:
+        lines = [str(l)+'\n' for l in lines]
     # Write the file
     f = open(filename,'w')
     f.writelines(lines)
