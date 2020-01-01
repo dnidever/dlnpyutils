@@ -357,7 +357,7 @@ def writelines(filename=None,lines=None,overwrite=True,raw=False):
                 if l.endswith('\n') is False:
                     lines[i] += '\n'
         # Make sure final element does not end in \n
-        n = dln.size(lines)
+        n = size(lines)
         if n>1:
             if lines[-1].endswith('\n'):
                 lines[-1] = lines[-1][0:-1]
