@@ -531,6 +531,85 @@ def limit(x,llimit,ulimit):
     """Require x to be within upper and lower limits"""
     return lt(gt(x,llimit),ulimit)
 
+def valrange(array):
+    if size(array)==1:
+        return 0.0
+    else:
+        return np.max(array)-np.min(array)
+
+def signs(inp):
+    """ Return the sign of input.  Return +1.0 for 0.0"""
+    s = np.sign(inp)
+    bad,nbad = where(s== 0)
+    if nbad>0:
+        if size(s)>1:
+            s[bad] = 1
+        else:
+            s = 1.0
+    return s
+
+def scale(arr,oldrange,newrange):
+    """
+    This function maps an array or image onto a new
+    scale given two points on the old scale and
+    the corresponding points on the new scale.
+    The array is converted to double type.
+    It's similar to BYTSCL.PRO except that you
+    can set the bottom value as well.
+    The ranges can be increasing or decreasing.
+
+    INPUTS:
+    arr      The array of values to be scaled
+    oldrange Two-element array specifiying The original range which
+               will be scaled to newrange.
+    newrange Two-element array specifiying The new range which
+               the oldrange will be scaled to.
+
+    OUTPUTS:
+    narr     The new scaled array
+
+    USAGE:
+    arr2 = scale(arr,[0,1],[150,2000])
+
+    By D.Nidever   March 2007
+    """
+
+    if len(newrange)!=2:
+        raise ValueError("newrange must be a 2-element array or list")
+    if len(oldrange)!=2:
+        raise ValueError("oldrange must be a 2-element array or list")
+    
+    # Does it flip around
+    signchange = 1.0
+    if signs(oldrange[1]-oldrange[0]) != signs(newrange[1]-newrange[0]):
+        signchange = -1.0 
+    # Scale
+    narr = valrange(newrange) * signchange*(np.float64(arr)-oldrange[0])/val.range(oldrange) + newrange[0]
+    return narr
+    
+def scale_vector(vector, minrange, maxrange):
+    """ Scale a vector to minrange and maxrange. """
+
+    # Make sure we are working with floating point numbers.
+    minRange = np.float64( minrange )
+    maxRange = np.float64( maxrange )
+
+    # Make sure we have a valid range.
+    if (maxRange == minrange):
+        raise ValueError("Range max and min are coincidental")
+        return vector*0+minrange
+
+    vectormin = np.float64(np.min(vector))
+    vectormax = np.float64(np.max(vector))
+    
+    # Calculate the scaling factors.
+    scaleFactor = [((minrange * vectormax)-(maxrange * vectormin)) /
+                   (vectormax - vectormin), (maxrange - minrange) / (vectormax - vectormin)]
+
+    # Return the scaled vector.
+    return vector * scaleFactor[1] + scaleFactor[0]
+    
+
 def quadratic_bisector(x,y):
     """ Calculate the axis of symmetric or bisector of parabola"""
     #https://www.azdhs.gov/documents/preparedness/state-laboratory/lab-licensure-certification/technical-resources/
