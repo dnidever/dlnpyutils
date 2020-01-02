@@ -650,7 +650,8 @@ def robust_slope(x,y,sigma,limits=None,npt=15,reweight=False):
 
 def gaussian(x, amp, cen, sig, const=0):
     """1-D gaussian: gaussian(x, amp, cen, sig)"""
-    return (amp / (np.sqrt(2*np.pi) * sig)) * np.exp(-(x-cen)**2 / (2*sig**2)) + const
+    #return (amp / (np.sqrt(2*np.pi) * sig)) * np.exp(-(x-cen)**2 / (2*sig**2)) + const
+    return amp * np.exp(-(x-cen)**2 / (2*sig**2)) + const
 
 def gaussbin(x, amp, cen, sig, const=0, dx=1.0):
     """1-D gaussian with pixel binning
