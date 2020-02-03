@@ -61,7 +61,7 @@ def mkrunbatch():
         lines.append("  ( nohup  $1 > $1.log 2>&1 ) &\n")
         lines.append("  echo 'JOBID='$!\n")
         lines.append("fi\n")
-        dln.writelines(batchfile,lines,overwrite=True)
+        dln.writelines(batchfile,lines,overwrite=True,raw=True)
         os.chmod(batchfile,0o755)
     return batchfile
 
@@ -86,7 +86,7 @@ def mkidlbatch():
         lines.append("  ( nohup "+idlprog+" < $1 > $1.log 2>&1 ) &\n")
         lines.append("  echo 'JOBID='$!\n")
         lines.append("fi\n")
-        dln.writelines(batchfile,lines,overwrite=True)
+        dln.writelines(batchfile,lines,overwrite=True,raw=True)
         os.chmod(batchfile,0o755)
     return batchfile
 
@@ -210,7 +210,7 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
             if idle is True:
                 # Making an IDL batch file
                 bname = str(indir[i])+'/'+base+'.batch'
-                dln.writelines(bname,input1,overwrite=True)
+                dln.writelines(bname,input1,overwrite=True,raw=True)
                 # The execution command
                 cmd = 'idl < '+base+'.batch'
             # SHELL command
@@ -248,7 +248,7 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
             lines.append('echo "Job Ended at `date`"\n')
             lines.append('echo\n')
             # Writing the file
-            dln.writelines(scriptname[i],lines,overwrite=True)
+            dln.writelines(scriptname[i],lines,overwrite=True,raw=True)
             # Print info
             print('PBS script written to: '+str(scriptname[i]))
 
@@ -267,7 +267,7 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
             # IDL files should end in .batch
             if idle is True: scriptname[i] = str(indir[i])+'/'+base+'.batch'
             # Writing the file
-            dln.writelines(scriptname[i],cmd,overwrite=True)
+            dln.writelines(scriptname[i],cmd,overwrite=True,raw=True)
             # Make SHELL scripts executable
             if idle is False: os.chmod(scriptname[i],0o755)
             # Print info
