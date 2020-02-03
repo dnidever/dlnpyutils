@@ -282,7 +282,7 @@ def touch(fname):
 
 
 # Read in all lines of files
-def readlines(fil=None):
+def readlines(fil=None,raw=False):
     """
     Read in all lines of a file.
     
@@ -290,7 +290,9 @@ def readlines(fil=None):
     ----------
     file : str
          The name of the file to load.
-   
+    raw : bool, optional, default is false
+         Do not trim \n off the ends of the lines.
+
     Returns
     -------
     lines : list
@@ -308,11 +310,13 @@ def readlines(fil=None):
     f = open(fil,'r')
     lines = f.readlines()
     f.close()
+    # Strip newline off
+    if raw is False: lines = [l.rstrip('\n') for l in lines]
     return lines
 
 
 # Write all lines to file
-def writelines(filename=None,lines=None,overwrite=True):
+def writelines(filename=None,lines=None,overwrite=True,raw=False):
     """
     Write a list of lines to a file.
     
@@ -324,6 +328,8 @@ def writelines(filename=None,lines=None,overwrite=True):
          The list of lines to write to a file.
     overwrite : bool, optional, default is True
         If the output file already exists, then overwrite it.
+    raw : bool, optional, default is False
+        Do not modify the lines. Write out as is.
 
     Returns
     -------
@@ -347,6 +353,31 @@ def writelines(filename=None,lines=None,overwrite=True):
         else:
             print(filename+" already exists and overwrite=False")
             return
+    # Modify the input as needed
+    if raw is False:
+        # List, make sure it ends with \n
+        if type(lines) is list:
+            for i in len(lines):
+                if l.endswith('\n') is False:
+                    lines[i] += '\n'
+            # Make sure final element does not end in \n
+            n = size(lines)
+            if n>1:
+                if lines[-1].endswith('\n'):
+                    lines[-1] = lines[-1][0:-1]
+            else:
+                if lines.endswith('\n'):
+                    lines = lines[0:-1]
+    # Convert string to list
+    if type(lines) is str: lines=list(lines)
+    # Convert numpy array and numbers to list of strings
+    if type(lines) is not list:
+        if hasattr(lines,'__iter__'):
+            lines = [str(l)+'\n' for l in lines]
+            # Make sure final element does not end in \n        
+            if lines[-1].endswith('\n'): lines[-1] = lines[-1][0:-1]        
+        else:
+            lines = str(lines)
     # Write the file
     f = open(filename,'w')
     f.writelines(lines)
@@ -500,6 +531,85 @@ def limit(x,llimit,ulimit):
     """Require x to be within upper and lower limits"""
     return lt(gt(x,llimit),ulimit)
 
+def valrange(array):
+    if size(array)==1:
+        return 0.0
+    else:
+        return np.max(array)-np.min(array)
+
+def signs(inp):
+    """ Return the sign of input.  Return +1.0 for 0.0"""
+    s = np.sign(inp)
+    bad,nbad = where(s== 0)
+    if nbad>0:
+        if size(s)>1:
+            s[bad] = 1
+        else:
+            s = 1.0
+    return s
+
+def scale(arr,oldrange,newrange):
+    """
+    This function maps an array or image onto a new
+    scale given two points on the old scale and
+    the corresponding points on the new scale.
+    The array is converted to double type.
+    It's similar to BYTSCL.PRO except that you
+    can set the bottom value as well.
+    The ranges can be increasing or decreasing.
+
+    INPUTS:
+    arr      The array of values to be scaled
+    oldrange Two-element array specifiying The original range which
+               will be scaled to newrange.
+    newrange Two-element array specifiying The new range which
+               the oldrange will be scaled to.
+
+    OUTPUTS:
+    narr     The new scaled array
+
+    USAGE:
+    arr2 = scale(arr,[0,1],[150,2000])
+
+    By D.Nidever   March 2007
+    """
+
+    if len(newrange)!=2:
+        raise ValueError("newrange must be a 2-element array or list")
+    if len(oldrange)!=2:
+        raise ValueError("oldrange must be a 2-element array or list")
+    
+    # Does it flip around
+    signchange = 1.0
+    if signs(oldrange[1]-oldrange[0]) != signs(newrange[1]-newrange[0]):
+        signchange = -1.0 
+    # Scale
+    narr = valrange(newrange) * signchange*(np.float64(arr)-oldrange[0])/val.range(oldrange) + newrange[0]
+    return narr
+    
+def scale_vector(vector, minrange, maxrange):
+    """ Scale a vector to minrange and maxrange. """
+
+    # Make sure we are working with floating point numbers.
+    minRange = np.float64( minrange )
+    maxRange = np.float64( maxrange )
+
+    # Make sure we have a valid range.
+    if (maxRange == minrange):
+        raise ValueError("Range max and min are coincidental")
+        return vector*0+minrange
+
+    vectormin = np.float64(np.min(vector))
+    vectormax = np.float64(np.max(vector))
+    
+    # Calculate the scaling factors.
+    scaleFactor = [((minrange * vectormax)-(maxrange * vectormin)) /
+                   (vectormax - vectormin), (maxrange - minrange) / (vectormax - vectormin)]
+
+    # Return the scaled vector.
+    return vector * scaleFactor[1] + scaleFactor[0]
+    
+
 def quadratic_bisector(x,y):
     """ Calculate the axis of symmetric or bisector of parabola"""
     #https://www.azdhs.gov/documents/preparedness/state-laboratory/lab-licensure-certification/technical-resources/
@@ -619,7 +729,8 @@ def robust_slope(x,y,sigma,limits=None,npt=15,reweight=False):
 
 def gaussian(x, amp, cen, sig, const=0):
     """1-D gaussian: gaussian(x, amp, cen, sig)"""
-    return (amp / (np.sqrt(2*np.pi) * sig)) * np.exp(-(x-cen)**2 / (2*sig**2)) + const
+    #return (amp / (np.sqrt(2*np.pi) * sig)) * np.exp(-(x-cen)**2 / (2*sig**2)) + const
+    return amp * np.exp(-(x-cen)**2 / (2*sig**2)) + const
 
 def gaussbin(x, amp, cen, sig, const=0, dx=1.0):
     """1-D gaussian with pixel binning
@@ -670,7 +781,7 @@ def gaussbin(x, amp, cen, sig, const=0, dx=1.0):
 
     return geval
 
-def gaussfit(x,y,initpar,sigma=None, bounds=None):
+def gaussfit(x,y,initpar,sigma=None, bounds=None, binned=False):
     """Fit 1-D Gaussian to X/Y data"""
     #gmodel = Model(gaussian)
     #result = gmodel.fit(y, x=x, amp=initpar[0], cen=initpar[1], sig=initpar[2], const=initpar[3])
@@ -1030,8 +1141,8 @@ def match(a,b,epsilon=0):
     return suba, subb
 
 # Interpolation with extrapolation
-def interp(x,y,xout,kind='cubic',bounds_error=False,assume_sorted=True,extrapolate=True,exporder=2):
-    yout = interp1d(x,y,kind=kind,bounds_error=bounds_error,fill_value=(np.nan,np.nan),assume_sorted=assume_sorted)(xout)
+def interp(x,y,xout,kind='cubic',bounds_error=False,assume_sorted=True,extrapolate=True,exporder=2,fill_value=np.nan):
+    yout = interp1d(x,y,kind=kind,bounds_error=bounds_error,fill_value=(fill_value,fill_value),assume_sorted=assume_sorted)(xout)
     # Need to extrapolate
     if ((np.min(xout)<np.min(x)) | (np.max(xout)>np.max(x))) & (extrapolate is True):
         si = np.argsort(x)

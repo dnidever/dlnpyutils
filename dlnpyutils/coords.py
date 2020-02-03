@@ -479,8 +479,9 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
             ind2 = ind[:,0][not_inf1]
             mindist = dist[:,0][not_inf1]
             if len(ind2)==0:
-                print('no elements')
-                import pdb; pdb.set_trace()
+                return [], [], [np.inf]
+                #print('no elements')
+                #import pdb; pdb.set_trace()
             index = utils.create_index(ind2)
             # some duplicates to deal with
             bd,nbd = utils.where(index['num']>1)
@@ -511,6 +512,17 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
             if (ntorem==0) | (niter>=10): done=1
                                 
     return ind1, ind2, mindist
+
+def dist(x1, y1, x2, y2):
+    """ Calculate Euclidian distance between two sets of points."""
+
+    if (utils.size(x1) != utils.size(y1)):
+        raise ValueError('x1/y1 must have same number of elements')
+    if (utils.size(x2) != utils.size(y2)):
+        raise ValueError('x2/y2 must have same number of elements')    
+
+    return np.sqrt( (x1-x2)**2 + (y1-y2)**2 )
+    
 
 def sphdist(lon1, lat1, lon2, lat2):
     """Calculate the angular distance between two sets of points.
