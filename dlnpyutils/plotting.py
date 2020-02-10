@@ -368,3 +368,78 @@ def hist2d(x,y,z=None,statistic='count',xrange=None,yrange=None,dx=None,dy=None,
     plt.colorbar()
 
     return
+
+def display(im,x=None,y=None,log=False,noerase=False,zscale=False,zmin=None,zmax=None,
+            xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',cmap=None):
+    """ Display an image."""
+
+    # Getting the current figure, creating a new one if necessary
+    fig = plt.gcf()
+    
+    if noerase is False:
+        plt.clf()   # clear the plot
+
+    nx,ny = im.shape
+        
+    # Plot the image
+    #fig, ax = plt.subplots()
+    norm = None
+    if log is True:
+        norm = colors.LogNorm(vmin=zmin,vmax=zmax)
+    if zscale is True:
+        zmin,zmax = zscaling(im)
+    if x is None:
+        xrange = [0,nx-1]
+    else:
+        xrange = [np.min(x),np.max(x)]
+    if y is None:
+        yrange = [0,ny-1]
+    else:
+        yrange = [np.min(y),np.max(y)]
+        
+    extent = [xrange[0], xrange[1], yrange[0], yrange[1]]
+    plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,vmin=zmin,vmax=zmax,origin=origin,extent=extent)
+        
+    # Axis titles
+    if xtitle is not None:
+        plt.xlabel(xtitle)
+    if ytitle is not None:
+        plt.ylabel(ytitle)        
+    if title is not None:
+        plt.title(title)
+        
+    # Add the colorbar
+    plt.colorbar()
+    
+    return
+
+
+def plot(x,y,z=None,marker=None,log=False,noerase=False,zmin=None,zmax=None,linewidth=None,
+         xtitle=None,ytitle=None,title=None,cmap=None,alpha=None):
+    """ Create a line or scatter plot.  like plotc.pro"""
+
+    # Getting the current figure, creating a new one if necessary
+    fig = plt.gcf()
+    
+    if noerase is False:
+        plt.clf()   # clear the plot
+
+    # Make the plot
+    norm = None
+    if log is True:
+        norm = colors.LogNorm(vmin=zmin,vmax=zmax)
+    plt.scatter(x,y,c=z,marker=marker,cmap=cmap,norm=norm,vmin=zmin,vmax=zmax,alpha=alpha,linewidth=linewidth)
+
+    # Axis titles
+    if xtitle is not None:
+        plt.xlabel(xtitle)
+    if ytitle is not None:
+        plt.ylabel(ytitle)        
+    if title is not None:
+        plt.title(title)
+    
+    # Add the colorbar
+    if z is not None:
+        plt.colorbar()
+    
+    return
