@@ -1301,3 +1301,8 @@ def ellipsecoords(pars,npoints=100):
     xprime = xc + x*cosang - y*sinang               # Rotate to desired position angle
     yprime = yc + x*sinang + y*cosang
     return xprime, yprime
+
+def closest(array,value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return array[idx],idx

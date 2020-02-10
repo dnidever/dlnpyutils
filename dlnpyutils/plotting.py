@@ -369,7 +369,7 @@ def hist2d(x,y,z=None,statistic='count',xrange=None,yrange=None,dx=None,dy=None,
 
     return
 
-def display(im,x=None,y=None,log=False,noerase=False,zscale=False,zmin=None,zmax=None,
+def display(im,x=None,y=None,log=False,xrange=None,yrange=None,noerase=False,zscale=False,zmin=None,zmax=None,
             xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',cmap=None):
     """ Display an image."""
 
@@ -379,7 +379,37 @@ def display(im,x=None,y=None,log=False,noerase=False,zscale=False,zmin=None,zmax
     if noerase is False:
         plt.clf()   # clear the plot
 
-    nx,ny = im.shape
+    nx,ny = im.shape        
+        
+    # No X/Y inputs
+    if x is None:
+        x = np.arange(nx)
+    if y is None:
+        y = np.arange(ny)
+
+    # Min's and Max's
+    xmin = np.min(x)
+    xmax = np.max(x)
+    ymin = np.min(y)
+    ymax = np.max(y)
+
+    # Trim based on xrange/yrange
+    if xrange is not None:
+        val0,xlo = dln.closest(x,xrange[0])
+        val1,xhi = dln.closest(x,xrange[1])        
+        im = im[xlo:xhi+1,:]
+        x = x[xlo:xhi+1]
+        nx,ny = im.shape
+        xmin = np.min(x)
+        xmax = np.max(x)
+    if yrange is not None:
+        val0,ylo = dln.closest(y,yrange[0])
+        val1,yhi = dln.closest(y,yrange[1])        
+        im = im[:,ylo:yhi+1]
+        y = y[ylo:yhi+1]
+        nx,ny = im.shape        
+        ymin = np.min(y)
+        ymax = np.max(y)
         
     # Plot the image
     #fig, ax = plt.subplots()
@@ -388,16 +418,8 @@ def display(im,x=None,y=None,log=False,noerase=False,zscale=False,zmin=None,zmax
         norm = colors.LogNorm(vmin=zmin,vmax=zmax)
     if zscale is True:
         zmin,zmax = zscaling(im)
-    if x is None:
-        xrange = [0,nx-1]
-    else:
-        xrange = [np.min(x),np.max(x)]
-    if y is None:
-        yrange = [0,ny-1]
-    else:
-        yrange = [np.min(y),np.max(y)]
-        
-    extent = [xrange[0], xrange[1], yrange[0], yrange[1]]
+
+    extent = [xmin, xmax, ymin, ymax]
     plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,vmin=zmin,vmax=zmax,origin=origin,extent=extent)
         
     # Axis titles
