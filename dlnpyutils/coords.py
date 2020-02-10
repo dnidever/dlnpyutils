@@ -469,6 +469,10 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
                     for i in range(nbd):
                         dist[bd[i],:] = np.inf
 
+            # no matches
+            if np.sum(~np.isinf(dist[:,0]))==0:
+                return [], [], [np.inf]
+
             # closest matches
             not_inf1 = ~np.isinf(dist[:,0])
             ind1 = np.arange(len(ra1))[not_inf1]

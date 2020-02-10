@@ -369,7 +369,7 @@ def writelines(filename=None,lines=None,overwrite=True,raw=False):
                 if lines.endswith('\n'):
                     lines = lines[0:-1]
     # Convert string to list
-    if type(lines) is str: lines=list(lines)
+    if (type(lines) is str) | (type(lines) is np.str_): lines=list(lines)
     # Convert numpy array and numbers to list of strings
     if type(lines) is not list:
         if hasattr(lines,'__iter__'):
