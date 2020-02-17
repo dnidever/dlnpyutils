@@ -68,7 +68,7 @@ def stat(a=None,silent=False):
     #  info[7]: Standard Error
     #  info[8]: Root Mean Square (R.M.S.)
     #  info[9]: MAD estimate of St.Dev.
-    info = np.zeros(10)
+    info = np.zeros(10,float)
     info[0] = len(a)
     info[1] = np.min(a)
     info[2] = np.max(a)
