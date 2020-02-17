@@ -440,6 +440,8 @@ def plot(x,y,z=None,marker=None,log=False,noerase=False,zmin=None,zmax=None,line
          xtitle=None,ytitle=None,title=None,cmap=None,alpha=None):
     """ Create a line or scatter plot.  like plotc.pro"""
 
+    # xerr, yerr, symbol size
+    
     # Getting the current figure, creating a new one if necessary
     fig = plt.gcf()
     
