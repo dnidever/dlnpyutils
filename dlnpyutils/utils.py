@@ -1073,7 +1073,26 @@ def match(a,b,epsilon=0):
         count = nw
         return suba,subb
 
-    c = np.hstack((np.array(a),np.array(b)))                     # combined list of a and b
+    # Conver to numpy.chararray if either of them are strings
+    a1 = dln.first_el(a)
+    b1 = dln.first_el(b)
+    if isinstance(a,np.chararray) | isinstance(a1,str) | isinstance(a1,np.string_) | \
+       isinstance(b,np.chararray) | isinstance(b1,str) | isinstance(b1,np.string_):
+        atemp = np.char.array(a)
+        btemp = np.char.array(b)
+        # Use the dtype with the largest number of characters
+        if atemp.dtype > btemp.dtype:
+            dtype = atemp.dtype
+        else:
+            dtype = btemp.dtype
+        c = np.zeros(na+nb,dtype=dtype)
+        c[0:na] = atemp
+        c[na:] = btemp
+        c = np.char.array(c)  # convert to np.chararray, removes trailing strings
+        del atemp, btemp
+        #c = np.hstack((np.char.array(a),np.char.array(b)))           # combined list of a and b
+    else:
+        c = np.hstack((np.array(a),np.array(b)))                     # combined list of a and b
     ind = np.hstack((np.arange(na),np.arange(nb)))               # combined list of indices
     vec = np.hstack((np.zeros(na,bool),np.zeros(nb,bool)+True))  # flag of which vector in  combined
     #list   False - a   True - b
