@@ -1074,8 +1074,8 @@ def match(a,b,epsilon=0):
         return suba,subb
 
     # Conver to numpy.chararray if either of them are strings
-    a1 = dln.first_el(a)
-    b1 = dln.first_el(b)
+    a1 = first_el(a)
+    b1 = first_el(b)
     if isinstance(a,np.chararray) | isinstance(a1,str) | isinstance(a1,np.string_) | \
        isinstance(b,np.chararray) | isinstance(b1,str) | isinstance(b1,np.string_):
         atemp = np.char.array(a)
@@ -1295,7 +1295,7 @@ def add_elements(cat,num=10000):
     """ Add more elements to a catalog"""
     ncat = len(cat)
     old = cat.copy()
-    num = dln.gt(num,ncat)
+    num = gt(num,ncat)
     cat = np.zeros(ncat+num,dtype=old.dtype)
     cat[0:ncat] = old
     del old
