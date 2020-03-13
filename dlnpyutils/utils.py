@@ -1244,9 +1244,11 @@ def addcatcols(cat,dt):
     # Concatenate the dtypes
     dtype_list = []
     for f in cat.dtype.names:
-        dtype_list.append((f,cat.dtype[f].str))
+        dtype_list.append((f,cat.dtype[f]))
+    #    dtype_list.append((f,cat.dtype[f].str))
     for f in dt.names:
-        dtype_list.append((f,dt[f].str))        
+        dtype_list.append((f,dt[f]))
+    #    dtype_list.append((f,dt[f].str))
     newdtype = np.dtype(dtype_list)    
     
     # Create the final structure and load the data
