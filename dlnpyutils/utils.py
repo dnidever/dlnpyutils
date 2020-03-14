@@ -278,7 +278,7 @@ def grep(lines=None,expr=None,index=False):
 
 # Create an empty file
 def touch(fname):
-    open(fname, 'wa').close()
+    open(fname, 'a').close()
 
 
 # Read in all lines of files
