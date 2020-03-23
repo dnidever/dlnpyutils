@@ -727,6 +727,15 @@ def robust_slope(x,y,sigma,limits=None,npt=15,reweight=False):
         best_slp = quad_slp
     return best_slp, wt_slperr
 
+def wtmedian(val,wt):
+    """Weighted median can be computed by sorting the set of numbers and finding the
+    smallest numbers which sums to half the weight of total weight."""
+    # https://en.wikipedia.org/wiki/Weighted_median
+    si = np.argsort(val.flatten())
+    totwt = np.cumsum(np.abs(wt).flatten()[si])
+    ind = totwt.searchsorted(totwt.max()*0.5)
+    return val.flatten()[si[ind-1]]
+
 def gaussian(x, amp, cen, sig, const=0):
     """1-D gaussian: gaussian(x, amp, cen, sig)"""
     #return (amp / (np.sqrt(2*np.pi) * sig)) * np.exp(-(x-cen)**2 / (2*sig**2)) + const
