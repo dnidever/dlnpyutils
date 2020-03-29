@@ -491,7 +491,10 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
                     indx = index['index'][index['lo'][bd[i]]:index['hi'][bd[i]]+1]
                     # keep the one with the smallest minimum distance
                     si = np.argsort(mindist[indx])
-                    torem.append(indx[si[1:]])
+                    if index['num'][bd[i]]>2:
+                        torem += list(indx[si[1:]])    # add list
+                    else:
+                        torem.append(indx[si[1:]][0])  # add single element
                 ntorem = utils.size(torem)
                 # For each object that was "removed" and is now unmatched, check the next possible
                 # match and move it up in the dist/ind list if it isn't INF
