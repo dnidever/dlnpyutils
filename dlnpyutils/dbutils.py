@@ -4,7 +4,7 @@ from dlnpyutils import utils as dln, coords
 import time
 import sqlite3
 
-def writecat2db(cat,dbfile,table='meas'):
+def writecat(cat,dbfile,table='meas'):
     """ Write a catalog to the database """
     ncat = dln.size(cat)
     sqlite3.register_adapter(np.int8, int)
@@ -37,7 +37,7 @@ def writecat2db(cat,dbfile,table='meas'):
     db.commit()
     db.close()
 
-def createindexdb(dbfile,col='measid',table='meas',unique=True,verbose=False):
+def createindex(dbfile,col='measid',table='meas',unique=True,verbose=False):
     """ Index a column in the database """
     t0 = time.time()
     db = sqlite3.connect(dbfile, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
@@ -60,7 +60,7 @@ def createindexdb(dbfile,col='measid',table='meas',unique=True,verbose=False):
     db.close()
     if verbose: print('indexing done after '+str(time.time()-t0)+' sec')
 
-def getdatadb(dbfile,table='meas',cols='*',rar=None,decr=None,verbose=False):
+def getdata(dbfile,table='meas',cols='*',rar=None,decr=None,verbose=False):
     """ Get rows from the database """
     t0 = time.time()
     sqlite3.register_adapter(np.int8, int)
