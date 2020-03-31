@@ -60,7 +60,7 @@ def createindex(dbfile,col='measid',table='meas',unique=True,verbose=False):
     db.close()
     if verbose: print('indexing done after '+str(time.time()-t0)+' sec')
 
-def getdata(dbfile,table='meas',cols='*',rar=None,decr=None,verbose=False):
+def query(dbfile,table='meas',cols='*',where=None,verbose=False):
     """ Get rows from the database """
     t0 = time.time()
     sqlite3.register_adapter(np.int8, int)
@@ -78,23 +78,14 @@ def getdata(dbfile,table='meas',cols='*',rar=None,decr=None,verbose=False):
 
     # Start the SELECT statement
     cmd = 'SELECT '+cols+' FROM '+table
-    # RA constraints
-    if rar is not None:
-        if cmd.find('WHERE') == -1:
-            cmd += ' WHERE '
-        else:
-            cmd += ' AND '
-        cmd += 'ra>='+str(rar[0])+' AND ra<'+str(rar[1])
-    # DEC constraints
-    if decr is not None:
-        if cmd.find('WHERE') == -1:
-            cmd += ' WHERE '
-        else:
-            cmd += ' AND '
-        cmd += 'dec>='+str(decr[0])+' AND dec<'+str(decr[1])
+
+    # Add WHERE statement
+    if where is not None:
+        cmd += ' WHERE '+where
 
     # Execute the select command
-    #print('CMD = '+cmd)
+    if verbose:
+        print('CMD = '+cmd)
     cur.execute(cmd)
     data = cur.fetchall()
 
