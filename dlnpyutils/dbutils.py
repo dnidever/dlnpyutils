@@ -60,7 +60,7 @@ def createindex(dbfile,col='measid',table='meas',unique=True,verbose=False):
     db.close()
     if verbose: print('indexing done after '+str(time.time()-t0)+' sec')
 
-def query(dbfile,table='meas',cols='*',where=None,raw=False,verbose=False):
+def query(dbfile,table='meas',cols='*',where=None,groupby=None,raw=False,verbose=False):
     """ Get rows from the database """
     t0 = time.time()
     sqlite3.register_adapter(np.int8, int)
@@ -83,6 +83,10 @@ def query(dbfile,table='meas',cols='*',where=None,raw=False,verbose=False):
     if where is not None:
         cmd += ' WHERE '+where
 
+    # Add GROUP BY statement
+    if groupby is not None:
+        cmd += ' GROUP BY '+groupby
+        
     # Execute the select command
     if verbose:
         print('CMD = '+cmd)
