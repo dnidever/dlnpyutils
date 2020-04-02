@@ -1,24 +1,10 @@
 #!/usr/bin/env python                                                                                                                                                   
-import os
-import sys
 import numpy as np
-import glob
-import warnings
-from astropy.io import fits
-from astropy.utils.exceptions import AstropyWarning
-from astropy.table import Table, vstack, Column
-from astropy.time import Time
-import healpy as hp
-from dlnpyutils import utils as dln, coords
-import subprocess
+from dlnpyutils import utils as dln
 import time
-#from argparse import ArgumentParser
-import socket
-#from dustmaps.sfd import SFDQuery
-from astropy.coordinates import SkyCoord
 import sqlite3
 
-def writecat2db(cat,dbfile,table='meas'):
+def writecat(cat,dbfile,table='meas'):
     """ Write a catalog to the database """
     ncat = dln.size(cat)
     sqlite3.register_adapter(np.int8, int)
@@ -51,7 +37,7 @@ def writecat2db(cat,dbfile,table='meas'):
     db.commit()
     db.close()
 
-def createindexdb(dbfile,col='measid',table='meas',unique=True,verbose=False):
+def createindex(dbfile,col='measid',table='meas',unique=True,verbose=False):
     """ Index a column in the database """
     t0 = time.time()
     db = sqlite3.connect(dbfile, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
@@ -74,7 +60,7 @@ def createindexdb(dbfile,col='measid',table='meas',unique=True,verbose=False):
     db.close()
     if verbose: print('indexing done after '+str(time.time()-t0)+' sec')
 
-def getdatadb(dbfile,table='meas',cols='*',rar=None,decr=None,verbose=False):
+def query(dbfile,table='meas',cols='*',where=None,groupby=None,raw=False,verbose=False):
     """ Get rows from the database """
     t0 = time.time()
     sqlite3.register_adapter(np.int8, int)
@@ -88,27 +74,22 @@ def getdatadb(dbfile,table='meas',cols='*',rar=None,decr=None,verbose=False):
     cur = db.cursor()
 
     # Convert numpy data types to sqlite3 data types
-    d2d = {"TEXT":(np.str,100), "INTEGER":np.int, "REAL":np.float}
+    d2d = {"TEXT":(np.str,200), "INTEGER":np.int, "REAL":np.float}
 
     # Start the SELECT statement
     cmd = 'SELECT '+cols+' FROM '+table
-    # RA constraints
-    if rar is not None:
-        if cmd.find('WHERE') == -1:
-            cmd += ' WHERE '
-        else:
-            cmd += ' AND '
-        cmd += 'ra>='+str(rar[0])+' AND ra<'+str(rar[1])
-    # DEC constraints
-    if decr is not None:
-        if cmd.find('WHERE') == -1:
-            cmd += ' WHERE '
-        else:
-            cmd += ' AND '
-        cmd += 'dec>='+str(decr[0])+' AND dec<'+str(decr[1])
 
+    # Add WHERE statement
+    if where is not None:
+        cmd += ' WHERE '+where
+
+    # Add GROUP BY statement
+    if groupby is not None:
+        cmd += ' GROUP BY '+groupby
+        
     # Execute the select command
-    #print('CMD = '+cmd)
+    if verbose:
+        print('CMD = '+cmd)
     cur.execute(cmd)
     data = cur.fetchall()
 
@@ -116,6 +97,10 @@ def getdatadb(dbfile,table='meas',cols='*',rar=None,decr=None,verbose=False):
     if len(data)==0:
         return np.array([])
 
+    # Return the raw results
+    if raw is True:
+        return data
+    
     # Get table column names and data types
     cur.execute("select sql from sqlite_master where tbl_name = '"+table+"'")
     dum = cur.fetchall()
@@ -125,15 +110,15 @@ def getdatadb(dbfile,table='meas',cols='*',rar=None,decr=None,verbose=False):
     lo = head.find('(')
     hi = head.find(')')
     head = head[lo+1:hi]
-    cols = head.split(',')
-    cols = dln.strip(cols)
+    columns = head.split(',')
+    columns = dln.strip(columns)
     dt = []
-    for c in cols:
+    for c in columns:
         pair = c.split(' ')
         dt.append( (pair[0], d2d[pair[1]]) )
     dtype = np.dtype(dt)
 
-    # Convert to nump structured array
+    # Convert to numpy structured array
     cat = np.zeros(len(data),dtype=dtype)
     cat[...] = data
     del(data)
@@ -141,6 +126,3 @@ def getdatadb(dbfile,table='meas',cols='*',rar=None,decr=None,verbose=False):
     if verbose: print('got data in '+str(time.time()-t0)+' sec.')
 
     return cat
-
-
-
