@@ -357,7 +357,7 @@ def writelines(filename=None,lines=None,overwrite=True,raw=False):
     if raw is False:
         # List, make sure it ends with \n
         if type(lines) is list:
-            for i in len(lines):
+            for i,l in enumerate(lines):
                 if l.endswith('\n') is False:
                     lines[i] += '\n'
             # Make sure final element does not end in \n
