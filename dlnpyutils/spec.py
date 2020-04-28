@@ -95,8 +95,8 @@ def extract(im,imerr=None,mcat=None,nobackground=False):
         if nobackground is True:
             initpar = [ht0,ycen,ysigma,0]
         # Only fit the region right around the peak
-        y0 = int(np.maximum(ymid-50,0))
-        y1 = int(np.minimum(ymid+50,ny))
+        y0 = int(np.maximum(ycen-50,0))
+        y1 = int(np.minimum(ycen+50,ny))
         bnds = ([0,ycen-1e-4,ysigma-1e-4,0],[1.5*ht0,ycen,ysigma,1.5*initpar[3]])
         if nobackground is True:
             bnds = ([0,ycen-1e-4,ysigma-1e-4,0],[1.5*ht0,ycen,ysigma,0.1])
@@ -145,8 +145,8 @@ def emissionlines(spec,thresh=None):
         gmodel[xlo:xhi] += (gmodel1-pars[3])
         resid[xlo:xhi] -= (gmodel1-pars[3])
         # Gaussian area = ht*wid*sqrt(2*pi)
-        flux = pars[0]*ysigma*np.sqrt(2*np.pi)
-        fluxerr = perr[0]*ysigma*np.sqrt(2*np.pi)
+        flux = pars[0]*pars[2]*np.sqrt(2*np.pi)
+        fluxerr = perr[0]*pars[2]*np.sqrt(2*np.pi)
         gcat['x0'][i] = x0
         gcat['x'][i] = pars[1]
         gcat['xerr'][i] = perr[1]
