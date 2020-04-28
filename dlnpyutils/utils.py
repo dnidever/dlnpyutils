@@ -736,12 +736,12 @@ def wtmedian(val,wt):
     ind = totwt.searchsorted(totwt.max()*0.5)
     return val.flatten()[si[ind-1]]
 
-def gaussian(x, amp, cen, sig, const=0):
+def gaussian(x, amp, cen, sig, const=0.0, slp=0.0):
     """1-D gaussian: gaussian(x, amp, cen, sig)"""
     #return (amp / (np.sqrt(2*np.pi) * sig)) * np.exp(-(x-cen)**2 / (2*sig**2)) + const
-    return amp * np.exp(-(x-cen)**2 / (2*sig**2)) + const
+    return amp * np.exp(-(x-cen)**2 / (2*sig**2)) + const + slp(x-cen)
 
-def gaussbin(x, amp, cen, sig, const=0, dx=1.0):
+def gaussbin(x, amp, cen, sig, const=0, slp=0.0, dx=1.0):
     """1-D gaussian with pixel binning
     
     This function returns a binned Gaussian
@@ -759,6 +759,8 @@ def gaussbin(x, amp, cen, sig, const=0, dx=1.0):
        The Gaussian sigma.
     const : float, optional, default=0.0
        A constant offset.
+    slp : float, optional, default=0.0
+       A linear slope around cen.
     dx : float, optional, default=1.0
       The width of each "pixel" (scalar).
     
@@ -786,7 +788,7 @@ def gaussbin(x, amp, cen, sig, const=0, dx=1.0):
     geval_upper = erf(t2cen)
 
     geval = amp*np.sqrt(2.0)*sig * np.sqrt(np.pi)/2.0 * ( geval_upper - geval_lower )
-    geval += const   # add constant offset
+    geval += const + slp(x-cen)   # add constant offset and slope
 
     return geval
 
@@ -798,6 +800,35 @@ def gaussfit(x,y,initpar,sigma=None, bounds=None, binned=False):
     func = gaussian
     if binned is True: func=gaussbin
     return curve_fit(func, x, y, p0=initpar, sigma=sigma, bounds=bounds)
+
+
+def voigt(x, height, cen, sigma, gamma, const=0.0, slp=0.0):
+    """
+    Return the Voigt line shape at x with Lorentzian component HWHM gamma
+    and Gaussian sigma.
+
+    """
+
+    maxy = np.real(wofz((1j*gamma)/sigma/np.sqrt(2))) / sigma\
+                                                           /np.sqrt(2*np.pi)
+    return (height/maxy) * np.real(wofz(((x-cen) + 1j*gamma)/sigma/np.sqrt(2))) / sigma\
+                                                           /np.sqrt(2*np.pi) + const + slp*(x-cen)
+
+def voigtfit(x,y,initpar=None,sigma=None,bounds=(-np.inf,np.inf)):
+    """Fit a Voigt profile to data."""
+    if initpar is None:
+        initpar = [np.max(y),x[np.argmax(y)],1.0,1.0,np.median(y),0.0]
+    func = voigt
+    return curve_fit(func, x, y, p0=initpar, sigma=sigma, bounds=bounds)
+
+def voigtarea(pars):
+    """ Compute area of Voigt profile"""
+    sig = np.maximum(pars[2],pars[3])
+    x = np.linspace(-20*sig,20*sig,1000)+pars[1]
+    dx = x[1]-x[0]
+    v = voigt(x,np.abs(pars[0]),pars[1],pars[2],pars[3])
+    varea = np.sum(v*dx)
+    return varea
 
 def poly(x,coef,*args):
     """ Evaluate a polynomial function of a variable."""
