@@ -1096,7 +1096,7 @@ def match(a,b,epsilon=0):
                 subb, = np.where(np.abs(b-a) < epsilon)
                 nw = len(subb)
             if (nw>0):
-                suba = np.zeros(w,int)
+                suba = np.zeros(nw,int)
             else:
                 suba = np.array([])
         else:
