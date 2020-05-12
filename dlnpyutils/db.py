@@ -60,6 +60,18 @@ def createindex(dbfile,col='measid',table='meas',unique=True,verbose=False):
     db.close()
     if verbose: print('indexing done after '+str(time.time()-t0)+' sec')
 
+def analyzetable(dbfile,table,verbose=False):
+    """ Run analyze command on a table.  This speeds up queries."""
+    t0 = time.time()
+    db = sqlite3.connect(dbfile, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
+    c = db.cursor()
+    # Index the table
+    if verbose: print('Analyzing '+table)
+    c.execute('ANALYZE '+table)
+    data = c.fetchall()
+    db.close()
+    if verbose: print('analyzing done after '+str(time.time()-t0)+' sec')
+    
 def query(dbfile,table='meas',cols='*',where=None,groupby=None,raw=False,verbose=False):
     """ Get rows from the database """
     t0 = time.time()
