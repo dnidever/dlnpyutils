@@ -114,7 +114,7 @@ def query(dbfile,table='meas',cols='*',where=None,groupby=None,raw=False,verbose
         return data
     
     # Get table column names and data types
-    cur.execute("select sql from sqlite_master where tbl_name = '"+table+"'")
+    cur.execute("select sql from sqlite_master where tbl_name = '"+table+"' and type='table'")
     dum = cur.fetchall()
     db.close()
     head = dum[0][0]
