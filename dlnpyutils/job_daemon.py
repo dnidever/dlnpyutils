@@ -116,7 +116,8 @@ def check_killfile(jobs=None,hyperthread=True):
             if hyperthread is False:
                 out = subprocess.check_output(['qdel',jobs['jobid'][sub[i]]],stdout=sf,stderr=subprocess.STDOUT,shell=False)
             else:
-                out = subprocess.check_output(['kill','-9',jobs['jobid'][sub[i]]],stderr=subprocess.STDOUT,shell=False)
+                # Using negative PID will also kill subprocesses
+                out = subprocess.check_output(['kill','-9','-'+jobs['jobid'][sub[i]]],stderr=subprocess.STDOUT,shell=False)
         # Remove the kill file
         print('Deleting kill file "'+killfile+'"')
         os.remove(killfile)
