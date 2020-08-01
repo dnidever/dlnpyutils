@@ -717,9 +717,11 @@ def robust_slope(x,y,sigma,limits=None,npt=15,reweight=False):
     bestind = np.argmin(chisq)
     best_slp = slp_arr[bestind]
     # Get parabola bisector
+    # fixed two bugs on 08/01/20 that biased the results
+    #  np.minimum was a np.maximum and lo:hi+1 was missing the +1
     lo = np.maximum(0,bestind-2)
-    hi = np.maximum(bestind+2,n)
-    quad_slp = quadratic_bisector(slp_arr[lo:hi],chisq[lo:hi])
+    hi = np.minimum(bestind+2,n)
+    quad_slp = quadratic_bisector(slp_arr[lo:hi+1],chisq[lo:hi+1])
     # Problem with parabola bisector, use best point instead                                                                                                                 
     if np.isnan(quad_slp) | (np.abs(quad_slp-best_slp)> slp_step):
         best_slp = best_slp
