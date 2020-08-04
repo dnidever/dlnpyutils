@@ -692,6 +692,41 @@ def wtslope(x,y,sigma,error=False,reweight=False):
     else:
         return wtx
 
+def robust_slope_old(x,y,sigma,limits=None,npt=15,reweight=False):
+    """ Calculate robust weighted slope"""
+    # Maybe add sigma outlier rejection in the future
+    n = len(x)
+    if n==2:
+        return wtslope(x,y,sigma,error=True,reweight=reweight)
+    # Calculate weighted pmx/pmxerr
+    wt_slp,wt_slperr = wtslope(x,y,sigma,error=True,reweight=reweight)
+    wt_y, wt_yerr = wtmean(y,sigma,error=True,reweight=reweight)
+    # Unweighted slope
+    uwt_slp = wtslope(x,y,sigma*0+1,reweight=reweight)
+    # Calculate robust loss metric for range of slope values
+    #   chisq = Sum( abs(y-(x*slp-mean(x*slp)))/sigma )
+    if limits is None:
+        limits = np.array([np.min([0.5*wt_slp,0.5*uwt_slp]), np.max([1.5*wt_slp,1.5*uwt_slp])])
+    slp_step = (np.max(limits)-np.min(limits))/(npt-1)
+    slp_arr = np.arange(npt)*slp_step + np.min(limits)
+    # Vectorize it
+    resid = np.outer(y,np.ones(npt))-np.outer(x,np.ones(npt))*np.outer(np.ones(n),slp_arr)
+    mnresid = np.mean(resid,axis=0)
+    resid -= np.outer(np.ones(n),mnresid)    # remove the mean
+    chisq = np.sum( np.abs(resid) / np.outer(sigma,np.ones(npt)) ,axis=0)
+    bestind = np.argmin(chisq)
+    best_slp = slp_arr[bestind]
+    # Get parabola bisector
+    lo = np.maximum(0,bestind-2)
+    hi = np.maximum(bestind+2,n)
+    quad_slp = quadratic_bisector(slp_arr[lo:hi],chisq[lo:hi])
+    # Problem with parabola bisector, use best point instead
+    if np.isnan(quad_slp) | (np.abs(quad_slp-best_slp)> slp_step):
+        best_slp = best_slp
+    else:
+        best_slp = quad_slp
+    return best_slp, wt_slperr
+    
 def robust_slope(x,y,sigma,limits=None,npt=15,reweight=False):
     """ Calculate robust weighted slope"""
     # Maybe add sigma outlier rejection in the future
@@ -722,7 +757,7 @@ def robust_slope(x,y,sigma,limits=None,npt=15,reweight=False):
     lo = np.maximum(0,bestind-2)
     hi = np.minimum(bestind+2,npt-1)
     quad_slp = quadratic_bisector(slp_arr[lo:hi+1],chisq[lo:hi+1])
-    # Problem with parabola bisector, use best point instead                                                                                                                 
+    # Problem with parabola bisector, use best point instead
     if np.isnan(quad_slp) | (np.abs(quad_slp-best_slp)> slp_step):
         best_slp = best_slp
     else:
