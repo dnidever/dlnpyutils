@@ -42,11 +42,110 @@ def size(a=None):
     if a is None: return 0
     return np.array(a,ndmin=1).size
 
+
 # Median Absolute Deviation
-def mad(data, axis=None, func=None, ignore_nan=True):
-    """ Calculate the median absolute deviation."""
-    if type(data) is not np.ndarray: raise ValueError("data must be a numpy array")    
-    return 1.4826 * astropy.stats.median_absolute_deviation(data,axis=axis,func=func,ignore_nan=ignore_nan)
+def mad(data, axis=None, func=None, ignore_nan=True, zero=False):
+
+    """
+    Calculate a robust standard deviation using the `median absolute
+    deviation (MAD)
+    <https://en.wikipedia.org/wiki/Median_absolute_deviation>`_.
+
+    The MAD is defined as ``median(abs(a - median(a)))``.
+
+    This is a straight-up copy of the astropy median_absolute_deviation
+    and mad_std() functions but with the addition of the zero keyword.
+
+    Parameters
+    ----------
+    data : array_like
+        Input array or object that can be converted to an array.
+    axis : `None`, int, or tuple of ints, optional
+        The axis or axes along which the MADs are computed.  The default
+        (`None`) is to compute the MAD of the flattened array.
+    func : callable, optional
+        The function used to compute the median. Defaults to `numpy.ma.median`
+        for masked arrays, otherwise to `numpy.median`.
+    ignore_nan : bool
+        Ignore NaN values (treat them as if they are not in the array) when
+        computing the median.  This will use `numpy.ma.median` if ``axis`` is
+        specified, or `numpy.nanmedian` if ``axis==None`` and numpy's version
+        is >1.10 because nanmedian is slightly faster in this case.
+    zero : bool
+        Do not subtract the median.  Want the scatter around zero.
+
+    Returns
+    -------
+    mad : float or `~numpy.ndarray`
+        The median absolute deviation of the input array.  If ``axis``
+        is `None` then a scalar will be returned, otherwise a
+        `~numpy.ndarray` will be returned.
+
+    Examples
+    --------
+    Generate random variates from a Gaussian distribution and return the
+    median absolute deviation for that distribution::
+
+        >>> import numpy as np
+        >>> from astropy.stats import median_absolute_deviation
+        >>> rand = np.random.RandomState(12345)
+        >>> from numpy.random import randn
+        >>> mad = median_absolute_deviation(rand.randn(1000))
+        >>> print(mad)    # doctest: +FLOAT_CMP
+        0.65244241428454486
+
+
+    """
+
+    if type(data) is not np.ndarray: raise ValueError("data must be a numpy array")  
+
+    if func is None:
+        # Check if the array has a mask and if so use np.ma.median
+        # See https://github.com/numpy/numpy/issues/7330 why using np.ma.median
+        # for normal arrays should not be done (summary: np.ma.median always
+        # returns an masked array even if the result should be scalar). (#4658)
+        if isinstance(data, np.ma.MaskedArray):
+            is_masked = True
+            func = np.ma.median
+            if ignore_nan:
+                data = np.ma.masked_where(np.isnan(data), data, copy=True)
+        elif ignore_nan:
+            is_masked = False
+            func = np.nanmedian
+        else:
+            is_masked = False
+            func = np.median
+    else:
+        is_masked = None
+
+    data = np.asanyarray(data)
+    # np.nanmedian has `keepdims`, which is a good option if we're not allowing
+    # user-passed functions here
+    data_median = func(data, axis=axis)
+
+    # broadcast the median array before subtraction
+    if axis is not None:
+        data_median = _expand_dims(data_median, axis=axis)  # NUMPY_LT_1_18
+
+    if zero == False:
+        result = func(np.abs(data - data_median), axis=axis, overwrite_input=True)
+    # Don't subtract the median, want scatter around zero
+    else:
+        result = func(np.abs(data), axis=axis, overwrite_input=True)    
+        
+    if axis is None and np.ma.isMaskedArray(result):
+        # return scalar version
+        result = result.item()
+    elif np.ma.isMaskedArray(result) and not is_masked:
+        # if the input array was not a masked array, we don't want to return a
+        # masked array
+        result = result.filled(fill_value=np.nan)
+
+    # Return MAD
+    # NOTE: 1. / scipy.stats.norm.ppf(0.75) = 1.482602218505602
+
+    return result * 1.482602218505602
+
 
 def minmax(a):
     """ Return a 2-element array of minimum and maximum."""
