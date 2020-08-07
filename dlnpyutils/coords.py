@@ -557,3 +557,79 @@ def sphdist(lon1, lat1, lon2, lat2):
     dist = np.rad2deg(np.arccos(cosa))
 
     return dist
+
+def lbd2xyz(l,b,d,R0=8.5):
+    """
+    Convert from LON, LAT and DISTANCE to galactocentric
+    cartesian coordinates.
+
+    The L,B and D (distance) are all with respect to the sun
+    L and B need to be in degrees and D in kpc.
+    The X, Y and Z coordinates are with respect to the Galactic Center
+    Z is going up, towards b=90
+    X is towards the galactic center from our direction, L=0
+    Y is towards the L=90 direction
+
+    Parameters:
+    -----------
+    l    Galactic longitude in degrees
+    b    Galactic latitude in degrees
+    d    Distance from sun in kpc
+    =R0  Distance of the sun to the galactic center. 8.5 kpc is the default
+
+    Returns:
+    -------
+    X  The galactocentric cartesian X coordinate in kpc.  Positive X is
+          towards the Galactic center or L=0.
+    Y  The galactocentric cartesian Y coordinate in kpc.  Positive Y is
+          towards L=90.
+    Z  The galactocentric cartesian Z coordinate in kpc.  Positive Z is
+          towards the North Galactic pole.
+    """
+
+    brad = np.deg2rad(np.atleast_1d(b).copy().astype(np.float64))
+    lrad = np.deg2rad(np.atleast_1d(l).copy().astype(np.float64))
+    dd = np.atleast_1d(d).copy().astype(np.float64)
+
+    x = dd*np.sin(0.5*np.pi-brad)*np.cos(lrad)-R0
+    y = dd*np.sin(0.5*np.pi-brad)*np.sin(lrad)
+    z = dd*np.cos(0.5*np.pi-brad)
+
+    return x,y,z
+
+
+def xyz2lbd(x,y,z,R0=8.5):
+    """ Convert galactocentric X/Y/Z coordinates to l,b,dist."""
+    ll = np.atleast_1d(x).copy()*0.0
+    bb = np.atleast_1d(x).copy()*0.0
+    dd = np.atleast_1d(x).copy()*0.0    
+    for i in range(len(ll)):
+        xx = np.float64(x[i])
+        yy = np.float64(y[i])
+        zz = np.float64(z[i])
+        rho = np.sqrt( (xx+R0)**2 + yy**2)  # distance from sun in X/Y plane
+
+        lrad = np.arctan2(yy,xx+R0)
+        
+        brad = 0.5*np.pi - np.arctan2(rho,zz)      # this is more straighforward
+        if brad > 0.5*np.pi:
+            brad = brad-np.pi
+        if brad < -0.5*np.pi:
+            brad = brad+np.pi
+
+        # This doesn't work if z=0
+        #if cos(0.5*!dpi-brad) ne 0.0 then d = zz/cos(0.5*!dpi-brad)
+        #if cos(0.5*!dpi-brad) eq 0.0 then d = abs(zz)
+        d = np.sqrt( (xx+R0)**2 + yy**2 + zz**2 )
+
+        b = np.rad2deg(brad)
+        l = np.rad2deg(lrad)
+        
+        if l < 0.:
+            l = l+360.
+        
+        ll[i] = l
+        bb[i] = b
+        dd[i] = d
+
+    return ll,bb,dd

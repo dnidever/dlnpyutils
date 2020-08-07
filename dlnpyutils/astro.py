@@ -31,6 +31,7 @@ from astropy.utils.exceptions import AstropyWarning
 #from scipy.ndimage.filters import convolve
 #import astropy.stats
 from . import utils
+from .coords import xyz2lbd
 
 
 # Ignore these warnings, it's a bug
@@ -132,42 +133,6 @@ def vactoair(wave_vac):
 
     return wave_air
 
-
-def xyz2lbd(x,y,z,R0=8.5):
-    """ Convert galactocentric X/Y/Z coordinates to l,b,dist."""
-    ll = np.atleast_1d(x).copy()*0.0
-    bb = np.atleast_1d(x).copy()*0.0
-    dd = np.atleast_1d(x).copy()*0.0    
-    for i in range(len(ll)):
-        xx = np.float64(x[i])
-        yy = np.float64(y[i])
-        zz = np.float64(z[i])
-        rho = np.sqrt( (xx+R0)**2 + yy**2)  # distance from sun in X/Y plane
-
-        lrad = np.arctan2(yy,xx+R0)
-        
-        brad = 0.5*np.pi - np.arctan2(rho,zz)      # this is more straighforward
-        if brad > 0.5*np.pi:
-            brad = brad-np.pi
-        if brad < -0.5*np.pi:
-            brad = brad+np.pi
-
-        # This doesn't work if z=0
-        #if cos(0.5*!dpi-brad) ne 0.0 then d = zz/cos(0.5*!dpi-brad)
-        #if cos(0.5*!dpi-brad) eq 0.0 then d = abs(zz)
-        d = np.sqrt( (xx+R0)**2 + yy**2 + zz**2 )
-
-        b = np.rad2deg(brad)
-        l = np.rad2deg(lrad)
-        
-        if l < 0.:
-            l = l+360.
-        
-        ll[i] = l
-        bb[i] = b
-        dd[i] = d
-
-    return ll,bb,dd
 
 def vgsr2vhelio(vgsr,lon,lat,vcirc=240.0):
     """
