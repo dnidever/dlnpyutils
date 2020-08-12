@@ -17,7 +17,7 @@ import warnings
 from astropy.io import fits
 from astropy.table import Table, Column
 from astropy import modeling
-from astropy.convolution import Gaussian1DKernel, convolve
+from astropy.convolution import Gaussian1DKernel, Gaussian2DKernel, convolve
 from glob import glob
 from scipy.signal import medfilt
 from scipy.ndimage.filters import median_filter,gaussian_filter1d
@@ -1042,7 +1042,13 @@ def gsmooth(data,fwhm,mask=None,boundary='extend',fill=0.0,truncate=4.0,squared=
     # Create kernel
     xsize = np.ceil(fwhm/2.35*truncate*2)
     if xsize % 2 == 0: xsize+=1   # must be odd
-    g = Gaussian1DKernel(stddev=fwhm/2.35,x_size=xsize)
+    if data.ndim==1:
+        g = Gaussian1DKernel(stddev=fwhm/2.35,x_size=xsize)
+    else:
+        if size(fwhm)==1:
+            g = Gaussian2DKernel(fwhm/2.35,x_size=xsize)
+        else:
+            g = Gaussian2DKernel(fwhm[0]/2.35,fwhm[1]/2.35,x_size=xsize)            
     if squared is False:
         return convolve(data, g.array, mask=mask, boundary=boundary, fill_value=fill)
         #return gaussian_filter1d(data,fwhm/2.35,axis=axis,mode=mode,cval=cval,truncate=truncate)
