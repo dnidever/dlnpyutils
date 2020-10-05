@@ -46,6 +46,7 @@ from dlnpyutils.dlnpyutils import *
  - gaussfit: fit a 1-D Gaussian to X/Y data
  - poly: evaluate a polynomial function of a variable
  - slope: derivative or slope of an array
+ - closest: find value in array closest to an input scalar
 
  job_daemon:
  This is a simple batch job manager.
