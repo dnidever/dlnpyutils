@@ -1006,10 +1006,14 @@ def poly_fit(x,y,nord,robust=False,sigma=None,initpar=None,bounds=(-np.inf,np.in
     #    coef = np.polyfit(x,y,nord,w=weights)
     #    return coef
 
-    loss = 'linear'
-    if robust: loss='soft_l1'
+    if robust==True:
+        loss = 'soft_l1'
+        f_scale = 0.1
+    else:
+        loss = 'linear'
+        f_scale = 1.0
     if sigma is None: sigma=np.zeros(len(x))+1
-    res = least_squares(poly_resid, initpar, loss=loss, f_scale=0.1, args=(x,y,sigma), max_nfev=max_nfev)
+    res = least_squares(poly_resid, initpar, loss=loss, f_scale=f_scale, args=(x,y,sigma), max_nfev=max_nfev)
     if res.success is False:
         import pdb; pdb.set_trace()
         raise Exception("Problem with least squares polynomial fitting. Status="+str(res.status))
