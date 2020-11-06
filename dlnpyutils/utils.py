@@ -984,7 +984,7 @@ def poly_resid(coef,x,y,sigma=1.0):
     return (poly(x,coef)-y)/sig
 
 def poly_fit(x,y,nord,robust=False,sigma=None,initpar=None,bounds=(-np.inf,np.inf),error=False,max_nfev=None):
-    if initpar is None: initpar = np.zeros(nord+1)
+    if initpar is None: initpar = np.zeros(nord+1,float)
     # Normal polynomial fitting
     #if sigma is None: sigma=np.zeros(len(x))+1
     #coef, cov = curve_fit(poly, x, y, p0=initpar, sigma=sigma, bounds=bounds)
@@ -1012,13 +1012,15 @@ def poly_fit(x,y,nord,robust=False,sigma=None,initpar=None,bounds=(-np.inf,np.in
     else:
         loss = 'linear'
         f_scale = 1.0
-    if sigma is None: sigma=np.zeros(len(x))+1
-    res = least_squares(poly_resid, initpar, loss=loss, f_scale=f_scale, args=(x,y,sigma), max_nfev=max_nfev)
+    if sigma is None: sigma=np.zeros(len(x),float)+1
+    # using jac='3-point' seems to improve the results a lot!
+    res = least_squares(poly_resid, initpar, loss=loss, f_scale=f_scale, args=(x,y,sigma), max_nfev=max_nfev, jac='3-point')
     if res.success is False:
         import pdb; pdb.set_trace()
         raise Exception("Problem with least squares polynomial fitting. Status="+str(res.status))
         return initpar+np.nan
     coef = res.x
+    
     # Calculate the covariance matrix
     #  this is how scipy.optimize.curve_fit computes the covariance matrix
     #  https://github.com/scipy/scipy/blob/2526df72e5d4ca8bad6e2f4b3cbdfbc33e805865/scipy/optimize/minpack.py#L739
