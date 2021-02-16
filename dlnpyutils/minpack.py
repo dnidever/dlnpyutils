@@ -13,7 +13,7 @@ from scipy.linalg import svd, cholesky, solve_triangular, LinAlgError
 from scipy._lib._util import _asarray_validated, _lazywhere
 from scipy.optimize.optimize import OptimizeResult, _check_unknown_options, OptimizeWarning
 from .least_squares import least_squares
-from .common import make_strictly_feasible
+from .mpcommon import make_strictly_feasible
 from .least_squares import prepare_bounds
 
 error = _minpack.error
