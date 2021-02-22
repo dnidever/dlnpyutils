@@ -1354,7 +1354,7 @@ def interp(x,y,xout,kind='cubic',bounds_error=False,assume_sorted=True,extrapola
     if ((np.min(xout)<np.min(x)) | (np.max(xout)>np.max(x))) & (extrapolate is True):
         si = np.argsort(x)
         npix = len(x)
-        nfit = np.min([10,npix])
+        nfit = np.min([3,npix])
         # At the beginning
         if (np.min(xout)<np.min(x)):
             coef1 = poly_fit(x[0:nfit], y[0:nfit], exporder)
