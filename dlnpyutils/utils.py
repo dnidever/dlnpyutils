@@ -1515,3 +1515,42 @@ def closest(array,value):
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return array[idx],idx
+
+
+
+def sexig2ten(inp):
+    """ Convert sexigesimal to decimal."""
+
+    inp = np.atleast_1d(inp)
+    ninp = size(inp)
+    tenarr = np.zeros(ninp,np.float64)
+    
+    # array input
+    for i in range(ninp):
+        rgt = inp[i].strip()
+        arr = rgt.split(':')
+
+        # Still only one element.  Maybe try spaces
+        if len(arr)==1:
+            arr = rgt.split()
+
+        # Multiple elements
+        if len(arr)>1:
+            ten = np.abs(np.float64(arr[0]))
+            ten += np.float64(arr[1])/60.0
+            if len(arr)>2:
+                ten += np.float64(arr[2])/3600.0 
+            if np.float64(arr[0])<0:  # negative
+                ten *= -1
+            tenarr[i] = ten
+                
+        # Only one element, assume it's a number
+        else:
+            tenarr[i] = np.float64(arr)
+
+
+    if ninp==1:
+        tenarr = tenarr[0]
+
+    return tenarr
+
