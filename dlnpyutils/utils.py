@@ -683,7 +683,7 @@ def scale(arr,oldrange,newrange):
     if signs(oldrange[1]-oldrange[0]) != signs(newrange[1]-newrange[0]):
         signchange = -1.0 
     # Scale
-    narr = valrange(newrange) * signchange*(np.float64(arr)-oldrange[0])/val.range(oldrange) + newrange[0]
+    narr = valrange(newrange) * signchange*(np.float64(arr)-oldrange[0])/dln.valrange(oldrange) + newrange[0]
     return narr
     
 def scale_vector(vector, minrange, maxrange):
