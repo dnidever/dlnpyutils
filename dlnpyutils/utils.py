@@ -1016,7 +1016,7 @@ def poly_fit(x,y,nord,robust=False,sigma=None,initpar=None,bounds=(-np.inf,np.in
     # using jac='3-point' seems to improve the results a lot!
     res = least_squares(poly_resid, initpar, loss=loss, f_scale=f_scale, args=(x,y,sigma), max_nfev=max_nfev, jac='3-point')
     if res.success is False:
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         raise Exception("Problem with least squares polynomial fitting. Status="+str(res.status))
         return initpar+np.nan
     coef = res.x
