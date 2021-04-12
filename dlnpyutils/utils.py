@@ -1761,3 +1761,8 @@ def fread(line,fmt):
             count += num
 
     return out
+
+def randf(low,high,num):
+    """ Pick random floats between low and high (inclusive)."""
+    return np.random.rand(num)*(high-low)+low
+    
