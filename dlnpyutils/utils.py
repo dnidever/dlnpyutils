@@ -1766,3 +1766,12 @@ def randf(low,high,num):
     """ Pick random floats between low and high (inclusive)."""
     return np.random.rand(num)*(high-low)+low
     
+def isnumber(s):
+    """ Returns True if string is a number or float. """
+    # Handles negatives and scientific notation as well
+    # use isdigit() for integers.
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
