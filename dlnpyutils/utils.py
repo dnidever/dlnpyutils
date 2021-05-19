@@ -733,6 +733,31 @@ def quadratic_bisector(x,y):
         return np.nan
     return -b/(2*a)
 
+def quadratic_coefficients(x,y):
+    """ Calculate the quadratic coefficients from the three points."""
+    #https://www.azdhs.gov/documents/preparedness/state-laboratory/lab-licensure-certification/technical-resources/
+    #    calibration-training/12-quadratic-least-squares-regression-calib.pdf
+    #quadratic regression statistical equation
+    # y = ax**2 + b*x + c
+    n = len(x)
+    if n<3:
+        return None
+    Sxx = np.sum(x**2) - np.sum(x)**2/n
+    Sxy = np.sum(x*y) - np.sum(x)*np.sum(y)/n
+    Sxx2 = np.sum(x**3) - np.sum(x)*np.sum(x**2)/n
+    Sx2y = np.sum(x**2 * y) - np.sum(x**2)*np.sum(y)/n
+    Sx2x2 = np.sum(x**4) - np.sum(x**2)**2/n
+    #a = ( S(x^2*y)*S(xx)-S(xy)*S(xx^2) ) / ( S(xx)*S(x^2x^2) - S(xx^2)^2 )
+    #b = ( S(xy)*S(x^2x^2) - S(x^2y)*S(xx^2) ) / ( S(xx)*S(x^2x^2) - S(xx^2)^2 )
+    denom = Sxx*Sx2x2 - Sxx2**2
+    if denom==0:
+        return [np.nan,np.nan,np.nan]
+    a = ( Sx2y*Sxx - Sxy*Sxx2 ) / denom
+    b = ( Sxy*Sx2x2 - Sx2y*Sxx2 ) / denom
+    c = np.median(y - (a*x**2+b*x))
+    coef = [a,b,c]
+    return coef
+
 def wtmean(x,sigma,error=False,reweight=False,magnitude=False):
     """ Calculate weighted mean and error"""
     n = len(x)
