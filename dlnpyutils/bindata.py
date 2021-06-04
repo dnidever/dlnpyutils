@@ -1,9 +1,14 @@
-from __future__ import division, print_function, absolute_import
+#from __future__ import division, print_function, absolute_import
 
+import builtins
 import numpy as np
-from scipy._lib.six import callable, xrange
-from scipy._lib._numpy_compat import suppress_warnings
+from numpy.testing import suppress_warnings
+from operator import index
 from collections import namedtuple
+
+#from scipy._lib.six import callable, xrange
+#from scipy._lib._numpy_compat import suppress_warnings
+
 from . import utils as dln
 
 __all__ = ['binned_statistic',
