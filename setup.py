@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='dlnpyutils',
-      version='1.0',
+      version='1.0.0',
       description='David Nidever Python Utility Functions',
       author='David Nidever',
       author_email='dnidever@montana.edu',
