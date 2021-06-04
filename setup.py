@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+#from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(name='dlnpyutils',
       version='1.0.0',
@@ -10,5 +11,5 @@ setup(name='dlnpyutils',
       url='https://github.com/dnidever/dlnpyutils',
       packages=['dlnpyutils'],
       scripts=['bin/job_daemon'],
-      requires=['numpy','astropy','scipy']
+      install_requires=['numpy','astropy','scipy']
 )
