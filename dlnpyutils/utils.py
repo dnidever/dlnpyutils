@@ -318,8 +318,8 @@ def first_el(lst):
     """ Return the first element"""
     if lst is None: return None
     if size(lst)>1: return lst[0]
-    if (size(lst)==1) & (type(lst) is list): return lst.pop() 
-    if (size(lst)==1) & (type(lst) is np.ndarray): return lst.item()
+    if (size(lst)==1) & (type(lst) is list): return lst[0]
+    if (size(lst)==1) & (type(lst) is np.ndarray): return lst.item(0)
     return lst
         
 
