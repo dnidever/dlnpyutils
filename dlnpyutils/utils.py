@@ -949,7 +949,7 @@ def gaussbin(x, amp, cen, sig, const=0, slp=0.0, dx=1.0):
     geval_upper = erf(t2cen)
 
     geval = amp*np.sqrt(2.0)*sig * np.sqrt(np.pi)/2.0 * ( geval_upper - geval_lower )
-    geval += const + slp(x-cen)   # add constant offset and slope
+    geval += const + slp*(x-cen)   # add constant offset and slope
 
     return geval
 
