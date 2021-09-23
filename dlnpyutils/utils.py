@@ -897,6 +897,34 @@ def wtmedian(val,wt):
     ind = totwt.searchsorted(totwt.max()*0.5)
     return val.flatten()[si[ind-1]]
 
+def iqrstdev(data):
+    """ Use the interquartile range to estimate the standard deviation."""
+    val = np.percentile(data,[25,75])
+    iqr = val[1]-val[0]
+    # std/iqr = 0.5906 for normal distribution
+    std = iqr*0.5906
+    return std
+
+def sigclipmean(data,nsig=2.5):
+    """ Sigma-clipped mean."""
+    fnt = np.finite(data)
+    med = np.median(data[fnt])
+    sig = mad(data[fnt])
+    good, = np.where(np.abs(data[fnt]-med) < nsig*sig)
+    mn = np.mean(data[fnt[good]])
+    return mn
+
+def gausswtmean(data):
+    """ Compute weighted mean using a Gaussian with center of the median and sigma of the MAD."""
+    # try sqrt() of Gaussian
+    fnt = np.finite(data)
+    med = np.median(data[fnt])
+    sig = mad(data[fnt])
+    wt = np.exp(-0.5*(data[fnt]-med)**2/sig**2)
+    totwt = np.sum(wt)
+    mn = np.sum(wt*data[fnt])/totwt
+    return mn
+
 def gaussian(x, amp, cen, sig, const=0.0, slp=0.0):
     """1-D gaussian: gaussian(x, amp, cen, sig)"""
     #return (amp / (np.sqrt(2*np.pi) * sig)) * np.exp(-(x-cen)**2 / (2*sig**2)) + const
