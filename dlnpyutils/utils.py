@@ -898,32 +898,64 @@ def wtmedian(val,wt):
     return val.flatten()[si[ind-1]]
 
 def iqrstdev(data):
-    """ Use the interquartile range to estimate the standard deviation."""
+    """ Use the interquartile range to estimate the standard deviation robustly."""
     val = np.percentile(data,[25,75])
     iqr = val[1]-val[0]
-    # std/iqr = 0.5906 for normal distribution
-    std = iqr*0.5906
-    return std
+    # for a normally distributed dataset we should have
+    # Q1 = -0.67*sigma + mean
+    # Q3 = 0.67*sigma + mean
+    # Sigma = (Q3-Q1)/1.34
+    sigma = iqr/1.34
+    return sigma
 
 def sigclipmean(data,nsig=2.5):
     """ Sigma-clipped mean."""
-    fnt = np.finite(data)
+    fnt = np.isfinite(data)
     med = np.median(data[fnt])
     sig = mad(data[fnt])
     good, = np.where(np.abs(data[fnt]-med) < nsig*sig)
-    mn = np.mean(data[fnt[good]])
+    mn = np.mean(data[fnt][good])
     return mn
 
 def gausswtmean(data):
     """ Compute weighted mean using a Gaussian with center of the median and sigma of the MAD."""
     # try sqrt() of Gaussian
-    fnt = np.finite(data)
+    fnt = np.isfinite(data)
     med = np.median(data[fnt])
     sig = mad(data[fnt])
-    wt = np.exp(-0.5*(data[fnt]-med)**2/sig**2)
+    # sqrt(gaussian) to not downweight outliers so much
+    wt = np.exp(-0.25*(data[fnt]-med)**2/sig**2)
     totwt = np.sum(wt)
     mn = np.sum(wt*data[fnt])/totwt
     return mn
+
+def skewquartile(data):
+    """ Measure the skewness robustly based on quartiles."""
+
+    # Get quartiles, from Beaumont's quartile.pro function
+    quarts = np.percentile(data,[25,50,75])
+    q1 = quarts[0]
+    q2 = quarts[1]
+    q3 = quarts[2]
+    skew = ( q1 - 2*q2 + q3 ) / ( q3 - q1 )
+    return skew
+
+def skewgauss(x,par):
+    """ Return a skewed Gaussian."""
+    # This is a skewed Gaussian
+    #  See http://en.wikipedia.org/wiki/Skew_normal_distribution
+    # par = [height, center, sigma, alpha]
+    # alpha is the skewness of the Gaussian
+
+    ht = par[0]
+    cen = par[1]
+    sig = par[2]
+    alpha = par[3]
+
+    x2 = (x-cen)/sig  # rescale 
+    y = ht * np.exp(-0.5 * x2**2 ) * 0.5*(1 + erf(alpha*x2/np.sqrt(2)))
+
+    return y
 
 def gaussian(x, amp, cen, sig, const=0.0, slp=0.0):
     """1-D gaussian: gaussian(x, amp, cen, sig)"""
