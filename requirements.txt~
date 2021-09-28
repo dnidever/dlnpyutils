@@ -1,0 +1,6 @@
+numpy
+matplotlib
+astropy
+scipy
+#the-cannon
+git+https://github.com/andycasey/AnniesLasso
