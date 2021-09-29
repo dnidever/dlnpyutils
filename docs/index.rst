@@ -9,16 +9,16 @@ dlnpyutils
 
 Introduction
 ============
-|dlnpyutils| is a package of useful python utility functions.
+|dlnpyutils| is a package of useful python utility functions.  See the `description <description.html>`__ page for a list and description of the functions.
 
 .. toctree::
    :maxdepth: 1
 
    install
-   gettingstarted
+   description
    modules
-	      
 
+   
 *****
 Index
 *****
