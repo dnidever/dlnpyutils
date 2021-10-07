@@ -45,7 +45,8 @@ The :mod:`~dlnpyutils.utils` module has many of the general purpose functions.
  - :func:`~dlnpyutils.utils.iqrstdev`: Use the interquartile range to estimate the standard deviation robustly.
  - :func:`~dlnpyutils.utils.sigclipmean`: Sigma-clipped mean.
  - :func:`~dlnpyutils.utils.gausswtmean`: Compute weighted mean using a Gaussian with center of the median and sigma of the MAD.
- - :func:`~dlnpyutils.utils.skewquartile`: Measure the skewness robustly based on quartiles.
+ - :func:`~dlnpyutils.utils.gmean`: Compute geometric mean.
+ - :func:`~dlnpyutils.utils.skewquartile`: Measure the skewness robustly based on quartiles.   
  - :func:`~dlnpyutils.utils.skewgauss`:  Return a skewed Gaussian.
  - :func:`~dlnpyutils.utils.gaussian`: Return 1-D Gaussian.
  - :func:`~dlnpyutils.utils.gaussbin`: Return 1-D binned Gaussian.

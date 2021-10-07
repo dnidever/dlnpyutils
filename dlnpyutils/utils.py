@@ -20,6 +20,7 @@ from astropy import modeling
 from astropy.convolution import Gaussian1DKernel, Gaussian2DKernel, convolve
 from glob import glob
 from scipy.signal import medfilt
+from scipy.stats import mstats
 from scipy.ndimage.filters import median_filter,gaussian_filter1d
 from scipy.optimize import curve_fit, least_squares
 from scipy.special import erf
@@ -760,6 +761,7 @@ def quadratic_coefficients(x,y):
 
 def wtmean(x,sigma,error=False,reweight=False,magnitude=False):
     """ Calculate weighted mean and error"""
+    # np.average() can take weights as well.
     n = len(x)
     wt = 1/sigma**2
     # Magnitudes
@@ -928,6 +930,12 @@ def gausswtmean(data):
     totwt = np.sum(wt)
     mn = np.sum(wt*data[fnt])/totwt
     return mn
+
+def gmean(data,weights=None):
+    """ Compute geometric mean."""
+    # can add an array of weights as well
+    return mstats.gmean(data,weights=weights)
+
 
 def skewquartile(data):
     """ Measure the skewness robustly based on quartiles."""
