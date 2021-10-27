@@ -21,13 +21,15 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from scipy import stats
 import copy
-import dlnpyutils.utils as dln
+#import dlnpyutils.utils as dln
+from . import utils as dln
+from . import ladfit
 
 # Ignore these warnings, it's a bug
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
-def zscaling(im,contrast=0.25,nsample=500000):
+def zscaling(im,contrast=0.25,nsample=50000):
     """
     This finds the IRAF display z1,z2 scalings
     for an image
@@ -89,15 +91,19 @@ def zscaling(im,contrast=0.25,nsample=500000):
     f2 = f[si]
     x = np.arange(nsample)
     midpoint = np.round(nsample*0.5)
-    med = np.median(f)
+    zmin = np.min(f)
+    zmax = np.max(f)
+    zmed = np.median(f)
 
-    zmin = np.min(im)
-    zmax = np.max(im)
-    zmed = np.median(im)
+    #zmin = np.min(im)
+    #zmax = np.max(im)
+    #zmed = np.median(im)
 
     # Robust fitting program
-    coef = dln.poly_fit(x,f2,1,robust=True)
-
+    coef,dum = ladfit.ladfit(x,f2)
+    coef = coef[::-1]
+    #coef = dln.poly_fit(x,f2,1,robust=True)
+    
     # y = m*x + b
     # I = intercept + slope * (i-midpoint)
     # I = intercept + slope * i - slope*midpoint
