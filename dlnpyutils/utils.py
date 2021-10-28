@@ -18,7 +18,7 @@ from astropy.io import fits
 from astropy.table import Table, Column
 from astropy import modeling
 from astropy.convolution import Gaussian1DKernel, Gaussian2DKernel, convolve
-from glob import glob
+from glob import glob as glb
 from scipy.signal import medfilt
 from scipy.stats import mstats
 from scipy.ndimage.filters import median_filter,gaussian_filter1d
@@ -203,6 +203,18 @@ def where(statement,comp=False):
     else:
         return gd,ngd
 
+def glob(inp):
+    """ Similar to glob.glob() but allows input of lists."""
+    if type(inp) is str:
+        return glb(inp)
+    elif type(inp) is list:
+        out = []
+        for l in inp:
+            out += glb(l)
+        return out
+    else:
+        raise ValueError(inp,' not understood')
+    
 def strlen(lst=None):
     """ Calculate the string lengths of a string array."""
     if lst is None: raise ValueError("lst must be input")
