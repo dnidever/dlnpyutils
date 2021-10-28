@@ -1,6 +1,18 @@
 #!/usr/bin/env python
+#
+# GALAXY_MODEL.PY - A simple galaxy model
+#
+
+from __future__ import print_function
+
+__authors__ = 'David Nidever <dnidever@montana.edu>'
+__version__ = '20200305'  # yyyymmdd
 
 import numpy as np
+
+# Ignore these warnings, it's a bug
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
 def xyz2lbd(x,y,z,R0=8.5):
     """ Convert galactocentric X/Y/Z coordinates to l,b,dist."""
