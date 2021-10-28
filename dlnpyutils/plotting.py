@@ -5,23 +5,16 @@
 
 from __future__ import print_function
 
-__authors__ = 'David Nidever <dnidever@noao.edu>'
+__authors__ = 'David Nidever <dnidever@montana.edu>'
 __version__ = '20200209'  # yyyymmdd
 
-#import os
-#import sys
 import numpy as np
 import warnings
-#from scipy.signal import medfilt
-#from scipy.ndimage.filters import median_filter,gaussian_filter1d
 from astropy.utils.exceptions import AstropyWarning
-#from scipy.ndimage.filters import convolve
-#from . import utils
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from scipy import stats
 import copy
-#import dlnpyutils.utils as dln
 from . import utils as dln
 from . import ladfit
 

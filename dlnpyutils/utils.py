@@ -5,7 +5,7 @@
 
 from __future__ import print_function
 
-__authors__ = 'David Nidever <dnidever@noao.edu>'
+__authors__ = 'David Nidever <dnidever@montana.edu>'
 __version__ = '20180823'  # yyyymmdd
 
 import re
@@ -26,10 +26,6 @@ from scipy.optimize import curve_fit, least_squares
 from scipy.special import erf
 from scipy.interpolate import interp1d
 from scipy.linalg import svd
-#from astropy.utils.exceptions import AstropyWarning
-#import socket
-#from scipy.signal import convolve2d
-#from scipy.ndimage.filters import convolve
 import astropy.stats
 
 
