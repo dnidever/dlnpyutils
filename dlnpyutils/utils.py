@@ -469,13 +469,13 @@ def writelines(filename=None,lines=None,overwrite=True,raw=False):
                 if l.endswith('\n') is False:
                     lines[i] += '\n'
             # Make sure final element does not end in \n
-            n = size(lines)
-            if n>1:
-                if lines[-1].endswith('\n'):
-                    lines[-1] = lines[-1][0:-1]
-            else:
-                if lines[0].endswith('\n'):
-                    lines = lines[0][0:-1]
+            #n = size(lines)
+            #if n>1:
+            #    if lines[-1].endswith('\n'):
+            #        lines[-1] = lines[-1][0:-1]
+            #else:
+            #    if lines[0].endswith('\n'):
+            #        lines = lines[0][0:-1]
     # Convert string to list
     if (type(lines) is str) | (type(lines) is np.str_): lines=list(lines)
     # Convert numpy array and numbers to list of strings
