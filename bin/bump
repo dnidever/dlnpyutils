@@ -111,7 +111,8 @@ if __name__ == "__main__":
         if os.path.exists('setup.py.orig'): os.remove('setup.py.orig')
         shutil.move('setup.py','setup.py.orig')
         dln.writelines('setup.py',newlines)
-        # last line is missing \n
+        # git add the file
+        out = subprocess.run(['git','add','setup.py'],shell=False)
                 
         if version is None:
             print('Cannot find version in setup.py')
@@ -138,7 +139,8 @@ if __name__ == "__main__":
         if os.path.exists('setup.cfg.orig'): os.remove('setup.cfg.orig')
         shutil.move('setup.cfg','setup.cfg.orig')
         dln.writelines('setup.cfg',newlines)
-        # last line is missing \n
+        # git add the file
+        out = subprocess.run(['git','add','setup.cfg'],shell=False)        
     
     else:
         print('No setup.cfg file found')
@@ -164,8 +166,14 @@ if __name__ == "__main__":
         if os.path.exists(initfile+'.orig'): os.remove(initfile+'.orig')
         shutil.move(initfile,initfile+'.orig')
         dln.writelines(initfile,newlines)
-        # last line is missing \n
+        # git add the file
+        out = subprocess.run(['git','add',initfile],shell=False)
+        
     else:
         print('No __init__.py file found')
 
+    # git commit the bump
+    out = subprocess.run(['git','commit','-m','bumped version from '+version+' to '+newversion],shell=False)
+        
+        
     # Create new git tag
