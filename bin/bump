@@ -1,0 +1,171 @@
+#!/usr/bin/env python
+#
+# Bump git version
+
+from __future__ import print_function
+
+import os
+import re
+import sys
+import time
+import numpy as np
+import shutil
+from argparse import ArgumentParser
+from dlnpyutils import utils as dln
+import subprocess
+import traceback
+try:
+    import __builtin__ as builtins # Python 2
+except ImportError:
+    import builtins # Python 3
+
+def getversion(line):
+    """ get version out of string."""
+    lo = line.find('version')
+    version = line[lo+7:]
+    version = version.replace(" ","")
+    version = version.replace("_","")    
+    version = version.replace("'","")
+    version = version.replace('"',"")
+    version = version.replace(',',"")
+    version = version.replace('=','')
+    version = version.replace('v','')    
+    return version
+
+def bumpversion(version,btype):
+    """ Bump the version string."""
+    versarr = version.split('.')                
+    versarr = [int(v) for v in versarr]   # str -> int
+    # Make sure we have [major, minor, patch]
+    if len(versarr)<3:
+        versarr += list(np.zeros(3-len(versarr),int))
+    # Bump version
+    newversarr = versarr.copy()
+    if btype=='major':
+        newversarr[0] += 1
+    elif btype=='minor':
+        newversarr[1] += 1
+    else:
+        newversarr[2] += 1
+    newversarr = [str(v) for v in newversarr] # int->str
+    newversion = '.'.join(newversarr)
+    return newversion
+
+def subverstring(line,version,newversion):
+    """ Substitute the new version in the line string."""
+    slen = len(version)
+    start = line.find(version)
+    if start+slen<len(line):
+        stail = line[start+slen:]
+    else:
+        stail = ''
+    # Stick the new version in the line
+    newline = line[0:start]+newversion+stail
+    return newline
+
+    
+# Main command-line program
+if __name__ == "__main__":
+    parser = ArgumentParser(description='Bump the git version')
+    parser.add_argument('btype', type=str, nargs='*', default='patch', help='major, minor or patch')
+    parser.add_argument('-t','--tag', action='store_true', help='Create tag')
+    args = parser.parse_args()
+
+    btype = dln.first_el(args.btype)
+    btype = btype.lower()
+    if btype not in ['major','minor','patch']:
+        print('Bump type bump type must be major, minor or patch')
+        
+    tag = dln.first_el(args.tag)
+        
+    # Check that this is a git repository
+    if os.path.exists('.git') is False:
+        print('This is not a git repository')
+        sys.exit()
+
+    # Modify the setup.py file
+    if os.path.exists('setup.py'):
+        lines = dln.readlines('setup.py')
+        # Find the version
+        version = None
+        newlines = lines.copy()
+        for l,line in enumerate(lines):
+            # Get package new
+            if line.find('name=')>-1:
+                lo = line.find('name=')
+                name = line[lo+5:]
+                name = name.replace(',','')
+                name = name.replace('"','')
+                name = name.replace("'",'')                
+                print('package name: ',name)
+            # Get version
+            if line.find('version')>-1:
+                version = getversion(line)
+                print('version: ',version)                
+                newversion = bumpversion(version,btype)
+                print('new version: ',newversion)
+                # Stick the new version in the line
+                newline = subverstring(line,version,newversion)                
+                newlines[l] = newline
+        # Write the updated setup.py file
+        if os.path.exists('setup.py.orig'): os.remove('setup.py.orig')
+        shutil.move('setup.py','setup.py.orig')
+        dln.writelines('setup.py',newlines)
+        # last line is missing \n
+                
+        if version is None:
+            print('Cannot find version in setup.py')
+            sys.exit()
+    else:
+        print('No setup.py file found')
+        
+    # Modify the setup.cfg file (if it exists)
+    if os.path.exists('setup.cfg'):
+        lines = dln.readlines('setup.cfg')
+        newlines = lines.copy()
+        for l,line in enumerate(lines):
+            # Get version
+            if line.find('version')>-1 and line.find('=')>-1:
+                cversion = getversion(line)
+                # Check that the two version are the same
+                if cversion != version:
+                    print('Versions do not match.  setup.py version='+version+' setup.cfg version='+cversion)
+                    sys.exit()
+                # Stick the new version in the line
+                newline = subverstring(line,cversion,newversion)
+                newlines[l] = newline
+        # Write the updated setup.py file
+        if os.path.exists('setup.cfg.orig'): os.remove('setup.cfg.orig')
+        shutil.move('setup.cfg','setup.cfg.orig')
+        dln.writelines('setup.cfg',newlines)
+        # last line is missing \n
+    
+    else:
+        print('No setup.cfg file found')
+    
+    # Modify the __init__.py file (if it exists and has a __version__ in it)
+    initfile = name+'/__init__.py'
+    if os.path.exists(initfile)==False:  
+        initfile = 'python/'+name+'/__init__.py'      
+    if os.path.exists(initfile):
+        lines = dln.readlines(initfile)
+        newlines = lines.copy()
+        for l,line in enumerate(lines):
+            if line.find('version')>-1:
+                iversion = getversion(line)
+                # Check that the two version are the same
+                if iversion != version:
+                    print('Versions do not match.  setup.py version='+version+' __init__.py version='+iversion)
+                    sys.exit()
+                # Stick the new version in the line
+                newline = subverstring(line,iversion,newversion)                
+                newlines[l] = newl
+        # Write the updated setup.py file
+        if os.path.exists(initfile+'.orig'): os.remove(initfile+'.orig')
+        shutil.move(initfile,initfile+'.orig')
+        dln.writelines(initfile,newlines)
+        # last line is missing \n
+    else:
+        print('No __init__.py file found')
+
+    # Create new git tag
