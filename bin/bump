@@ -69,8 +69,9 @@ if __name__ == "__main__":
     parser = ArgumentParser(description='Bump the git version')
     parser.add_argument('btype', type=str, nargs='*', default='patch', help='major, minor or patch')
     parser.add_argument('-t','--tag', action='store_true', help='Create tag')
+    parser.add_argument('-m','--message', type=str, nargs='*', default='', help='Message')
     args = parser.parse_args()
-
+    
     btype = dln.first_el(args.btype)
     btype = btype.lower()
     if btype not in ['major','minor','patch']:
@@ -172,8 +173,19 @@ if __name__ == "__main__":
     else:
         print('No __init__.py file found')
 
-    # git commit the bump
-    out = subprocess.run(['git','commit','-m','bumped version from '+version+' to '+newversion],shell=False)
+    message = args.message
+    if len(message)>1:
+        message = ' '.join(message)
+    else:
+        message = message[0]
+    if message=='':
+        message = 'bumped version from '+version+' to '+newversion        
         
+    # git commit and push the bump
+    out = subprocess.run(['git','commit','-m',message],shell=False)
+    out = subprocess.run(['git','push'],shell=False)    
         
     # Create new git tag
+    if tag:
+        out = subprocess.run(['git','tag','-a',newversion,'-m',message],shell=False)
+        out = subprocess.run(['git','push','origin',newversion],shell=False)        

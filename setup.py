@@ -10,6 +10,6 @@ setup(name='dlnpyutils',
       author_email='dnidever@montana.edu',
       url='https://github.com/dnidever/dlnpyutils',
       packages=['dlnpyutils'],
-      scripts=['bin/job_daemon','bin/bump'],
+      scripts=['bin/job_daemon','bin/bump','bin/topypi'],
       install_requires=['numpy','astropy','scipy']
 )
