@@ -161,7 +161,7 @@ if __name__ == "__main__":
                     sys.exit()
                 # Stick the new version in the line
                 newline = subverstring(line,iversion,newversion)                
-                newlines[l] = newl
+                newlines[l] = newline
         # Write the updated setup.py file
         if os.path.exists(initfile+'.orig'): os.remove(initfile+'.orig')
         shutil.move(initfile,initfile+'.orig')

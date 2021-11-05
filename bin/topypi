@@ -1,0 +1,21 @@
+#!/bin/bash
+# Fix project name in setup.py
+mv -f setup.py setup.py.orig >& /dev/null
+rm -f setup.py >& /dev/null
+pypiname=`grep pypiname setup.py.orig | awk '{print $3}' | sed 's|["'\'']||g'`
+name=`grep name setup.py.orig | grep -v pypiname | sed -nE 's/.*=\s*"(.*)".*/\1/p'`
+dirname=${PWD##*/}
+if [ $pypiname != '' ]
+then
+  cat setup.py.orig | sed 's/name="'${name}'"/name="'${pypiname}'"/g' > setup.py
+else
+  pypiname=name
+fi
+printf '%s\n' "Uploading new version to pypi as package '${pypiname}'"
+
+\rm -R dist build ${pypiname}.egg-info >& /dev/null
+python setup.py sdist
+python setup.py bdist_wheel --universal
+twine upload dist/*
+# change setup.py back
+mv -f setup.py.orig setup.py >& /dev/null
