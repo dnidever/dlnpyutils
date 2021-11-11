@@ -33,6 +33,52 @@ import astropy.stats
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
+# NUMPY_LT_1_18
+def _expand_dims(data, axis):
+    """
+    Expand the shape of an array.
+
+    Insert a new axis that will appear at the `axis` position in the
+    expanded array shape.
+
+    This function allows for tuple axis arguments.
+    ``numpy.expand_dims`` currently does not allow that, but it will in
+    numpy v1.18 (https://github.com/numpy/numpy/pull/14051).
+    ``_expand_dims`` can be replaced with ``numpy.expand_dims`` when the
+    minimum support numpy version is v1.18.
+
+    Parameters
+    ----------
+    data : array-like
+        Input array.
+    axis : int or tuple of int
+        Position in the expanded axes where the new axis (or axes) is
+        placed.  A tuple of axes is now supported.  Out of range axes as
+        described above are now forbidden and raise an `AxisError`.
+
+    Returns
+    -------
+    result : ndarray
+        View of ``data`` with the number of dimensions increased.
+    """
+
+    if isinstance(data, np.matrix):
+        data = np.asarray(data)
+    else:
+        data = np.asanyarray(data)
+
+    if not isinstance(axis, (tuple, list)):
+        axis = (axis,)
+
+    out_ndim = len(axis) + data.ndim
+    axis = np.core.numeric.normalize_axis_tuple(axis, out_ndim)
+
+    shape_it = iter(data.shape)
+    shape = [1 if ax in axis else next(shape_it) for ax in range(out_ndim)]
+
+    return data.reshape(shape)
+
+
 # Size, number of elements
 def size(a=None):
     """Returns the number of elements"""
@@ -801,6 +847,61 @@ def wtmean(x,sigma,error=False,reweight=False,magnitude=False):
     else:
         return xmn
 
+    
+def mediqrslope(x,y):
+    """ Calculate robust slope.  Calculate the slopes of all points in the 3+4th quartile using
+        the median X/Y values of the 1st quartile points, and then the same with 1+2nd quartile
+        with the median X/Y values of th 4th quartile points.  Then median is found of all the
+        slopes."""
+    xx = np.array(x).ravel()
+    yy = np.array(y).ravel()
+    n = len(xx)
+    si = np.sort(xx)
+    nh = n//2
+    nq = n//4
+    # First quartile median X/Y values
+    x1 = np.median(xx[si[0:nq]])
+    y1 = np.median(yy[si[0:nq]])
+    slp34 = (yy[si[nh:]]-y1)/(xx[si[nh:]]-x1)
+    # Fourth quartile median X/Y values    
+    x4 = np.median(xx[si[-nq:]])
+    y4 = np.median(yy[si[-nq:]])
+    slp12 = (yy[si[0:nh]]-y4)/(xx[si[0:nh]]-x4)
+    allslp = np.vstack((slp12,slp34))
+    slp = np.median(allslp)
+    return slp    
+
+    
+def iqrslope(x,y):
+    """ Calculate robust slope using median X/Y values of first quartile
+         and last quartile points."""
+    xx = np.array(x).ravel()
+    yy = np.array(y).ravel()
+    n = len(xx)
+    si = np.sort(xx)
+    nq = n//4
+    x1 = np.median(xx[si[0:nq]])
+    y1 = np.median(yy[si[0:nq]])
+    x2 = np.median(xx[si[-nq:]])
+    y2 = np.median(yy[si[-nq:]])
+    slp = (y2-y1)/(x2-x1)
+    return slp    
+
+def medslope(x,y):
+    """ Calculate robust slope using median X/Y values of first half
+         and second half of sorted points."""
+    xx = np.array(x).ravel()
+    yy = np.array(y).ravel()
+    n = len(xx)
+    si = np.sort(xx)
+    nh = n//2
+    x1 = np.median(xx[si[0:nh]])
+    y1 = np.median(yy[si[0:nh]])
+    x2 = np.median(xx[si[nh:]])
+    y2 = np.median(yy[si[nh:]])
+    slp = (y2-y1)/(x2-x1)
+    return slp
+    
 def wtslope(x,y,sigma,error=False,reweight=False):
     """ Calculate weighted slope and error"""
     n = len(x)
