@@ -436,7 +436,7 @@ def touch(fname):
 
 
 # Read in all lines of files
-def readlines(fil=None,raw=False):
+def readlines(fil=None,comment=None,raw=False):
     """
     Read in all lines of a file.
     
@@ -444,6 +444,8 @@ def readlines(fil=None,raw=False):
     ----------
     file : str
          The name of the file to load.
+    comment : str
+         Comment line character to ignore (e.g., "#").
     raw : bool, optional, default is false
          Do not trim \n off the ends of the lines.
 
@@ -466,6 +468,9 @@ def readlines(fil=None,raw=False):
     f.close()
     # Strip newline off
     if raw is False: lines = [l.rstrip('\n') for l in lines]
+    # Check for comment string:
+    if comment is not None:
+        lines = [l for l in lines if l[0]!=comment]                
     return lines
 
 
@@ -537,6 +542,71 @@ def writelines(filename=None,lines=None,overwrite=True,raw=False):
     f.writelines(lines)
     f.close()
 
+def loadinput(inp,comment='#',exist=False):
+    """
+    PURPOSE:
+    This program can be used to load command-line inputs.
+    The input can be:
+    (1) an array list of files, i.e. ['one.txt','two.txt']
+    (2) a globbed list, i.e. "*.txt"
+    (3) a comma separated list, i.e.  'one.txt,two.txt'
+    (4) the name of a file that contains a list, i.e. "list.txt"
+       This can NOT be used in combination with any of the other three options.
+
+    INPUTS:
+      input    The input list.  There are three possibilities
+               (1) an array list of files
+               (2) a globbed list, i.e. "*.txt"
+               (3) a comma separated list, i.e.  'one.txt,two.txt'
+               (4) the name of a file that contains a list, i.e. "@list.txt"
+                 This can NOT be used in combination with any of the other three options.
+      =comment Comment string to use when loading a list file. By default
+                comment='#'
+      /exist   Files must exist
+
+    OUTPUTS:
+      list     The list of files
+      =count   The number of elements in list
+
+    USAGE:
+    list = loadinput('*.fits')
+
+    By D.Nidever   April 2007
+
+    """
+
+    if type(inp) is not list:
+        inp = [inp]
+
+    # Check if this is a file I should read in
+    if inp[0][0]=='@':
+        fil = inp[0][1:]
+        out = readlines(fil,comment=comment)
+    else:
+        # Break up comma-delimited list        
+        lst = []
+        for l in inp:
+            if l.find(','):
+                l = l.split(',')
+                lst += l
+            else:
+                lst.append(l)
+        # Glob
+        out = []
+        for l in lst:
+            if l.find('*')>-1 or l.find('?')>-1:
+                gl = glob(l)
+                if len(gl)>0:
+                    out += gl
+            else:
+                out.append(l)
+
+    # Files must exist
+    if exist:
+        out = out[exists(out)]
+
+    return out
+    
 
 # Remove indices from a list
 def remove_indices(lst=None,index=None):
