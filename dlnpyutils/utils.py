@@ -1098,12 +1098,13 @@ def sigclipmean(data,nsig=2.5):
     mn = np.mean(data[fnt][good])
     return mn
 
-def gausswtmean(data):
-    """ Compute weighted mean using a Gaussian with center of the median and sigma of the MAD."""
+def gausswtmean(data,sig=None):
+    """ Compute weighted mean using a Gaussian with center of the median and sigma of the MAD (or input)."""
     # try sqrt() of Gaussian
     fnt = np.isfinite(data)
     med = np.median(data[fnt])
-    sig = mad(data[fnt])
+    if sig is None:
+        sig = mad(data[fnt])
     # sqrt(gaussian) to not downweight outliers so much
     wt = np.exp(-0.25*(data[fnt]-med)**2/sig**2)
     totwt = np.sum(wt)
