@@ -4,12 +4,16 @@ mv -f setup.py setup.py.orig >& /dev/null
 rm -f setup.py >& /dev/null
 pypiname=`grep pypiname setup.py.orig | awk '{print $3}' | sed 's|["'\'']||g'`
 name=`grep name setup.py.orig | grep -v pypiname | sed -nE 's/.*=\s*"(.*)".*/\1/p'`
-dirname=${PWD##*/}
-if [ $pypiname != '' ]
+if [ -z $pypiname ] || [ $pypiname == '' ]
 then
-  cat setup.py.orig | sed 's/name="'${name}'"/name="'${pypiname}'"/g' > setup.py
+  name=`grep name setup.py.orig | grep -v pypiname | sed -nE "s/.*=\s*'(.*)'.*/\1/p"`
+fi
+dirname=${PWD##*/}
+if [ -z $pypiname ] || [ $pypiname == '' ]
+then
+  pypiname=${name}
 else
-  pypiname=name
+  cat setup.py.orig | sed 's/name="'${name}'"/name="'${pypiname}'"/g' > setup.py
 fi
 printf '%s\n' "Uploading new version to pypi as package '${pypiname}'"
 
