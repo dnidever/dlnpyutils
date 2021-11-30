@@ -39,13 +39,17 @@ The :mod:`~dlnpyutils.utils` module has many of the general purpose functions.
  - :func:`~dlnpyutils.utils.quadratic_bisector`: Calculate the axis of symmetric or bisector of parabola.
  - :func:`~dlnpyutils.utils.quadratic_coefficients`: Calculate the quadratic coefficients from the three points.
  - :func:`~dlnpyutils.utils.wtmean`: Calculate weighted mean and error.
+ - :func:`~dlnpyutils.utils.mediqrslope`: Calculate robust slope from median of first quartile and points in the 3+4th quartile and median of 4th quartile
+      and points in the 1+2nd quartile.  The median is then found of all the slopes.
+ - :func:`~dlnpyutils.utils.iqrslope`: Calculate robust slope from median of first quartile and last quartile of points.
+ - :func:`~dlnpyutils.utils.medslope`: Calculate robust slope from median of first half and last half of points.
  - :func:`~dlnpyutils.utils.wtslope`: Calculate weighted slope and error.
  - :func:`~dlnpyutils.utils.robust_slope`: Calculate robust weighted slope.
  - :func:`~dlnpyutils.utils.wtmedian`: Weighted median by sorting the weighted values and finding the point of half the total weights.
  - :func:`~dlnpyutils.utils.iqrstdev`: Use the interquartile range to estimate the standard deviation robustly.
  - :func:`~dlnpyutils.utils.sigclipmean`: Sigma-clipped mean.
  - :func:`~dlnpyutils.utils.gausswtmean`: Compute weighted mean using a Gaussian with center of the median and sigma of the MAD.
- - :func:`~dlnpyutils.utils.gmean`: Compute geometric mean.
+ - :func:`~dlnpyutils.utils.gmean`: Compute geometric mean.   
  - :func:`~dlnpyutils.utils.skewquartile`: Measure the skewness robustly based on quartiles.   
  - :func:`~dlnpyutils.utils.skewgauss`:  Return a skewed Gaussian.
  - :func:`~dlnpyutils.utils.gaussian`: Return 1-D Gaussian.
@@ -57,7 +61,9 @@ The :mod:`~dlnpyutils.utils` module has many of the general purpose functions.
  - :func:`~dlnpyutils.utils.poly`: evaluate a polynomial function of a variable
  - :func:`~dlnpyutils.utils.poly_fit`: Fit a polynomial to X/Y data.
  - :func:`~dlnpyutils.utils.slope`: derivative or slope of an array 
- - :func:`~dlnpyutils.utils.gsmooth`: Gaussian smooth an array of image.
+ - :func:`~dlnpyutils.utils.smooth`: Boxcar smooth an array.
+ - :func:`~dlnpyutils.utils.gsmooth`: Gaussian smooth an array or image.
+ - :func:`~dlnpyutils.utils.savol`: Savitzky-Golay smoothing of data.
  - :func:`~dlnpyutils.utils.rebin`: Rebin data.
  - :func:`~dlnpyutils.utils.roi_cut`: Use cuts in a 2D plane to select points from arrays.
  - :func:`~dlnpyutils.utils.create_index`: Create an index of array values like reverse indices.
