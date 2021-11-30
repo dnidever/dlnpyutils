@@ -39,8 +39,7 @@ The :mod:`~dlnpyutils.utils` module has many of the general purpose functions.
  - :func:`~dlnpyutils.utils.quadratic_bisector`: Calculate the axis of symmetric or bisector of parabola.
  - :func:`~dlnpyutils.utils.quadratic_coefficients`: Calculate the quadratic coefficients from the three points.
  - :func:`~dlnpyutils.utils.wtmean`: Calculate weighted mean and error.
- - :func:`~dlnpyutils.utils.mediqrslope`: Calculate robust slope from median of first quartile and points in the 3+4th quartile and median of 4th quartile
-      and points in the 1+2nd quartile.  The median is then found of all the slopes.
+ - :func:`~dlnpyutils.utils.mediqrslope`: Calculate robust slope from median of first quartile and points in the 3+4th quartile and median of 4th quartile and points in the 1+2nd quartile.  The median is then found of all the slopes.
  - :func:`~dlnpyutils.utils.iqrslope`: Calculate robust slope from median of first quartile and last quartile of points.
  - :func:`~dlnpyutils.utils.medslope`: Calculate robust slope from median of first half and last half of points.
  - :func:`~dlnpyutils.utils.wtslope`: Calculate weighted slope and error.
