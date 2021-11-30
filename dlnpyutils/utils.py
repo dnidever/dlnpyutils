@@ -1319,7 +1319,7 @@ def slope(array):
 def smooth(y, width):
     """ Smooth a curve"""
     cumsum_vec = np.cumsum(np.insert(y, 0, 0)) 
-    ma_vec = (cumsum_vec[width:] - cumsum_vec[:-_width]) / width
+    ma_vec = (cumsum_vec[width:] - cumsum_vec[:-width]) / width
     #box = np.ones(box_pts)/box_pts
     #y_smooth = np.convolve(y, box, mode='same')
     return ma_vec
@@ -1346,6 +1346,8 @@ def gsmooth(data,fwhm,mask=None,boundary='extend',fill=0.0,truncate=4.0,squared=
 
 def savgol(y,nbin,order=3):
     """ Smooth data with Savitzky-Golay filter."""
+    if nbin % 2 == 0:  # width must be odd
+        nbin += 1
     yhat = savgol_filter(y, nbin, order) # window size 51, polynomial order 3
     return yhat
         
