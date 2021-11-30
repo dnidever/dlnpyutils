@@ -26,8 +26,8 @@ from scipy.optimize import curve_fit, least_squares
 from scipy.special import erf
 from scipy.interpolate import interp1d
 from scipy.linalg import svd
+from scipy.signal import savgol_filter
 import astropy.stats
-
 
 # Ignore these warnings, it's a bug
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
@@ -1315,6 +1315,15 @@ def slope(array):
     n = len(array)
     return array[1:n]-array[0:n-1]
 
+
+def smooth(y, width):
+    """ Smooth a curve"""
+    cumsum_vec = np.cumsum(np.insert(y, 0, 0)) 
+    ma_vec = (cumsum_vec[width:] - cumsum_vec[:-_width]) / width
+    #box = np.ones(box_pts)/box_pts
+    #y_smooth = np.convolve(y, box, mode='same')
+    return ma_vec
+
 # Gaussian filter
 def gsmooth(data,fwhm,mask=None,boundary='extend',fill=0.0,truncate=4.0,squared=False):
     # astropy.convolve automatically ignores NaNs
@@ -1334,7 +1343,12 @@ def gsmooth(data,fwhm,mask=None,boundary='extend',fill=0.0,truncate=4.0,squared=
     else:
         return convolve(data, g.array**2, mask=mask, boundary=boundary, fill_value=fill, normalize_kernel=False)
         #return gaussian_filter1d(data,fwhm/2.35,axis=axis,mode=mode,cval=cval,truncate=truncate)**2
-    
+
+def savgol(y,nbin,order=3):
+    """ Smooth data with Savitzky-Golay filter."""
+    yhat = savgol_filter(y, nbin, order) # window size 51, polynomial order 3
+    return yhat
+        
 # Rebin data
 def rebin(arr, new_shape):
     if arr.ndim>2:
