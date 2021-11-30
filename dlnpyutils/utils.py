@@ -926,7 +926,7 @@ def mediqrslope(x,y):
     xx = np.array(x).ravel()
     yy = np.array(y).ravel()
     n = len(xx)
-    si = np.sort(xx)
+    si = np.argsort(xx)
     nh = n//2
     nq = n//4
     # First quartile median X/Y values
@@ -948,7 +948,7 @@ def iqrslope(x,y):
     xx = np.array(x).ravel()
     yy = np.array(y).ravel()
     n = len(xx)
-    si = np.sort(xx)
+    si = np.argsort(xx)
     nq = n//4
     x1 = np.median(xx[si[0:nq]])
     y1 = np.median(yy[si[0:nq]])
@@ -963,7 +963,7 @@ def medslope(x,y):
     xx = np.array(x).ravel()
     yy = np.array(y).ravel()
     n = len(xx)
-    si = np.sort(xx)
+    si = np.argsort(xx)
     nh = n//2
     x1 = np.median(xx[si[0:nh]])
     y1 = np.median(yy[si[0:nh]])
