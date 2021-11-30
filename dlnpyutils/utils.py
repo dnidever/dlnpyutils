@@ -937,7 +937,7 @@ def mediqrslope(x,y):
     x4 = np.median(xx[si[-nq:]])
     y4 = np.median(yy[si[-nq:]])
     slp12 = (yy[si[0:nh]]-y4)/(xx[si[0:nh]]-x4)
-    allslp = np.vstack((slp12,slp34))
+    allslp = np.hstack((slp12,slp34))
     slp = np.median(allslp)
     return slp    
 
