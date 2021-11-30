@@ -12,6 +12,7 @@ dirname=${PWD##*/}
 if [ -z $pypiname ] || [ $pypiname == '' ]
 then
   pypiname=${name}
+  cp -f setup.py.orig setup.py >& /dev/null
 else
   cat setup.py.orig | sed 's/name="'${name}'"/name="'${pypiname}'"/g' > setup.py
 fi
