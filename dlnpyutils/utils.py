@@ -1352,18 +1352,77 @@ def savgol(y,nbin,order=3):
     return yhat
         
 # Rebin data
-def rebin(arr, new_shape):
+def rebin(arr, new_shape=None, binsize=None, tot=False,med=False):
+    """
+    Rebin data in 1D or 2D
+
+    Parameters
+    ----------
+    arr : numpy array
+       The data array to rebin.
+    new_shape : tuple or list, optional
+       Tuple or list of new output shape.  Either new_shape or binsize must be input.
+    binsize : tuple or list, optional
+       Tuple or list of binsize.  Either new_shape or bins must be input. 
+    tot : boolean, optional
+       Return the sum instead of the mean (the default).
+    med : boolean, optional
+       Return the median instead of the mean (the default).
+
+    Returns
+    -------
+    out : numpy array
+       The rebinned data.
+
+    Example
+    -------
+
+    out = rebin(arr,(100,300))
+
+    """
     if arr.ndim>2:
         raise Exception("Maximum 2D arrays")
     if arr.ndim==0:
         raise Exception("Must be an array")
+    if new_shape is None and binsize is None:
+        raise Exception("new_shape or binsize must be input")
+    
     if arr.ndim==2:
-        shape = (new_shape[0], arr.shape[0] // new_shape[0],
-                 new_shape[1], arr.shape[1] // new_shape[1])
-        return arr.reshape(shape).mean(-1).mean(1)
+        if binsize is None:
+            binsize = (arr.shape[0] // new_shape[0], arr.shape[1] // new_shape[1])
+        else:
+            new_shape = (arr.shape[0]//binsize[0], arr.shape[1]//binsize[1])
+        shape = (new_shape[0], binsize[0],
+                 new_shape[1], binsize[1])
+        slc = (slice(0,new_shape[0]*binsize[0],None),slice(0,new_shape[1]*binsize[1],None))
+        # Median
+        if med:
+            out = np.median(arr[slc].reshape(shape),axis=(1,3))
+        # Sum
+        elif tot:
+            out = arr[slc].reshape(shape).sum(-1).sum(1)
+        # Mean
+        else:
+            out = arr[slc].reshape(shape).mean(-1).mean(1)
+        return out
+    
     if arr.ndim==1:
-        shape = (np.array(new_shape,ndmin=1)[0], arr.shape[0] // np.array(new_shape,ndmin=1)[0])
-        return arr.reshape(shape).mean(-1)
+        if binsize is None:
+            binsize = arr.shape[0] // np.array(new_shape,ndmin=1)[0]
+        else:
+            new_shape = arr.shape[0] // binsize
+        shape = (np.array(new_shape,ndmin=1)[0], binsize)
+        slc = slice(0,np.array(new_shape,ndmin=1)[0]*binsize,None)
+        # Median
+        if med:
+            out = np.median(arr[slc].reshape(shape),axis=1)
+        # Sum
+        elif tot:
+            out = arr[slc].reshape(shape).sum(-1)
+        # Mean
+        else:
+            out = arr[slc].reshape(shape).mean(-1)
+        return out
 
 def roi_cut(xcut,ycut,x,y):
     """
