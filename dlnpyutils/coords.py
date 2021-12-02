@@ -369,7 +369,7 @@ def crossmatch(X1, X2, max_distance=np.inf,k=1):
     return dist, ind
 
 # from astroML, modified by D. Nidever
-def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
+def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False,sphere=True):
     """Cross-match angular values between RA1/DEC1 and RA2/DEC2
 
     Find the closest match in the second list for each element
@@ -391,6 +391,10 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
     ra2/dec2 : array_like
         second dataset, arrays of RA and DEC
         both measured in degrees
+    sphere : boolean, optional
+        The coordinates are spherical in degrees.  Otherwise, the dcr
+          is assumed to be in the same units as the input values.
+          Default is True.
     dcr : float (optional)
         maximum radius of search, measured in arcsec.
         This can be an array of the same size as ra1/dec1.
@@ -403,34 +407,41 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
     """
     X1 = np.vstack((ra1,dec1)).T
     X2 = np.vstack((ra2,dec2)).T
+
+    # Spherical coordinates in degrees
+    if sphere:
+        X1 = X1 * (np.pi / 180.)
+        X2 = X2 * (np.pi / 180.)
+        if utils.size(dcr)>1:
+            max_distance = (np.max(dcr) / 3600) * (np.pi / 180.)
+        else:
+            max_distance = (dcr / 3600) * (np.pi / 180.)
+
+        # Convert 2D RA/DEC to 3D cartesian coordinates
+        Y1 = np.transpose(np.vstack([np.cos(X1[:, 0]) * np.cos(X1[:, 1]),
+                                     np.sin(X1[:, 0]) * np.cos(X1[:, 1]),
+                                     np.sin(X1[:, 1])]))
+        Y2 = np.transpose(np.vstack([np.cos(X2[:, 0]) * np.cos(X2[:, 1]),
+                                     np.sin(X2[:, 0]) * np.cos(X2[:, 1]),
+                                     np.sin(X2[:, 1])]))
+
+        # law of cosines to compute 3D distance
+        max_y = np.sqrt(2 - 2 * np.cos(max_distance))
+        k = 1 if unique is False else 10
+        dist, ind = crossmatch(Y1, Y2, max_y, k=k)
     
-    X1 = X1 * (np.pi / 180.)
-    X2 = X2 * (np.pi / 180.)
-    if utils.size(dcr)>1:
-        max_distance = (np.max(dcr) / 3600) * (np.pi / 180.)
+        # convert distances back to angles using the law of tangents
+        not_inf = ~np.isinf(dist)
+        x = 0.5 * dist[not_inf]
+        dist[not_inf] = (180. / np.pi * 2 * np.arctan2(x,
+                                np.sqrt(np.maximum(0, 1 - x ** 2))))
+        dist[not_inf] *= 3600.0      # in arcsec
+    # Regular coordinates
     else:
-        max_distance = (dcr / 3600) * (np.pi / 180.)
-
-    # Convert 2D RA/DEC to 3D cartesian coordinates
-    Y1 = np.transpose(np.vstack([np.cos(X1[:, 0]) * np.cos(X1[:, 1]),
-                                 np.sin(X1[:, 0]) * np.cos(X1[:, 1]),
-                                 np.sin(X1[:, 1])]))
-    Y2 = np.transpose(np.vstack([np.cos(X2[:, 0]) * np.cos(X2[:, 1]),
-                                 np.sin(X2[:, 0]) * np.cos(X2[:, 1]),
-                                 np.sin(X2[:, 1])]))
-
-    # law of cosines to compute 3D distance
-    max_y = np.sqrt(2 - 2 * np.cos(max_distance))
-    k = 1 if unique is False else 10 
-    dist, ind = crossmatch(Y1, Y2, max_y, k=k)
-    
-    # convert distances back to angles using the law of tangents
-    not_inf = ~np.isinf(dist)
-    x = 0.5 * dist[not_inf]
-    dist[not_inf] = (180. / np.pi * 2 * np.arctan2(x,
-                                  np.sqrt(np.maximum(0, 1 - x ** 2))))
-    dist[not_inf] *= 3600.0      # in arcsec
-    
+        k = 1 if unique is False else 10
+        dist, ind = crossmatch(X1, X2, np.max(dcr), k=k)
+        not_inf = ~np.isinf(dist)
+            
     # Allow duplicates
     if unique is False:
 
@@ -480,8 +491,6 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False):
             mindist = dist[:,0][not_inf1]
             if len(ind2)==0:
                 return [], [], [np.inf]
-                #print('no elements')
-                #import pdb; pdb.set_trace()
             index = utils.create_index(ind2)
             # some duplicates to deal with
             bd,nbd = utils.where(index['num']>1)
