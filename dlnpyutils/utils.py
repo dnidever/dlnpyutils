@@ -1208,6 +1208,8 @@ def gaussfit(x,y,initpar=None,sigma=None, bounds=None, binned=False):
     #return result
     if initpar is None:
         initpar = [np.max(y),x[np.argmax(y)],1.0,np.median(y)]
+    if bounds is None:
+        bounds = (-np.inf,np.inf)
     func = gaussian
     if binned is True: func=gaussbin
     return curve_fit(func, x, y, p0=initpar, sigma=sigma, bounds=bounds)
