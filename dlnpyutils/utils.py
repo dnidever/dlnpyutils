@@ -1201,11 +1201,13 @@ def gaussbin(x, amp, cen, sig, const=0, slp=0.0, dx=1.0):
 
     return geval
 
-def gaussfit(x,y,initpar,sigma=None, bounds=None, binned=False):
+def gaussfit(x,y,initpar=None,sigma=None, bounds=None, binned=False):
     """Fit 1-D Gaussian to X/Y data"""
     #gmodel = Model(gaussian)
     #result = gmodel.fit(y, x=x, amp=initpar[0], cen=initpar[1], sig=initpar[2], const=initpar[3])
     #return result
+    if initpar is None:
+        initpar = [np.max(y),x[np.argmax(y)],1.0,np.median(y)]
     func = gaussian
     if binned is True: func=gaussbin
     return curve_fit(func, x, y, p0=initpar, sigma=sigma, bounds=bounds)
