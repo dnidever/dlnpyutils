@@ -20,6 +20,17 @@ To install the latest version::
 
     pip install git+https://github.com/dnidever/dlnpyutils
 
+Attribution
+-----------
+
+.. image:: https://zenodo.org/badge/205585866.svg
+   :target: https://zenodo.org/badge/latestdoi/205585866
+
+If you make use of this code, please cite this work using the DOI::
+
+    Nidever, D. L. 2021, dnidever/dlnpyutils, doi:10.5281/zenodo.5764938
+
+    
     
 Documentation
 -------------
