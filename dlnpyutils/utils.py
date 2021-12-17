@@ -534,7 +534,7 @@ def writelines(filename=None,lines=None,overwrite=True,raw=False):
         if hasattr(lines,'__iter__'):
             lines = [str(l)+'\n' for l in lines]
             # Make sure final element does not end in \n        
-            if lines[-1].endswith('\n'): lines[-1] = lines[-1][0:-1]        
+            #if lines[-1].endswith('\n'): lines[-1] = lines[-1][0:-1]        
         else:
             lines = str(lines)
     # Write the file
