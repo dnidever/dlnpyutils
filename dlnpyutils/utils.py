@@ -858,29 +858,47 @@ def quadratic_bisector(x,y):
         return np.nan
     return -b/(2*a)
 
-def quadratic_coefficients(x,y):
+def quadratic_coefficients(x,y,axis=0):
     """ Calculate the quadratic coefficients from the three points."""
     #https://www.azdhs.gov/documents/preparedness/state-laboratory/lab-licensure-certification/technical-resources/
     #    calibration-training/12-quadratic-least-squares-regression-calib.pdf
     #quadratic regression statistical equation
     # y = ax**2 + b*x + c
     n = len(x)
+    if np.array(x).ndim > 1:
+        n = np.array(x).shape[axis]
+            
     if n<3:
         return None
-    Sxx = np.sum(x**2) - np.sum(x)**2/n
-    Sxy = np.sum(x*y) - np.sum(x)*np.sum(y)/n
-    Sxx2 = np.sum(x**3) - np.sum(x)*np.sum(x**2)/n
-    Sx2y = np.sum(x**2 * y) - np.sum(x**2)*np.sum(y)/n
-    Sx2x2 = np.sum(x**4) - np.sum(x**2)**2/n
+    Sxx = np.sum(x**2,axis=axis) - np.sum(x,axis=axis)**2/n
+    Sxy = np.sum(x*y,axis=axis) - np.sum(x,axis=axis)*np.sum(y,axis=axis)/n
+    Sxx2 = np.sum(x**3,axis=axis) - np.sum(x,axis=axis)*np.sum(x**2,axis=axis)/n
+    Sx2y = np.sum(x**2 * y,axis=axis) - np.sum(x**2,axis=axis)*np.sum(y,axis=axis)/n
+    Sx2x2 = np.sum(x**4,axis=axis) - np.sum(x**2,axis=axis)**2/n
     #a = ( S(x^2*y)*S(xx)-S(xy)*S(xx^2) ) / ( S(xx)*S(x^2x^2) - S(xx^2)^2 )
     #b = ( S(xy)*S(x^2x^2) - S(x^2y)*S(xx^2) ) / ( S(xx)*S(x^2x^2) - S(xx^2)^2 )
     denom = Sxx*Sx2x2 - Sxx2**2
-    if denom==0:
-        return [np.nan,np.nan,np.nan]
+    if np.array(x).ndim==1:
+        if denom==0:
+            return [np.nan,np.nan,np.nan]
+    else:
+        bad = (denom==0)
+        denom[bad] = 1
     a = ( Sx2y*Sxx - Sxy*Sxx2 ) / denom
     b = ( Sxy*Sx2x2 - Sx2y*Sxx2 ) / denom
-    c = np.median(y - (a*x**2+b*x))
-    coef = [a,b,c]
+    c = np.median(y - (a*x**2+b*x),axis=axis)
+    if np.array(x).ndim==1:
+        coef = [a,b,c]
+    else:
+        coef = np.zeros((3,np.array(x).shape[1]),float)
+        coef[0,:] = a
+        coef[1,:] = b
+        coef[2,:] = c        
+        if np.sum(bad)>0:
+            coef[0,bad] = np.nan
+            coef[1,bad] = np.nan
+            coef[2,bad] = np.nan            
+        
     return coef
 
 def wtmean(x,sigma,error=False,reweight=False,magnitude=False):
