@@ -11,6 +11,11 @@ __version__ = '20190723'  # yyyymmdd
 import numpy as np
 from scipy.spatial import cKDTree
 from . import utils
+from astropy.coordinates import frame_transform_graph
+from astropy.coordinates.matrix_utilities import rotation_matrix, matrix_product, matrix_transpose
+import astropy.coordinates as coord
+import astropy.units as u
+from astropy.coordinates import SkyCoord
 
 def rotsph(lon,lat,clon,clat,anode=None,reverse=False,original=False):
     '''
@@ -642,3 +647,82 @@ def xyz2lbd(x,y,z,R0=8.5):
         dd[i] = d
 
     return ll,bb,dd
+
+
+class MagellanicStream(coord.BaseCoordinateFrame):
+    """
+    A Heliocentric spherical coordinate system defined by the Magellanic Stream
+    Parameters
+    ----------
+    representation : `BaseRepresentation` or None
+        A representation object or None to have no data (or use the other keywords)
+    MSLongitude : `Angle`, optional, must be keyword
+        The longitude-like angle corresponding to the Magellanic Stream.
+    MSLatitude : `Angle`, optional, must be keyword
+        The latitude-like angle corresponding to the Magellanic Stream.
+    distance : `Quantity`, optional, must be keyword
+        The Distance for this object along the line-of-sight.
+    pm_Lambda_cosBeta : :class:`~astropy.units.Quantity`, optional, must be keyword
+        The proper motion along the Stream in ``Lambda`` (including the
+        ``cos(Beta)`` factor) for this object (``pm_Beta`` must also be given).
+    pm_Beta : :class:`~astropy.units.Quantity`, optional, must be keyword
+        The proper motion in Declination for this object (``pm_ra_cosdec`` must
+        also be given).
+    radial_velocity : :class:`~astropy.units.Quantity`, optional, must be keyword
+        The radial velocity of this object.
+
+    Developed by J. Povick
+
+    """
+    default_representation = coord.SphericalRepresentation
+
+    frame_specific_representation_info = {
+        coord.SphericalRepresentation: [
+            coord.RepresentationMapping('lon', 'MSLongitude'),
+            coord.RepresentationMapping('lat', 'MSLatitude'),
+            coord.RepresentationMapping('distance', 'distance')]#,
+    }
+    frame_specific_representation_info[coord.UnitSphericalRepresentation] = frame_specific_representation_info[coord.SphericalRepresentation]
+
+MS_PHI = (180 + 8.5 + 90) * u.degree # Euler angles (from Nidever 2010)
+MS_THETA = (90 + 7.5) * u.degree
+MS_PSI = -32.724214217871349 * u.degree  # anode parameter from gal2mag.pro
+
+D = rotation_matrix(MS_PHI, "z")
+C = rotation_matrix(MS_THETA, "x")
+B = rotation_matrix(MS_PSI, "z")
+A = np.diag([1., 1., 1.])
+MS_MATRIX = matrix_product(A, B, C, D)
+
+@frame_transform_graph.transform(coord.StaticMatrixTransform, coord.Galactic, MagellanicStream)
+def galactic_to_MS():
+    """ Compute the transformation matrix from Galactic spherical to
+        Magellanic Stream coordinates.
+    """
+    return MS_MATRIX
+
+@frame_transform_graph.transform(coord.StaticMatrixTransform, MagellanicStream, coord.Galactic)
+def MS_to_galactic:
+    """ Compute the transformation matrix from Magellanic Stream coordinates to
+        spherical Galactic.
+    """
+    return matrix_transpose(MS_MATRIX)
+
+#c_icrs = SkyCoord(ra=tmp.ra*u.degree, dec=tmp.dec*u.degree)
+#c_ms = c_icrs.transform_to(MagellanicStream)
+#ms_l,ms_b = c_ms.MSLongitude.degree, c_ms.MSLatitude.degree #subtract off 360 from ms_l
+
+def gal2mag(glon,glat):
+    """ Convert Galactic longitude/latitude to Magellanic Stream longitude/latitude."""
+    c_glon = SkyCoord(glon,glat,frame='galactic',unit='deg')
+    c_ms = c_glon.transform_to(MagellanicStream)
+    mlon,mlat = c_ms.MSLongitude.degree, c_ms.MSLatitude.degree #subtract off 360 from ms_l
+    return mlon,mlat
+
+def mag2gal(mlon,mlat):
+    """ Convert Magellanic Stream longitude/latitude to Galactic longitude/latitude."""
+    c_ms = SkyCoord(mlon,mlat,frame=MagellanicStream,unit='deg')
+    c_glon = c_ms.transform_to('galactic')
+    glon,glat = c_glon.l.degree, c_glon.b.degree #subtract off 360 from ms_l
+    return glon,glat
+
