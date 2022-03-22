@@ -1385,7 +1385,7 @@ def rebin(arr, new_shape=None, binsize=None, tot=False,med=False):
     new_shape : tuple or list, optional
        Tuple or list of new output shape.  Either new_shape or binsize must be input.
     binsize : tuple or list, optional
-       Tuple or list of binsize.  Either new_shape or bins must be input. 
+       Tuple or list of binsize.  Either new_shape or binsize must be input. 
     tot : boolean, optional
        Return the sum instead of the mean (the default).
     med : boolean, optional
