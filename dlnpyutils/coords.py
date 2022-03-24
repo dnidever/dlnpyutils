@@ -614,39 +614,23 @@ def lbd2xyz(l,b,d,R0=8.5):
 
 def xyz2lbd(x,y,z,R0=8.5):
     """ Convert galactocentric X/Y/Z coordinates to l,b,dist."""
-    ll = np.atleast_1d(x).copy()*0.0
-    bb = np.atleast_1d(x).copy()*0.0
-    dd = np.atleast_1d(x).copy()*0.0    
-    for i in range(len(ll)):
-        xx = np.float64(x[i])
-        yy = np.float64(y[i])
-        zz = np.float64(z[i])
-        rho = np.sqrt( (xx+R0)**2 + yy**2)  # distance from sun in X/Y plane
 
-        lrad = np.arctan2(yy,xx+R0)
-        
-        brad = 0.5*np.pi - np.arctan2(rho,zz)      # this is more straighforward
-        if brad > 0.5*np.pi:
-            brad = brad-np.pi
-        if brad < -0.5*np.pi:
-            brad = brad+np.pi
+    rho = np.sqrt( (x+R0)**2 + y**2)
+    lrad = np.arctan2(y,x+R0)
+    brad = 0.5*np.pi - np.arctan2(rho,z)      # this is more straighforward
 
-        # This doesn't work if z=0
-        #if cos(0.5*!dpi-brad) ne 0.0 then d = zz/cos(0.5*!dpi-brad)
-        #if cos(0.5*!dpi-brad) eq 0.0 then d = abs(zz)
-        d = np.sqrt( (xx+R0)**2 + yy**2 + zz**2 )
+    brad[brad > 0.5*np.pi] -= np.pi
+    brad[brad < -0.5*np.pi] += np.pi
 
-        b = np.rad2deg(brad)
-        l = np.rad2deg(lrad)
-        
-        if l < 0.:
-            l = l+360.
-        
-        ll[i] = l
-        bb[i] = b
-        dd[i] = d
+    # This doesn't work if z=0
+    #if cos(0.5*!dpi-brad) ne 0.0 then d = zz/cos(0.5*!dpi-brad)
+    #if cos(0.5*!dpi-brad) eq 0.0 then d = abs(zz)
+    d = np.sqrt( (x+R0)**2 + y**2 + z**2 )
+    b = np.rad2deg(brad)
+    l = np.rad2deg(lrad)
+    l = l % 360
 
-    return ll,bb,dd
+    return l,b,d
 
 
 class MagellanicStream(coord.BaseCoordinateFrame):
@@ -702,7 +686,7 @@ def galactic_to_MS():
     return MS_MATRIX
 
 @frame_transform_graph.transform(coord.StaticMatrixTransform, MagellanicStream, coord.Galactic)
-def MS_to_galactic:
+def MS_to_galactic():
     """ Compute the transformation matrix from Magellanic Stream coordinates to
         spherical Galactic.
     """
