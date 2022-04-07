@@ -40,8 +40,9 @@ def inverse(a):
     try:
         ainv = np.linalg.inv(a)
     except:
-        print('inverse problem')
-        import pdb; pdb.set_trace()
+        rank = np.linalg.matrix_rank(a)
+        print('inverse problem: matrix shape '+str(a.shape)+', rank '+str(rank))
+        raise
     # Fix values
     a[badpar,badpar] = 0  # put values back
     ainv[badpar,badpar] = 0
@@ -165,9 +166,6 @@ def lsq_solve(xdata,data,jac,initpar,error=None,method='qr',model=None,
 
 
     """
-
-
-    # ADD A FIXED PARAMETER TO HOLD CERTAIN PARAMETERS FIXED!!
     
     # Iterate
     count = 0
