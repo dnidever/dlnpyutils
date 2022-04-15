@@ -436,7 +436,7 @@ def touch(fname):
 
 
 # Read in all lines of files
-def readlines(fil=None,comment=None,raw=False):
+def readlines(fil=None,comment=None,raw=False,nreadline=None):
     """
     Read in all lines of a file.
     
@@ -448,6 +448,8 @@ def readlines(fil=None,comment=None,raw=False):
          Comment line character to ignore (e.g., "#").
     raw : bool, optional, default is false
          Do not trim \n off the ends of the lines.
+    nreadline : int, optional
+         Read only this number of lines.  Default is to read all lines.
 
     Returns
     -------
@@ -463,9 +465,14 @@ def readlines(fil=None,comment=None,raw=False):
 
     """
     if fil is None: raise ValueError("File not input")
-    f = open(fil,'r')
-    lines = f.readlines()
-    f.close()
+    if nreadline is None:
+        with open(fil,'r') as f:
+            lines = f.readlines()
+    else:
+        with open(fil,'r') as f:
+            lines = []
+            for i in range(nreadline):
+                lines.append( f.readline() )
     # Strip newline off
     if raw is False: lines = [l.rstrip('\n') for l in lines]
     # Check for comment string:
