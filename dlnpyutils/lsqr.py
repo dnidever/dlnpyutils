@@ -212,7 +212,7 @@ def lsq_solve(xdata,data,jac,initpar,error=None,method='qr',model=None,
         maxpercdiff = np.max(percdiff)
                 
         if verbose:
-            print('N = '+str(ount))
+            print('N = '+str(count))
             print('bestpars = '+str(bestpar))
             print('dbeta = '+str(dbeta))
                 
