@@ -118,8 +118,8 @@ def rotsph(lon,lat,clon,clat,anode=None,reverse=False,original=False):
     nlon = nlon % 360.0
 
     # Make negative points positive
-    bd, = np.where(nlon < 0.0)
-    if len(bd)>0:
+    bd = (nlon < 0.0)
+    if np.sum(bd)>0:
         nlon[bd] = nlon[bd]+360.0
 
     return nlon, nlat
