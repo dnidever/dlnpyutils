@@ -193,13 +193,15 @@ def mad(data, axis=None, func=None, ignore_nan=True, zero=False):
 
 def minmax(a):
     """ Return a 2-element array of minimum and maximum."""
-    if type(a) is not np.ndarray: raise ValueError("a must be a numpy array")
+    if type(a) is not np.ndarray:
+        a = np.array(a)
     return np.array([np.min(a),np.max(a)])
 
 def stat(a=None,silent=False):
     """ Returns basic statistics on an array."""
     if a is None: raise ValueError("a must be input")
-    if type(a) is not np.ndarray: raise ValueError("a must be a numpy array")
+    if type(a) is not np.ndarray:
+        a = np.array(a)
     #  This is what stat returns:
     #  info[0]: Number of Elements
     #  info[1]: Minimum
