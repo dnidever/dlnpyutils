@@ -381,7 +381,7 @@ def first_el(lst):
 # Standard grep function that works on string list
 def grep(lines=None,expr=None,index=False):
     """
-    Similar to the standard unit "grep" but run on a list of strings.
+    Similar to the standard unix "grep" but run on a list of strings.
     Returns a list of the matching lines unless index=True is set,
     then it returns the indices.
 
@@ -429,6 +429,43 @@ def grep(lines=None,expr=None,index=False):
                 out.append(cnt)
         cnt = cnt+1
     return out
+
+# find() function for arrays
+def find(arr,expr):
+    """
+    The standard python string find() but for lists or np.char.array arrays.
+    Note that this uses re so it understands regular expressions.
+
+    Parameters
+    ----------
+    arr : list or np.char.array
+        The list of string lines to check.
+    expr  : str
+        Scalar string expression to search for.  Can be a regular expression.
+
+    Returns
+    -------
+    out : numpy array
+        The array of indices.
+
+    Example
+    -------
+
+    Search for a string and return the matching lines:
+
+    .. code-block:: python
+
+        mlines = find(arr,"hello")
+
+    """
+    out = []
+    for l in np.array(arr,ndmin=1):
+        m = re.search(expr,l)
+        if m != None:
+            out.append(m.start())
+        else:
+            out.append(-1)
+    return np.array(out).astype(int)
 
 # Create an empty file
 def touch(fname):
