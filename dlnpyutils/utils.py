@@ -13,6 +13,7 @@ import logging
 import os
 import sys
 import numpy as np
+import shutil
 import warnings
 from astropy.io import fits
 from astropy.table import Table, Column
@@ -260,6 +261,67 @@ def glob(inp):
         return out
     else:
         raise ValueError(inp,' not understood')
+
+def file_copy(src,dest,overwrite=False):
+    """ Copy files."""
+    nsrc = size(src)
+    if nsrc==1 and type(src) is str:
+        src = [src]
+    ndest = size(dest)
+    if ndest==1 and type(dest) is str:
+        dest = [dest]
+    # Loop over files
+    for i in range(nsrc):
+        src1 = src[i]
+        dest1 = dest[i]
+        if os.path.isdir(src1):
+            raise ValueError(src1+' is a directory')
+        # Destination is directory, add base name
+        if os.path.isdir(dest1):
+            dest1 += os.path.basename(src1)
+        # Check if the destination file exists already
+        exists1 = os.path.exists(dest1)
+        if os.path.abspath(src1)==os.path.abspath(dest1):
+            print(src1+' and '+dest1+' are the same file')
+            continue
+        if exists1 and overwrite==False:
+            print(dest1+' exists and overwrite=False')
+            continue
+        if exists1 and overwrite:
+            os.remove(exists1)
+        # Copy the file
+        shutil.copyfile(src1,dest1)
+
+def file_move(src,dest,overwrite=False):
+    """ Copy files.  dest can be a filename or directory."""
+    nsrc = size(src)
+    if nsrc==1 and type(src) is str:
+        src = [src]
+    ndest = size(dest)
+    if ndest==1 and type(dest) is str:
+        dest = [dest]
+    # Loop over files
+    for i in range(nsrc):
+        src1 = src[i]
+        dest1 = dest[i]
+        if os.path.isdir(src1):
+            raise ValueError(src1+' is a directory')
+        # Destination is directory, add base name
+        if os.path.isdir(dest1):
+            dest1 += os.path.basename(src1)
+        # Check if the destination file exists already
+        exists1 = os.path.exists(dest1)
+        if os.path.abspath(src1)==os.path.abspath(dest1):
+            print(src1+' and '+dest1+' are the same file')
+            continue
+        if exists1 and overwrite==False:
+            print(dest1+' exists and overwrite=False')
+            continue
+        if exists1 and overwrite:
+            os.remove(exists1)
+        # Move the file
+        shutil.move(src1,dest1)
+        
     
 def strlen(lst=None):
     """ Calculate the string lengths of a string array."""
