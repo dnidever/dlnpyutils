@@ -1487,7 +1487,7 @@ def savgol(y,nbin,order=3):
     return yhat
         
 # Rebin data
-def rebin(arr, new_shape=None, binsize=None, tot=False,med=False):
+def rebin(arr, new_shape=None, binsize=None, tot=False,med=False,maximum=False):
     """
     Rebin data in 1D or 2D
 
@@ -1502,7 +1502,9 @@ def rebin(arr, new_shape=None, binsize=None, tot=False,med=False):
     tot : boolean, optional
        Return the sum instead of the mean (the default).
     med : boolean, optional
-       Return the median instead of the mean (the default).
+       Return the median instead of the mean.
+    maximum : boolean, optional
+       Return the maximum instead of the mean.
 
     Returns
     -------
@@ -1536,6 +1538,9 @@ def rebin(arr, new_shape=None, binsize=None, tot=False,med=False):
         # Sum
         elif tot:
             out = arr[slc].reshape(shape).sum(-1).sum(1)
+        # Maximum
+        elif maximum:
+            out = arr[slc].reshape(shape).max(-1).max(1)
         # Mean
         else:
             out = arr[slc].reshape(shape).mean(-1).mean(1)
@@ -1554,6 +1559,9 @@ def rebin(arr, new_shape=None, binsize=None, tot=False,med=False):
         # Sum
         elif tot:
             out = arr[slc].reshape(shape).sum(-1)
+        # Maximum
+        elif maximum:
+            out = arr[slc].reshape(shape).max(-1)        
         # Mean
         else:
             out = arr[slc].reshape(shape).mean(-1)
