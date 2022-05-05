@@ -2268,3 +2268,128 @@ def isnumber(s):
         return True
     except ValueError:
         return False
+
+def bootstrap(data,statistic,niter=100,indexargs=False,args=None,kwargs=None):
+    """
+    Perform bootstrap statistics.
+    
+    Parameters
+    ----------
+    data : list or numpy array
+       The data on which to perform the statistic.
+    statistic : str or callable
+       Name of statistical function ('sum','mean','median', etc.) or callable
+         function to compute statistic.
+    niter : int, optional
+       Number of bootstrap iterationas.  Default is 100.
+    indexargs : boolean, optional
+       Apply the random ordering to the args/kwargs that are arrays and have
+          the same size as data.  Default is False.
+    args : tuple, optional
+       Extra positional arguments to pass to `statistic`.
+    kwargs : dictionary, optional
+       Extra keyword arguments to pass to `statistic`.
+
+    Returns
+    -------
+    sigma : numpy array
+      The 1-sigma bootstrap values for each output that
+        statistic returns.
+
+    Example
+    -------
+
+    sigma = bootstrap(xdata,ydata,statistic)
+
+    """
+
+    # String name
+    if type(statistic) is str:
+        if statistic=='sum' or statistic=='np.sum' or statistic=='numpy.sum':
+            statistic = np.sum
+        if statistic=='nansum' or statistic=='np.nansum' or statistic=='numpy.nansum':
+            statistic = np.nansum
+        elif statistic=='max' or statistic=='np.max' or statistic=='numpy.max':
+            statistic = np.max
+        elif statistic=='nanmax' or statistic=='np.nanmax' or statistic=='numpy.nanmax':
+            statistic = np.nanmax
+        elif statistic=='min' or statistic=='np.min' or statistic=='numpy.min':
+            statistic = np.min
+        elif statistic=='nanmin' or statistic=='np.nanmin' or statistic=='numpy.nanmin':
+            statistic = np.nanmin                        
+        elif statistic=='mean' or statistic=='np.mean' or statistic=='numpy.mean':
+            statistic = np.mean
+        elif statistic=='nanmean' or statistic=='np.nanmean' or statistic=='numpy.nanmean':
+            statistic = np.nanmean            
+        elif statistic=='median' or statistic=='np.median' or statistic=='numpy.median':
+            statistic = np.median
+        elif statistic=='nanmedian' or statistic=='np.nanmedian' or statistic=='numpy.nanmedian':
+            statistic = np.nanmedian            
+        elif statistic=='std' or statistic=='np.std' or statistic=='numpy.std':
+            statistic = np.std
+        elif statistic=='nanstd' or statistic=='np.nanstd' or statistic=='numpy.nanstd':
+            statistic = np.nanstd            
+        elif statistic=='mad':
+            statistic = np.mad
+        else:
+            raise ValueError('Statistic '+statistic+' not supported')
+    ndata = np.array(data).size
+    # Get number of outputs    
+    vals = (data,)
+    if args is not None: vals = (vals,args)
+    if kwargs is not None: vals = (vals,kwargs)
+    out0 = statistic(*vals)
+    nout = np.array(out0).size
+
+    # Initialize seed using data so reproducible
+    if type(data[0]) is not int:
+        seed = int(np.abs(data[0])*1e5)
+    else:
+        seed = data[0]
+    rng = np.random.default_rng(seed)
+    # Bootstrap loop
+    ind = np.arange(ndata).astype(int)
+    btout = np.zeros((niter,nout),float)
+    for i in range(niter):
+        # Randomly pick elements with replacement
+        rndind = rng.choice(ind,ndata,replace=True)
+        data1 = data[rndind]   # apply to data array
+        vals = (data1,)
+        # Apply the random ordering to the input arguments if
+        #  they are arrays or lists
+        if indexargs:
+            # Apply random ordering to args
+            if args is not None:
+                if type(args) is not list and type(args) is not tuple:
+                    args = (args,)
+                nargs = len(args)
+                for j in range(nargs):
+                    # Array and same size as data, apply the random ordering
+                    if np.array(args[j]).size > 1 and np.array(args[j]).size==ndata:
+                        vals = (vals,args[j][rndind])
+                    else:
+                        vals = (vals,args[j])
+            # Apply random ordering to kwargs
+            if kwargs is not None:
+                nkwargs = len(kwargs)
+                kwargs1 = kwargs.copy()  # start new dictionary
+                for k in kwargs1.keys():
+                    # Array and same size as data, apply the random ordering                    
+                    if np.array(kwargs[k]).size > 1 and np.array(kwargs[k]).size==ndata:
+                        kwargs1[k] = kwargs[k][rndind]
+                vals = (vals,kwargs1)
+        # Do not apply random ordering to args/kwargs
+        else:
+            if args is not None: vals = (vals,args)
+            if kwargs is not None: vals = (vals,kwargs)
+        out1 = statistic(*vals)
+        btout[i,:] = out1
+    # Calculate robust standard deviation for each coefficient
+    sigma = np.zeros(nout,float)
+    for i in range(nout):
+        med = np.median(btout[:,i])
+        sigma[i] = mad(btout[:,i]-med,zero=True)
+    if nout==1:
+        sigma = sigma[0]
+        
+    return sigma
