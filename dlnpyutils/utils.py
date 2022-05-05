@@ -141,8 +141,10 @@ def mad(data, axis=None, func=None, ignore_nan=True, zero=False):
 
     """
 
-    if type(data) is not np.ndarray: raise ValueError("data must be a numpy array")  
-
+    #if type(data) is not np.ndarray: raise ValueError("data must be a numpy array")  
+    if type(data) is not np.ndarray:
+        data = np.array(data)
+    
     if func is None:
         # Check if the array has a mask and if so use np.ma.median
         # See https://github.com/numpy/numpy/issues/7330 why using np.ma.median
