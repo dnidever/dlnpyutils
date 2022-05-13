@@ -2394,7 +2394,7 @@ def bootstrap(data,statistic,niter=100,indexargs=False,args=None,kwargs=None):
         
     return sigma
 
-def bspline(x,y,w=None,knots=None,nord=3,nquantiles=None,extrapolate=False):
+def bspline(x,y,w=None,nquantiles=10,nord=3,knots=None,extrapolate=False):
     """
     Fit a B-Spline to data.  This is a thin wrapper for scipy.interpolate.splrep
     and scipy.interpolate.BSpline.
@@ -2407,12 +2407,12 @@ def bspline(x,y,w=None,knots=None,nord=3,nquantiles=None,extrapolate=False):
        Array of y-values to fit.
     w : numpy array, optional
        Array of weights for x/y.
-    knots : numpy array, optional
-       The knot points for the BSpline.
+    nquantiles : int, optional
+       Number of quantiles to use to create the knots. Default is 10.
     nord : int, optional
        The degree of the spline fit.  Default is 3.
-    nquantiles : int, optional
-       Number of quantiles to use to create the knots.
+    knots : numpy array, optional
+       The knot points for the BSpline.
     extrapolate : bool, optional
        Should the B-Spline be allowed to extrapolate.  Default is False.
 
@@ -2435,7 +2435,7 @@ def bspline(x,y,w=None,knots=None,nord=3,nquantiles=None,extrapolate=False):
     si = ui[np.argsort(x[ui])]
     # Knots
     if knots is None and nquantiles is None:
-        raise ValueError('knots or nquantiles must be input')
+        raise ValueError('nquantiles or knots must be input')
     if knots is None:
         qs = np.linspace(0, 1, nquantiles+2)[1:-1]
         knots = np.quantile(x[si], qs)
