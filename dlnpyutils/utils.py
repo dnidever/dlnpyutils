@@ -12,6 +12,7 @@ import re
 import logging
 import os
 import sys
+import time
 import numpy as np
 import shutil
 import warnings
@@ -29,10 +30,13 @@ from scipy.interpolate import interp1d,splrep,BSpline
 from scipy.linalg import svd
 from scipy.signal import savgol_filter
 import astropy.stats
+from matplotlib.backend_bases import MouseButton
+import matplotlib.pyplot as plt
 
 # Ignore these warnings, it's a bug
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
+
 
 # NUMPY_LT_1_18
 def _expand_dims(data, axis):
@@ -1016,6 +1020,21 @@ def quadratic_coefficients(x,y,axis=0):
         
     return coef
 
+def linear_coefficients(x,y,silent=True):
+    """ Calculate the lienar coefficients from two points."""
+
+    # y = mx + b
+
+    m = (y[1]-y[0])/(x[1]-x[0])
+    b = y[0] - m*x[0]
+
+    if silent==False:
+        if b<0:
+            print('y = '+str(m)+'*x - '+str(np.abs(b)))
+        else:
+            print('y = '+str(m)+'*x + '+str(b))            
+    return m,b
+    
 def wtmean(x,sigma,error=False,reweight=False,magnitude=False):
     """ Calculate weighted mean and error"""
     # np.average() can take weights as well.
@@ -2448,3 +2467,4 @@ def bspline(x,y,w=None,nquantiles=10,nord=3,knots=None,extrapolate=False):
     spline = BSpline(*tck, extrapolate=extrapolate)
 
     return spline
+

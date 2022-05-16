@@ -8,11 +8,13 @@ from __future__ import print_function
 __authors__ = 'David Nidever <dnidever@montana.edu>'
 __version__ = '20200209'  # yyyymmdd
 
+import time
 import numpy as np
 import warnings
 from astropy.utils.exceptions import AstropyWarning
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
+from matplotlib.backend_bases import MouseButton
 from scipy import stats
 import copy
 from . import utils as dln
@@ -466,3 +468,359 @@ def plot(x,y,z=None,marker=None,log=False,noerase=False,zmin=None,zmax=None,line
         plt.colorbar()
     
     return
+
+
+
+class Cursor():
+
+    def __init__(self):
+        self.name = 'test'
+        self.coords = None
+        self.binding_id = None
+     
+def cursor():
+    """
+    This returns the position of a cursor click on a matplotlib figure window.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    coords : list
+      List of data coordinates.
+
+    Example
+    -------
+
+    coords = cursor()
+
+    Click in the figure window.
+    data coords: 2.981026 5.637763
+
+    print(coords)
+    [2.981026, 5.637763]
+
+    Note, the coords variable will be a blank list until the click in the figure window.
+
+    """
+
+    fig = plt.gcf()
+
+    curs.coords = []
+    curs.binding_id = None
+
+    
+    def on_click(event):
+        if event.button is MouseButton.LEFT:
+            x, y = event.x, event.y
+            if event.inaxes:
+                ax = event.inaxes  # the axes instance
+                print('data coords: %f %f' % (event.xdata, event.ydata))
+                curs.coords += [event.xdata,event.ydata]
+            plt.disconnect(curs.binding_id)
+            
+    binding_id = plt.connect('button_press_event', on_click)
+    curs.binding_id = binding_id
+
+    return curs.coords
+
+
+def curpdiff(spherical=False,arcsec=False):
+    """
+    This returns the difference of two clicked positions on a figure window.
+
+    Parameters
+    ----------
+    spherical : boolean, optional
+       Use spherical coordinates.  Default is False.
+    arcsec : boolean, optional
+       User arcseconds for spherical units.  Default is degrees.
+
+    Returns
+    -------
+    data : dict
+      Dictionary of data values
+
+    Example
+    -------
+
+    data = curpdiff()
+
+    First Click
+
+    data coords: 2.001687 1.907833
+    Second Click
+    data coords: 7.058273 7.033132
+    Distance = 7.1998 pixels
+    Delta X = 5.0566 pixels
+    Delta Y = 5.1253 pixels
+    Angle = 45.3867 (CCW from Right)
+
+    Note, the data variable will be a blank dict until the clicks in the figure window.
+
+    """
+
+    fig = plt.gcf()
+
+    curs.coords = {}
+    curs.binding_id = None
+    print('First Click')
+    
+    def on_click(event):
+        if event.button is MouseButton.LEFT:
+            if event.inaxes:
+                ax = event.inaxes  # the axes instance
+                if len(curs.coords)==0:
+                    print('data coords: %f %f' % (event.xdata, event.ydata))
+                    curs.coords['x1'] = event.xdata
+                    curs.coords['y1'] = event.ydata                    
+                    curs.time = time.time()
+                    print('Second Click')
+                elif len(curs.coords)==2:
+                    if time.time()-curs.time > 0.1:
+                        print('data coords: %f %f' % (event.xdata, event.ydata))
+                        curs.coords['x2'] = event.xdata
+                        curs.coords['y2'] = event.ydata                                            
+                        plt.disconnect(curs.binding_id)
+                        
+            if len(curs.coords)==4:
+                x1,y1 = curs.coords['x1'],curs.coords['y1']
+                x2,y2 = curs.coords['x2'],curs.coords['y2']                
+                # Spherical ra/dec coordinates (or similar)
+                #  use cos(dec) correction 
+                if spherical:
+                    mndec = np.mean([y1,y2])
+                    cosdec = np.cos(np.deg2rad(mndec))
+                    # Convert to arc seconds
+                    if arsec:
+                        mfac = 3600
+                        units = 'arcsec'
+                    else:
+                        units = 'deg'
+                else:
+                    cosdec = 1.0
+                    mfac = 1.0
+                    units = 'pixels'
+                dist = np.sqrt(((x1-x2)*cosdec)**2 + (y1-y2)**2)*mfac
+                deltax = (x2-x1)*mfac*cosdec
+                deltay = (y2-y1)*mfac
+                angle = np.rad2deg(np.arctan2(y2-y1,x2-x1))
+                print('Distance = %.4f %s' % (dist,units))
+                print('Delta X = %.4f %s' % (deltax,units))
+                print('Delta Y = %.4f %s' % (deltay,units))
+                print('Angle = %.4f %s' % (angle,'(CCW from Right)'))
+                slp,yoff = linear_coefficients([x1,x2],[y1,y2])
+
+                curs.coords['dist'] = dist
+                curs.coords['units'] = units
+                curs.coords['deltax'] = deltax
+                curs.coords['deltay'] = deltay
+                curs.coords['angle'] = angle
+                curs.coords['slp'] = slp
+                curs.coords['yoff'] = yoff
+
+                
+    binding_id = plt.connect('button_press_event', on_click)
+    curs.binding_id = binding_id
+
+    return curs.coords
+
+    
+def clicker(over=False,connect=False):
+    """
+    This returns the position of mulitple cursor click on a matplotlib figure window.
+    Click outside the data axes or right-click to stop.
+
+    Parameters
+    ----------
+    over : boolean, optional
+       Overplot the clicked position on the figure.  Default is False.
+    connect : boolean, optional
+       Connect the points with lines.  Default is False.
+
+    Returns
+    -------
+    coords : list
+      List of data coordinates.
+
+    Example
+    -------
+
+    coords = clicker()
+
+    <multiple clicks in the figure window.>
+
+    data coords: 1.042335 7.838153
+    data coords: 3.220864 6.093941
+    data coords: 3.800472 8.213830
+    data coords: 7.198178 3.759381
+    data coords: 4.579946 0.807638
+    data coords: 0.962389 3.866717
+    data coords: 1.522011 6.845294
+
+    <click outside data axes or right-click to stop>
+
+    coords
+    [[1.0423346449011444, 7.83815321583179],
+    [3.2208636836628513, 6.093941326530615],
+    [3.8004723270031215, 8.213829622758198],
+    [7.198178167273673, 3.7593807977736566],
+    [4.5799460197710715, 0.8076376004947439],
+    [0.9623886251300728, 3.8667169140383444],
+    [1.5220107635275753, 6.845294140383428]]
+
+    Note, the coords variable will be a blank list until the click in the figure window.
+
+    """
+
+    fig = plt.gcf()
+
+    curs.coords = []
+    curs.binding_id = None
+    
+    def on_click(event):
+        if event.button is MouseButton.LEFT:
+            if event.inaxes:
+                ax = event.inaxes  # the axes instance
+                print('data coords: %f %f' % (event.xdata, event.ydata))
+                curs.coords += [[event.xdata,event.ydata]]
+                if over:
+                    plt.scatter([event.xdata],[event.ydata],marker='+',c='r')
+                if connect and len(curs.coords)>1:
+                    x1,y1 = curs.coords[-2]
+                    x2,y2 = curs.coords[-1]
+                    plt.plot([x1,x2],[y1,y2],c='lightsalmon')
+                if connect or over:
+                    fig.canvas.draw()
+            else:
+                plt.disconnect(curs.binding_id)
+
+        if event.button is MouseButton.RIGHT:
+            plt.disconnect(curs.binding_id)
+            
+    binding_id = plt.connect('button_press_event', on_click)
+    curs.binding_id = binding_id
+
+    return curs.coords
+
+
+def selector(xdata,ydata,over=False,connect=False,verbose=True,color='r',backcolor='white'):
+    """
+    This returns the position of mulitple cursor click on a matplotlib figure window.
+    Click outside the data axes or right-click to stop.
+
+    Parameters
+    ----------
+    xdata : array or list
+      List or array of x-data.
+    ydata : array or list
+      List or array of y-data.
+    over : boolean, optional
+      Overplot the points selected.  Default is False.
+    connect : boolean, optional
+       Connect the points with lines.  Default is False.
+
+    Returns
+    -------
+    ind : list
+      Index of selected points.
+
+    Example
+    -------
+
+    ind = selector(x,y)
+
+    <multiple clicks in the figure window.>
+
+    data coords: 1.042335 7.838153
+    data coords: 3.220864 6.093941
+    data coords: 3.800472 8.213830
+    data coords: 7.198178 3.759381
+    data coords: 4.579946 0.807638
+    data coords: 0.962389 3.866717
+    data coords: 1.522011 6.845294
+
+    <click outside data axes or right-click to stop>
+
+    coords
+    [[1.0423346449011444, 7.83815321583179],
+    [3.2208636836628513, 6.093941326530615],
+    [3.8004723270031215, 8.213829622758198],
+    [7.198178167273673, 3.7593807977736566],
+    [4.5799460197710715, 0.8076376004947439],
+    [0.9623886251300728, 3.8667169140383444],
+    [1.5220107635275753, 6.845294140383428]]
+
+    Note, the coords variable will be a blank list until the click in the figure window.
+
+    """
+
+    fig = plt.gcf()
+
+    curs.coords = []
+    curs.binding_id = None
+    curs.xdata = xdata
+    curs.ydata = ydata
+    curs.index = []
+    curs.time = time.time()
+    curs.count = 0
+
+    if verbose:
+        print('------------------------------------------------')
+        print('      NUM       X           Y        IND        ')
+        print('------------------------------------------------')
+
+    
+    def on_click(event):
+        if event.button is MouseButton.LEFT:
+            # Add point
+            if event.inaxes:
+                ax = event.inaxes  # the axes instance
+                xcoord,ycoord = event.xdata,event.ydata
+                if time.time()-curs.time > 0.1:
+                    curs.count += 1
+                    curs.coords += [[xcoord,ycoord]]
+                    # Get the closest point
+                    idx = ((curs.xdata-xcoord)**2+(curs.ydata-ycoord)**2).argmin()
+                    # New point
+                    if idx not in curs.index:
+                        curs.index += [idx]
+                        if verbose:
+                            print('%8d%12.3f%12.3f%8d' % (curs.count,curs.xdata[idx],curs.ydata[idx],idx))
+                        if over:
+                            plt.scatter([curs.xdata[idx]],[curs.ydata[idx]],marker='D',facecolor='none',edgecolor=color)
+                            fig.canvas.draw()
+            else:
+                plt.disconnect(curs.binding_id)
+                if verbose:
+                    print('------------------------------------------------')
+                
+        if event.button is MouseButton.RIGHT:
+            # Remove point
+            if event.inaxes:
+                ax = event.inaxes  # the axes instance
+                xcoord,ycoord = event.xdata,event.ydata
+                if time.time()-curs.time > 0.1 and len(curs.index)>0:
+                    curs.count += 1
+                    # Get the closest point that was previously selected
+                    idx = ((curs.xdata[curs.index]-xcoord)**2+(curs.ydata[curs.index]-ycoord)**2).argmin()
+                    index,xcoo,ycoo = curs.index[idx],curs.xdata[curs.index][idx],curs.ydata[curs.index][idx]
+                    # Point to remove
+                    curs.index.pop(idx)
+                    if verbose:
+                        print('%8d%12.3f%12.3f%8d%20s' % (curs.count,xcoo,ycoo,index,'DE-SELECTED'))
+                    if over:
+                        plt.scatter([xcoo],[ycoo],marker='D',facecolor='none',edgecolor=backcolor)
+                        fig.canvas.draw()                   
+
+                
+    binding_id = plt.connect('button_press_event', on_click)
+    curs.binding_id = binding_id
+
+    return curs.index
+
+
+curs = Cursor()
+
