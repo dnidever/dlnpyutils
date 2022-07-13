@@ -792,7 +792,7 @@ class MagellanicStream(coord.BaseCoordinateFrame):
     radial_velocity : :class:`~astropy.units.Quantity`, optional, must be keyword
         The radial velocity of this object.
 
-    Developed by J. Povick
+    Developed by Y. Choi
 
     """
     default_representation = coord.SphericalRepresentation

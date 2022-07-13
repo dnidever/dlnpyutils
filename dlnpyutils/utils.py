@@ -31,7 +31,9 @@ from scipy.linalg import svd
 from scipy.signal import savgol_filter
 import astropy.stats
 from matplotlib.backend_bases import MouseButton
+import pandas as pd
 import matplotlib.pyplot as plt
+import traceback
 
 # Ignore these warnings, it's a bug
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
@@ -1981,18 +1983,6 @@ def onclick(event):
 
     return
 
-def clicker():
-    # im=fits.getdata('F1-00507803_23.fits.fz') 
-    # fig = plt.figure()
-    # plt.imshow(im)
-    # clicker()
-    # then the coordinates will be the global "coords" list
-    print('Click outside the plot to end')
-    global cid
-    cid = fig.canvas.mpl_connect('button_press_event', onclick)
-    coords = []
-
-
 def add_elements(cat,num=10000):
     """ Add more elements to a catalog"""
     ncat = len(cat)
@@ -2467,4 +2457,79 @@ def bspline(x,y,w=None,nquantiles=10,nord=3,knots=None,extrapolate=False):
     spline = BSpline(*tck, extrapolate=extrapolate)
 
     return spline
+
+
+def help(*args,verbose=False):
+    """ Like IDL help"""
+
+    if len(args)==0:
+        locals()
+
+    # Get variables names input
+    stack = traceback.extract_stack()
+    filename, lineno, function_name, code = stack[-2]
+    varnames = code[code.find('(')+1:-1].split(',')
+    varnames = [v.strip() for v in varnames]
+        
+    # Loop over arguments
+    for i in range(len(args)):
+        a = args[i]
+        atype = type(a)
+        ndim = np.array(a).ndim
+        try:
+            shape = a.shape
+        except:
+            shape = None
+
+        # Is this a table?
+        tab = False
+        if atype == Table:
+            colnames = a.colnames
+            dtype = a.dtype
+            tab = True
+        elif atype == np.ndarray and a.dtype.names is not None:
+            colnames = a.columns
+            dtype = a.dtype
+            tab = True
+        elif atype == pd.DataFrame:
+            colnames = a.columns
+            dtype = a.dtype
+            tab = True
+            
+        # Short output
+        if verbose==False or tab==False:
+            fmt = '%-16s %-22s %-10s'
+            if atype == np.ndarray and a.dtype.names is None:
+                atype = '<np.ndarray '+str(a.dtype)+'>'
+            if ndim==0:
+                data = (varnames[i],atype,'scalar')
+            elif shape is not None:
+                if len(shape)==1:
+                    sshape = '['+str(shape[0])+']'
+                else:
+                    sshape = '['+','.join(np.char.array(shape).astype(str))+']'
+                data = (varnames[i],atype,sshape)
+            else:
+                data = (varnames[i],atype,'['+str(size(a))+']')
+            if len(varnames[i])>16:
+                print(varnames[i])
+                print(fmt % ('',data[1],data[2]))
+            else:
+                print(fmt % data)
+
+        # Verbose output of table
+        else:
+            print(type(a),'['+str(size(a))+']')
+            fmt = '%-20s %-10s %-20s'                    
+            for j in range(len(colnames)):
+                col = a[colnames[j]][0]
+                if size(col)>1:
+                    data = (colnames[j],dtype[j],'Array['+size(col)+']')                    
+                else:
+                    data = (colnames[j],dtype[j],str(col))
+                if len(colnames[j])>16:
+                    print(colnames[j])
+                    print(fmt % ('',data[1],data[2]))
+                else:
+                    print(fmt % data)
 

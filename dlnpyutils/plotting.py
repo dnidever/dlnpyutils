@@ -123,36 +123,76 @@ def zscaling(im,contrast=0.25,nsample=50000):
 
     
 
-def hist2d(x,y,z=None,statistic='count',xrange=None,yrange=None,dx=None,dy=None,nx=200,ny=200,
+def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=200,
            zscale=None,log=None,noerase=False,zmin=None,zmax=None,center=True,force=True,cmap=None,
-           xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto'):
+           xtitle=None,ytitle=None,title=None,colorlabel=None,origin='lower',aspect='auto',
+           bright=None,minhue=0.0,maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9):
     """
-    Make a 2D histogram
+    Make a 2D histogram of points.
     
-    Parameters:
-    x
-    y
-    z
-    statistic
-    xrange
-    yrange
-    dx
-    dy
-    nx
-    ny
-    zscale
-    log
-    noerase
-    zmin
-    zmax
-    center
-    force
-    cmap
-    xtitle
-    ytitle
-    title
-    origin
-    aspect
+    Parameters
+    ----------
+    x : numpy array
+       Array of x-data points to plot.
+    y : numpy array
+       Array of y-data points to plot.
+    z : numpy array, optional
+       Array of z-data points to plot if we using a statistic.
+    statistic : str, optional
+       The statistic to use.  Default is 'count' if z is not input otherwise 'sum'.
+         The options are: 'sum', 'mean', 'median', 'std', 'mad'.
+    xr : list, optional
+       The range of x-values to plot.  The default is [min(x),max(x)]
+    yr : list, optional
+       The range of y-values to plot.  The default is [min(x),max(x)]
+    dx : float, optional
+       The step size in the x-dimension.  Either dx+dy or nx+ny must be specified.
+    dy : float, optional
+       The step size in the y-dimension.
+    nx : int, optional
+       Number of bins in the x-dimension. Either nx+ny or dx+dy must be specified.
+          Default is 200.
+    ny : int, optional
+       Number of bins in the z-dimension.  Default is 200.
+    zscale : bool, optional
+       Automatic min and max interval of statistic based on IRAF's zscale.
+    log : bool, optional
+       Use logarithmic scaling of the statistic.  Default is linear.
+    noerase : bool, optional
+       Do not erase or clear the figure window.  Default is to clear the figure.
+    zmin : float, optional
+       Minimum value to plot on colorbar.  Default is the minimum of the statistic.
+    zmax : float, optional
+       Maximum value to plot on colorbar.  Default is the maximum of the statistic.    
+    force : bool, optional
+       Force the xrange and yrange to be exactly as the way they are set (default).
+    center : bool, optional
+       The x/y values of a bin should correspond to the center.  By default they
+         correspond to the bottom-left corner.
+    cmap : str, optional
+       The matplotlib color map to use.  Default is 'viridis'.
+    xtitle : str, optional
+       The label for the x-axis.  Default is 'X'.
+    ytitle : str, optional
+       The label for the y-axis.  Default is 'Y'.
+    title : str, optional
+       The plot title.  Default is statistic+'(Z)'.
+    colorlabel : str, optional
+       The colorbar label.  Default is statistic+'(Z)'.
+    origin : str, optional
+       The origin of the plot.  Default is 'lower'.
+    aspect : str, optional
+       The aspect ratio of the plot.  Default is 'auto'.
+
+    Returns
+    -------
+
+    Figure is plotted to the screen.
+
+    Example
+    -------
+
+    hist2d(x,y,z,'mean')
 
     """
 
@@ -162,6 +202,13 @@ def hist2d(x,y,z=None,statistic='count',xrange=None,yrange=None,dx=None,dy=None,
     if noerase is False:
         plt.clf()   # clear the plot
 
+    # Statistic default
+    if statistic is None:
+        if z is None:
+            statistic = 'count'
+        else:
+            statistic = 'sum'
+        
     # Input dx/dy
     if dx is None:
         dx0 = None
@@ -182,40 +229,38 @@ def hist2d(x,y,z=None,statistic='count',xrange=None,yrange=None,dx=None,dy=None,
     # X-axis
     if (dx is None):
         # XRANGE set
-        if xrange is not None:
-            dx = (xrange[1]-xrange[0])/(nx-1)
+        if xr is not None:
+            dx = (xr[1]-x[0])/(nx-1)
         # XRANGE not set
         else:
             dx = (xmax-xmin)/(nx-1)
     # Y-axis
     if (dy is None):
         # YRANGE set
-        if yrange is not None:
-            dy = (yrange[1]-yrange[0])/(ny-1)
+        if yr is not None:
+            dy = (yr[1]-yr[0])/(ny-1)
         # YRANGE not set
         else:
             dy = (ymax-ymin)/(ny-1)
 
     # Axes reversed
-    if xrange is not None:
+    if xr is not None:
         # X axis reversed
-        if xrange[1]<xrange[0]:
-            xrange = np.flip(xrange)
+        if xr[1]<xr[0]:
+            xr = np.flip(xr)
             xflip = 1
-    if yrange is not None:
+    if yr is not None:
         # Y axis reversed
-        if yrange[1]<yrange[0]:
-            yrange = np.flip(yrange)
+        if yr[1]<yr[0]:
+            yr = np.flip(yr)
             yflip = 1
-
-
 
     # Cutting based on the xrange/yrange if set
     #   Otherwise the image size might get too large if there are
     #   points far outside the xrange/yrange
     # Xrange set
-    if xrange is not None:
-        mask1 = ((x>=(xrange[0]-dx)) & (x<=(xrange[1]+dx)))
+    if xr is not None:
+        mask1 = ((x>=(xr[0]-dx)) & (x<=(xr[1]+dx)))
         if np.sum(mask1)>0:
             x = x[mask1]
             y = y[mask1]
@@ -234,8 +279,8 @@ def hist2d(x,y,z=None,statistic='count',xrange=None,yrange=None,dx=None,dy=None,
         if dx0 is None: dx=(xmax-xmin)/(nx-1)
         if dy0 is None: dy=(ymax-ymin)/(ny-1)
     # yrange set
-    if yrange is not None:
-        mask2 = ((y>=(yrange[0]-dy)) & (y<=(yrange[1]+dy)))
+    if yr is not None:
+        mask2 = ((y>=(yr[0]-dy)) & (y<=(yr[1]+dy)))
         if np.sum(mask2)>0:
             x = x[mask2]
             y = y[mask2]
@@ -261,7 +306,7 @@ def hist2d(x,y,z=None,statistic='count',xrange=None,yrange=None,dx=None,dy=None,
 
 
     # Setting the range
-    if xrange is not None:
+    if xr is not None:
         # Default is that the xrange/yrange are for the centers
         # Move xmin/xmax accordingly
         if center is True:
@@ -272,26 +317,26 @@ def hist2d(x,y,z=None,statistic='count',xrange=None,yrange=None,dx=None,dy=None,
         # xmin and xmax must be xrange+/-integer*dx
         if force is True:
             # If xmin < xrange[0] then move it down an integer number of dx's
-            if (xmin < (xrange[0]-off)):
-                diff = (xrange[0]-off)-xmin
-                xmin = (xrange[0]-off)-np.ceil(diff/dx)*dx
+            if (xmin < (xr[0]-off)):
+                diff = (xr[0]-off)-xmin
+                xmin = (xr[0]-off)-np.ceil(diff/dx)*dx
             else:
-                xmin = xrange[0]-off
+                xmin = xr[0]-off
             # If xmax > xrange[1] then move it up an integer number of dx's
-            if (xmax > (xrange[1]+off)):
-                diff = xmax-(xrange[1]+off)
-                xmax = (xrange[1]+off)+np.ceil(diff/dx)*dx
+            if (xmax > (xr[1]+off)):
+                diff = xmax-(xr[1]+off)
+                xmax = (xr[1]+off)+np.ceil(diff/dx)*dx
             else:
-                xmax = xrange[1]+off
+                xmax = xr[1]+off
 
         # Don't force the xrange
         else:
-            if ((xrange[0]-off) < xmin) | ((xrange[1]+off) > xmax):
-                xmin = np.minimum((xrange[0]-off), xmin)
-                xmax = np.maximum((xrange[1]+off), xmax)
+            if ((x[0]-off) < xmin) | ((xr[1]+off) > xmax):
+                xmin = np.minimum((xr[0]-off), xmin)
+                xmax = np.maximum((xr[1]+off), xmax)
 
     # Setting the range
-    if yrange is not None:
+    if yr is not None:
         # Default is that the xrange/yrange are for the centers
         # Move ymin/ymax accordingly
         if center is True:
@@ -302,23 +347,23 @@ def hist2d(x,y,z=None,statistic='count',xrange=None,yrange=None,dx=None,dy=None,
         # xmin and xmax must be xrange+/-integer*dx
         if force is True:
             # If ymin < yrange[0] then move it down an integer number of dy's
-            if (ymin < (yrange[0]-off)):
-                diff = (yrange[0]-off)-ymin
-                ymin = (yrange[0]-off)-np.ceil(diff/dy)*dy
+            if (ymin < (yr[0]-off)):
+                diff = (yr[0]-off)-ymin
+                ymin = (yr[0]-off)-np.ceil(diff/dy)*dy
             else:
-                ymin = yrange[0]-off
+                ymin = yr[0]-off
             # If ymax > yrange[1] then move it up an integer number of dy's
-            if (ymax > (yrange[1]+off)):
-                diff = ymax-(yrange[1]+off)
-                ymax = (yrange[1]+off)+np.ceil(diff/dy)*dy
+            if (ymax > (yr[1]+off)):
+                diff = ymax-(yr[1]+off)
+                ymax = (yr[1]+off)+np.ceil(diff/dy)*dy
             else:
-                ymax = yrange[1]+off
+                ymax = yr[1]+off
 
         # Don't force the xrange
         else:
-            if ((yrange[0]-off) < ymin) | ((yrange[1]+off) > ymax):
-                ymin = np.minimum((yrange[0]-off), ymin)
-                ymax = np.maximum((yrange[1]+off), ymax)
+            if ((yr[0]-off) < ymin) | ((yr[1]+off) > ymax):
+                ymin = np.minimum((yr[0]-off), ymin)
+                ymax = np.maximum((yr[1]+off), ymax)
 
 
     # Setting final DX/DY and NX/NY
@@ -326,51 +371,126 @@ def hist2d(x,y,z=None,statistic='count',xrange=None,yrange=None,dx=None,dy=None,
     if dx0 is None:
         dx = (xmax-xmin)/(nx-1.)
     else:
-        nx = np.floor((xmax-xmin)/dx)+ 1  # only want bins fully within the range
+        nx = int(np.floor((xmax-xmin)/dx)+1)  # only want bins fully within the range
     # Y-axis
     if dy0 is None:
         dy = (ymax-ymin)/(ny-1)
     else:
-        ny = np.floor((ymax-ymin)/dy)+ 1  # only want bins fully within the range
+        ny = int(np.floor((ymax-ymin)/dy)+1)  # only want bins fully within the range
 
 
     # Final xrange/yrange, if not already set
-    if xrange is None:
-        xrange = [xmin,xmax]
-    if yrange is None:
-        yrange = [ymin,ymax]
+    if xr is None:
+        xr = [xmin,xmax]
+    if yr is None:
+        yr = [ymin,ymax]
         
-                
     # No z input
     if z is None:
-        im, xedges, yedges = np.histogram2d(x,y,range=[xrange,yrange],bins=[nx,ny])
+        im, xedges, yedges = np.histogram2d(x,y,range=[xr,yr],bins=[nx,ny])
+    # Statistic using z-values
     else:
-        im, xedges, yedges, binnumber = stats.binned_statistic_2d(x,y,z,statistic=statistic,range=[xrange,yrange],bins=[nx,ny])
+        if statistic=='avg':
+            cmap = 'jet'
+            ima, xedges, yedges, binnumber = stats.binned_statistic_2d(x,y,z,statistic='mean',range=[xr,yr],bins=[nx,ny])
+            ima = ima.T
+            if bright is None:
+                imt, xedges, yedges, binnumber = stats.binned_statistic_2d(x,y,z,statistic='count',range=[xr,yr],bins=[nx,ny])
+                imt = imt.T
+                if log:
+                    pos = (imt > 0)
+                    imt[pos] = np.log10(imt[pos])
+                    imt[~pos] = -10
+            else:
+                imt, xedges, yedges, binnumber = stats.binned_statistic_2d(x,y,bright,statistic='sum',range=[xr,yr],bins=[nx,ny])
+                imt = imt.T
+                if log:
+                    pos = (imt > 0)
+                    imt[pos] = np.log10(imt[pos])
+                    imt[~pos] = -10
+                    
+            # convert image to RGB, using HLS
+            # hue is Average (IMA)   (0-360)
+            # 0-red, 120-green, 240-blue
+            # brightness is Total (im) (0-1)
+            #ima2 = -ima    ; (blue-green-red)
+            # color_convert, hue, bright, im*0.+saturation, r, g, b, /HLS_RGB
+            gooda = np.isfinite(ima)
+            if zmin is None: zmin = np.min(ima[gooda])
+            if zmax is None: zmax = np.max(ima[gooda])            
+            #ima = -ima
+
+            # hue goes: red, orange, yellow, green, light blue, dark blue, purple, red
+            # want to stop after dark blue, around hue=0.7
+            
+            # hsv is hue, saturation, value or hue, saturation, brightness
+            hueim = np.zeros(ima.shape,float)
+            #hueim[gooda] = dln.limit(dln.scale(ima[gooda],[-zmax,-zmin],[minhue,maxhue]),minhue,maxhue)
+            hueim[gooda] = dln.limit(dln.scale(ima[gooda],[zmin,zmax],[minhue,maxhue]),minhue,maxhue)
+            # flip hue to get blue to red
+            hueim = 1-hueim
+            goodt = np.isfinite(imt)
+            tmin = np.min(imt[goodt])
+            tmax = np.max(imt[goodt])            
+            brightim = np.zeros(imt.shape,float)
+            brightim[goodt] = dln.limit(dln.scale(imt[goodt],[tmin,tmax],[minbright,maxbright]),minbright,maxbright)
+            hsvim = np.zeros((*ima.shape,3),float)
+            hsvim[:,:,0] = hueim
+            hsvim[:,:,1] = saturation
+            hsvim[:,:,2] = brightim
+            rgbim = colors.hsv_to_rgb(hsvim)
+            im = rgbim
+
+            if title is None:
+                title = 'mean(Z)'
+            if colorlabel is None:
+                colorlabel = 'mean(Z)'
+            
+        # Normal statistic
+        else:
+            im, xedges, yedges, binnumber = stats.binned_statistic_2d(x,y,z,statistic=statistic,range=[xr,yr],bins=[nx,ny])
+            im = im.T
 
     # Plot the image
     #fig, ax = plt.subplots()
     norm = None
-    if log is True:
+    if log is True and statistic != 'avg':
         norm = colors.LogNorm(vmin=zmin,vmax=zmax)
     if zscale is True:
         zmin,zmax = zscaling(im)
-    extent = [xrange[0], xrange[1], yrange[0], yrange[1]]
+    if zmin is None:
+        zmin = np.min(im[np.isfinite(im)])
+    if zmax is None:
+        zmax = np.max(im[np.isfinite(im)])        
+    extent = [xr[0], xr[1], yr[0], yr[1]]
     plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,vmin=zmin,vmax=zmax,origin=origin,extent=extent)
-        
+    
     # Axis titles
-    if xtitle is not None:
-        plt.xlabel(xtitle)
-    if ytitle is not None:
-        plt.ylabel(ytitle)        
-    if title is not None:
-        plt.title(title)
+    if xtitle is None:
+        xtitle = 'X'
+    plt.xlabel(xtitle)
+    if ytitle is None:
+        ytitle = 'Y'
+    plt.ylabel(ytitle)        
+    if title is None:
+        if statistic is 'count':
+            title = statistic
+        else:
+            title = statistic+'(Z)'
+    plt.title(title)
         
     # Add the colorbar
-    plt.colorbar()
+    if colorlabel is None:
+        if statistic is 'count':
+            colorlabel = statistic
+        else:
+            colorlabel = statistic+'(Z)'
+    plt.colorbar(label=colorlabel)
 
     return
 
-def display(im,x=None,y=None,log=False,xrange=None,yrange=None,noerase=False,zscale=False,zmin=None,zmax=None,
+
+def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=False,zmin=None,zmax=None,
             xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',cmap=None):
     """ Display an image."""
 
@@ -395,17 +515,17 @@ def display(im,x=None,y=None,log=False,xrange=None,yrange=None,noerase=False,zsc
     ymax = np.max(y)
 
     # Trim based on xrange/yrange
-    if xrange is not None:
-        val0,xlo = dln.closest(x,xrange[0])
-        val1,xhi = dln.closest(x,xrange[1])        
+    if xr is not None:
+        val0,xlo = dln.closest(x,xr[0])
+        val1,xhi = dln.closest(x,xr[1])        
         im = im[xlo:xhi+1,:]
         x = x[xlo:xhi+1]
         nx,ny = im.shape
         xmin = np.min(x)
         xmax = np.max(x)
-    if yrange is not None:
-        val0,ylo = dln.closest(y,yrange[0])
-        val1,yhi = dln.closest(y,yrange[1])        
+    if yr is not None:
+        val0,ylo = dln.closest(y,yr[0])
+        val1,yhi = dln.closest(y,yr[1])        
         im = im[:,ylo:yhi+1]
         y = y[ylo:yhi+1]
         nx,ny = im.shape        
@@ -706,10 +826,11 @@ def clicker(over=False,connect=False):
     return curs.coords
 
 
-def selector(xdata,ydata,over=False,connect=False,verbose=True,color='r',backcolor='white'):
+def selector(xdata,ydata,over=False,verbose=True,color='r',backcolor='white'):
     """
-    This returns the position of mulitple cursor click on a matplotlib figure window.
-    Click outside the data axes or right-click to stop.
+    Allows the user to select data points by clicking on or near then in a figure window.
+    Use left-button to select and right-button to de-select points.  
+    Click outside the data axes to stop.
 
     Parameters
     ----------
@@ -719,41 +840,42 @@ def selector(xdata,ydata,over=False,connect=False,verbose=True,color='r',backcol
       List or array of y-data.
     over : boolean, optional
       Overplot the points selected.  Default is False.
-    connect : boolean, optional
-       Connect the points with lines.  Default is False.
+    verbose : boolean, optional
+      Verbose output to the screen.  Default is True.
+    color : str, optional
+      The color for overplotting.  Default is 'r'.
+    backcolor : str, optional
+      The background for overplotting if a point is de-selected.
+         Default is 'white'.
 
     Returns
     -------
-    ind : list
+    index : list
       Index of selected points.
 
     Example
     -------
 
-    ind = selector(x,y)
+    index = selector(x,y,over=True)                                                                                                        
+    ------------------------------------------------
+        NUM       X           Y        IND        
+    ------------------------------------------------
 
-    <multiple clicks in the figure window.>
+           1       7.000       7.000       7
+           2       6.000       6.000       6
+           3       5.000       5.000       5
+           4       8.000       8.000       8
+           5       2.000       2.000       2
+           6       5.000       5.000       5         DE-SELECTED
+           7       6.000       6.000       6         DE-SELECTED
+           8       7.000       7.000       7         DE-SELECTED
+           9       1.000       1.000       1
+    ------------------------------------------------
 
-    data coords: 1.042335 7.838153
-    data coords: 3.220864 6.093941
-    data coords: 3.800472 8.213830
-    data coords: 7.198178 3.759381
-    data coords: 4.579946 0.807638
-    data coords: 0.962389 3.866717
-    data coords: 1.522011 6.845294
+    index                                                                                                                                   
+    [8, 2, 1]
 
-    <click outside data axes or right-click to stop>
-
-    coords
-    [[1.0423346449011444, 7.83815321583179],
-    [3.2208636836628513, 6.093941326530615],
-    [3.8004723270031215, 8.213829622758198],
-    [7.198178167273673, 3.7593807977736566],
-    [4.5799460197710715, 0.8076376004947439],
-    [0.9623886251300728, 3.8667169140383444],
-    [1.5220107635275753, 6.845294140383428]]
-
-    Note, the coords variable will be a blank list until the click in the figure window.
+    Note, the index variable will be a blank list until the clicks in the figure window.
 
     """
 
@@ -780,12 +902,13 @@ def selector(xdata,ydata,over=False,connect=False,verbose=True,color='r',backcol
                 ax = event.inaxes  # the axes instance
                 xcoord,ycoord = event.xdata,event.ydata
                 if time.time()-curs.time > 0.1:
-                    curs.count += 1
+                    curs.time = time.time()
                     curs.coords += [[xcoord,ycoord]]
                     # Get the closest point
                     idx = ((curs.xdata-xcoord)**2+(curs.ydata-ycoord)**2).argmin()
                     # New point
                     if idx not in curs.index:
+                        curs.count += 1                        
                         curs.index += [idx]
                         if verbose:
                             print('%8d%12.3f%12.3f%8d' % (curs.count,curs.xdata[idx],curs.ydata[idx],idx))
@@ -803,6 +926,7 @@ def selector(xdata,ydata,over=False,connect=False,verbose=True,color='r',backcol
                 ax = event.inaxes  # the axes instance
                 xcoord,ycoord = event.xdata,event.ydata
                 if time.time()-curs.time > 0.1 and len(curs.index)>0:
+                    curs.time = time.time()                    
                     curs.count += 1
                     # Get the closest point that was previously selected
                     idx = ((curs.xdata[curs.index]-xcoord)**2+(curs.ydata[curs.index]-ycoord)**2).argmin()
