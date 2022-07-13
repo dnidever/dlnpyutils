@@ -90,7 +90,10 @@ def _expand_dims(data, axis):
 def size(a=None):
     """Returns the number of elements"""
     if a is None: return 0
-    return np.array(a,ndmin=1).size
+    try:
+        return len(a)
+    except:
+        return np.array(a,ndmin=1).size
 
 
 # Median Absolute Deviation
@@ -2464,23 +2467,30 @@ def help(*args,verbose=False):
 
     if len(args)==0:
         locals()
-
+        
     # Get variables names input
     stack = traceback.extract_stack()
     filename, lineno, function_name, code = stack[-2]
     varnames = code[code.find('(')+1:-1].split(',')
     varnames = [v.strip() for v in varnames]
-        
+    
     # Loop over arguments
     for i in range(len(args)):
         a = args[i]
         atype = type(a)
-        ndim = np.array(a).ndim
+        try:
+            ndim = a.ndim
+        except:
+            ndim = 0
         try:
             shape = a.shape
         except:
             shape = None
-
+        try:
+            na = len(a)
+        except:
+            na = 0
+            
         # Is this a table?
         tab = False
         if atype == Table:
@@ -2510,7 +2520,7 @@ def help(*args,verbose=False):
                     sshape = '['+','.join(np.char.array(shape).astype(str))+']'
                 data = (varnames[i],atype,sshape)
             else:
-                data = (varnames[i],atype,'['+str(size(a))+']')
+                data = (varnames[i],atype,'['+str(na)+']')
             if len(varnames[i])>16:
                 print(varnames[i])
                 print(fmt % ('',data[1],data[2]))
@@ -2519,14 +2529,14 @@ def help(*args,verbose=False):
 
         # Verbose output of table
         else:
-            print(type(a),'['+str(size(a))+']')
+            print(str(type(a))+', '+str(len(colnames))+' columns, ['+str(na)+']')
             fmt = '%-20s %-10s %-20s'                    
             for j in range(len(colnames)):
                 col = a[colnames[j]][0]
                 if size(col)>1:
-                    data = (colnames[j],dtype[j],'Array['+size(col)+']')                    
+                    data = (colnames[j],dtype[j].base,'Array['+str(size(col))+']')           
                 else:
-                    data = (colnames[j],dtype[j],str(col))
+                    data = (colnames[j],dtype[j].base,str(col))
                 if len(colnames[j])>16:
                     print(colnames[j])
                     print(fmt % ('',data[1],data[2]))
