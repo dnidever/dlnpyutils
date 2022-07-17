@@ -2505,9 +2505,8 @@ def help(*args,verbose=False):
             colnames = a.columns
             dtype = a.dtype
             tab = True
-            
-        # Short output
-        if verbose==False or tab==False:
+
+        if tab==False:
             fmt = '%-16s %-22s %-10s'
             if atype == np.ndarray and a.dtype.names is None:
                 atype = '<np.ndarray '+str(a.dtype)+'>'
@@ -2520,7 +2519,10 @@ def help(*args,verbose=False):
                     sshape = '['+','.join(np.char.array(shape).astype(str))+']'
                 data = (varnames[i],atype,sshape)
             else:
-                data = (varnames[i],atype,'['+str(na)+']')
+                data = (varnames[i],atype,'['+str(na)+']')            
+            
+        # Short output
+        if verbose==False:
             if len(varnames[i])>16:
                 print(varnames[i])
                 print(fmt % ('',data[1],data[2]))
@@ -2529,17 +2531,27 @@ def help(*args,verbose=False):
 
         # Verbose output of table
         else:
-            print(str(type(a))+', '+str(len(colnames))+' columns, ['+str(na)+']')
-            fmt = '%-20s %-10s %-20s'                    
-            for j in range(len(colnames)):
-                col = a[colnames[j]][0]
-                if size(col)>1:
-                    data = (colnames[j],dtype[j].base,'Array['+str(size(col))+']')           
-                else:
-                    data = (colnames[j],dtype[j].base,str(col))
-                if len(colnames[j])>16:
-                    print(colnames[j])
+            if tab==False:
+                if len(varnames[i])>16:
+                    print(varnames[i])
                     print(fmt % ('',data[1],data[2]))
+                    print(str(a))
                 else:
                     print(fmt % data)
+                    print(str(a))
+                    
+            else:
+                print(str(type(a))+', '+str(len(colnames))+' columns, ['+str(na)+']')
+                fmt = '%-20s %-10s %-20s'                    
+                for j in range(len(colnames)):
+                    col = a[colnames[j]][0]
+                    if size(col)>1:
+                        data = (colnames[j],dtype[j].base,'Array['+str(size(col))+']')           
+                    else:
+                        data = (colnames[j],dtype[j].base,str(col))
+                    if len(colnames[j])>16:
+                        print(colnames[j])
+                        print(fmt % ('',data[1],data[2]))
+                    else:
+                        print(fmt % data)
 
