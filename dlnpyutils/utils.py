@@ -2520,9 +2520,13 @@ def help(*args,verbose=False):
                 data = (varnames[i],atype,sshape)
             else:
                 data = (varnames[i],atype,'['+str(na)+']')            
-            
+        else:
+            fmt = '%-16s %-22s %-10s'
+            data = (varnames[i],type(a),'['+str(na)+']')
+                
         # Short output
         if verbose==False:
+            fmt = '%-16s %-22s %-10s'
             if len(varnames[i])>16:
                 print(varnames[i])
                 print(fmt % ('',data[1],data[2]))
@@ -2532,6 +2536,7 @@ def help(*args,verbose=False):
         # Verbose output of table
         else:
             if tab==False:
+                fmt = '%-16s %-22s %-10s'
                 if len(varnames[i])>16:
                     print(varnames[i])
                     print(fmt % ('',data[1],data[2]))
@@ -2545,7 +2550,7 @@ def help(*args,verbose=False):
                 fmt = '%-20s %-10s %-20s'                    
                 for j in range(len(colnames)):
                     col = a[colnames[j]][0]
-                    if size(col)>1:
+                    if size(col)>1 and type(col) != str:
                         data = (colnames[j],dtype[j].base,'Array['+str(size(col))+']')           
                     else:
                         data = (colnames[j],dtype[j].base,str(col))
