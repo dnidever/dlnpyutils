@@ -491,12 +491,15 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
 
 
 def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=False,zmin=None,zmax=None,
-            xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',cmap=None):
+            xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',cmap=None,figure=None):
     """ Display an image."""
 
     # Getting the current figure, creating a new one if necessary
-    fig = plt.gcf()
-    
+    if figure is None:
+        fig = plt.gcf()
+    else:
+        fig = plt.figure(figure)
+        
     if noerase is False:
         plt.clf()   # clear the plot
 
