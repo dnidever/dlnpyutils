@@ -492,7 +492,57 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
 
 def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=False,zmin=None,zmax=None,
             xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',cmap=None,figure=None):
-    """ Display an image."""
+    """
+    Display an image.  The usual python convention is used where the image is [NY,NX]
+
+    Parameters
+    ----------
+    im : 2D numpy array
+      2D numpy array image to display.
+    x : 1D numpy array,  optional
+      1D array of x-values.  Default is to use np.arange(nx).
+    y : 1D numpy array, optional
+      1D array of y-values.  Default is to use np.arange(ny).
+    log : boolean, optional
+      Use logarithmic scaling.  Default is to use linear scaling.
+    xr : list, optional
+      X-axis range to use.  Default is to show the full image.
+    yr : list, optional
+      Y-axis range to use.  Default is to show the full image.
+    noerase : boolean, optional
+      Do not erase the plot window.  Default is to erase.
+    zscale : boolean, optional
+      Set image min/max values using the zscale algorithm.
+    zmin : float, optional
+      Minimum image value to plot.  Default is minimum of the entire image.
+    zmax : float, optional
+      Maximum image value to plot.  Default is maximum of the entire image.
+    xtitle : str, optional
+      X-axis title  Default is no title.
+    ytitle : str, optional
+      Y-axis title  Default is no title.
+    title : str, optional
+      The plot title.  Default is no title.
+    origin : str, optional
+      The origin.  Default is "lower".
+    aspect : str, optional
+      The aspect of the plot window.  Default is "auto".
+    cmap : str, optional
+      The color map.  Default is "viridis".
+    figure : int, optional
+      The figture window number.  Default is to use the current window.
+
+    Returns
+    -------
+    A plot is made in the figure window.
+
+    Example
+    -------
+    
+    display(im,zmin=100,zmax=5000,xr=[100,300])
+
+
+    """
 
     # Getting the current figure, creating a new one if necessary
     if figure is None:
@@ -521,7 +571,7 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     if xr is not None:
         val0,xlo = dln.closest(x,xr[0])
         val1,xhi = dln.closest(x,xr[1])        
-        im = im[xlo:xhi+1,:]
+        im = im[:,xlo:xhi+1]
         x = x[xlo:xhi+1]
         nx,ny = im.shape
         xmin = np.min(x)
@@ -529,7 +579,7 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     if yr is not None:
         val0,ylo = dln.closest(y,yr[0])
         val1,yhi = dln.closest(y,yr[1])        
-        im = im[:,ylo:yhi+1]
+        im = im[ylo:yhi+1,:]
         y = y[ylo:yhi+1]
         nx,ny = im.shape        
         ymin = np.min(y)
