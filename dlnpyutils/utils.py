@@ -1477,12 +1477,16 @@ def slope(array):
     return array[1:n]-array[0:n-1]
 
 
-def smooth(y, width):
+def smooth(y, width, fillvalue=np.nan):
     """ Smooth a curve"""
-    cumsum_vec = np.cumsum(np.insert(y, 0, 0)) 
-    ma_vec = (cumsum_vec[width:] - cumsum_vec[:-width]) / width
-    #box = np.ones(box_pts)/box_pts
-    #y_smooth = np.convolve(y, box, mode='same')
+    if y.ndim==1:
+        cumsum_vec = np.cumsum(np.insert(y, 0, 0)) 
+        ma_vec = (cumsum_vec[width:] - cumsum_vec[:-width]) / width
+        #box = np.ones(box_pts)/box_pts
+        #y_smooth = np.convolve(y, box, mode='same')
+    else:
+        kernel = np.ones((width,width)) / width**2
+        ma_vec = convolve(y, kernel, boundary='extend', fill_value=fillvalue)
     return ma_vec
 
 # Gaussian filter

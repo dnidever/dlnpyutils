@@ -611,14 +611,17 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
 
 
 def plot(x,y,z=None,marker=None,log=False,noerase=False,zmin=None,zmax=None,linewidth=None,
-         xtitle=None,ytitle=None,title=None,cmap=None,alpha=None):
+         xtitle=None,ytitle=None,title=None,cmap=None,alpha=None,figure=None):
     """ Create a line or scatter plot.  like plotc.pro"""
 
     # xerr, yerr, symbol size
     
     # Getting the current figure, creating a new one if necessary
-    fig = plt.gcf()
-    
+    if figure is None:
+        fig = plt.gcf()
+    else:
+        fig = plt.figure(figure)
+        
     if noerase is False:
         plt.clf()   # clear the plot
 
