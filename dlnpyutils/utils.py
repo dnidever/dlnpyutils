@@ -90,6 +90,8 @@ def _expand_dims(data, axis):
 def size(a=None):
     """Returns the number of elements"""
     if a is None: return 0
+    if type(a) is str:
+        return 1
     try:
         return len(a)
     except:
@@ -1485,8 +1487,13 @@ def smooth(y, width, fillvalue=np.nan):
         #box = np.ones(box_pts)/box_pts
         #y_smooth = np.convolve(y, box, mode='same')
     else:
-        kernel = np.ones((width,width)) / width**2
-        ma_vec = convolve(y, kernel, boundary='extend', fill_value=fillvalue)
+        # Do each axis separately
+        # https://gist.github.com/kwinkunks/769e39e8314b5479842a77b18e4e3eda
+        kernel = np.ones(width) / width
+        def convfunc(arr1d):
+            return np.convolve(arr1d, kernel, mode='same')
+        first_pass = np.apply_along_axis(convfunc, axis=0, arr=y)
+        ma_vec = np.apply_along_axis(convfunc, axis=1, arr=first_pass)
     return ma_vec
 
 # Gaussian filter
