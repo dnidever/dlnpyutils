@@ -1876,23 +1876,74 @@ def match(a,b,epsilon=0):
     return suba, subb
 
 # Interpolation with extrapolation
-def interp(x,y,xout,kind='cubic',bounds_error=False,assume_sorted=True,extrapolate=True,exporder=2,fill_value=np.nan):
-    yout = interp1d(x,y,kind=kind,bounds_error=bounds_error,fill_value=(fill_value,fill_value),assume_sorted=assume_sorted)(xout)
+def interp(x,y,xout,kind='cubic',bounds_error=False,assume_sorted=True,
+           extrapolate=True,exporder=2,fill_value=np.nan):
+    """
+    Interpolate data using scipy.interpolate.interp1d.  This function allows for
+    extrapolation on the ends as well.
+
+    Parameters
+    ----------
+    x : numpy array
+       Array of x-values to fit.
+    y : numpy array
+       Array of y-values to fit.
+    xout : numpy array
+       Array or scalar of desired output x-values.
+    kind : str, optional
+       The order of the interpolation: 'linear', 'quadratic', or 'cubic'.
+         Default is 'cubic'.
+    bounds_error : boolean, optional
+       Throw an exception if the requested values are outside the data range.
+         Default is False.
+    assume_sorted : boolean, optional
+       Assume that the x-values are sorted.  Default is True.
+    extrapolate : bool, optional
+       Extrapolate requested values outside of the data range.  Default is True.
+    exporder : int, optional
+       The extrapolation polynomial order.  Default is 2.
+    fill_value : float, optional
+       The fill value to use for requested points outside of the data range.
+
+    Returns
+    -------
+    yout : numpy array
+       Interpolated y-values.
+
+    Example
+    -------
+
+    yout = interp(x,y,xout)
+
+    """
+
+    xo = np.atleast_1d(xout)
+    
+    # X must be unique and sorted
+    if assume_sorted==False:
+        u,ui = np.unique(x,return_index=True)
+        si = ui[np.argsort(x[ui])]
+    else:
+        si = np.arange(len(x))
+    # Run scipy.interpolate.interp1d
+    yout = interp1d(x[si],y[si],kind=kind,bounds_error=bounds_error,
+                    fill_value=(fill_value,fill_value),assume_sorted=assume_sorted)(xo)
     # Need to extrapolate
-    if ((np.min(xout)<np.min(x)) | (np.max(xout)>np.max(x))) & (extrapolate is True):
-        si = np.argsort(x)
+    if ((np.min(xo)<np.min(x)) | (np.max(xo)>np.max(x))) & (extrapolate is True):
+        u,ui = np.unique(x,return_index=True)
+        si = ui[np.argsort(x[ui])]
         npix = len(x)
         nfit = np.min([np.maximum(exporder+1,1),npix])
         # At the beginning
-        if (np.min(xout)<np.min(x)):
+        if (np.min(xo)<np.min(x)):
             coef1 = poly_fit(x[0:nfit], y[0:nfit], exporder)
-            bd1, nbd1 = where(xout < np.min(x))
-            yout[bd1] = poly(xout[bd1],coef1)
+            bd1, nbd1 = where(xo < np.min(x))
+            yout[bd1] = poly(xo[bd1],coef1)
         # At the end
-        if (np.max(xout)>np.max(x)):
+        if (np.max(xo)>np.max(x)):
             coef2 = poly_fit(x[npix-nfit:], y[npix-nfit:], exporder)
-            bd2, nbd2 = where(xout > np.max(x))
-            yout[bd2] = poly(xout[bd2],coef2)     
+            bd2, nbd2 = where(xo > np.max(x))
+            yout[bd2] = poly(xo[bd2],coef2)     
     return yout
 
 def concatenate(a,b=None):
