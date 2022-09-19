@@ -610,9 +610,64 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     return
 
 
-def plot(x,y,z=None,marker=None,log=False,noerase=False,zmin=None,zmax=None,linewidth=None,
-         xtitle=None,ytitle=None,title=None,cmap=None,alpha=None,figure=None):
-    """ Create a line or scatter plot.  like plotc.pro"""
+def plot(x,y,c=None,marker=None,fill=True,size=None,log=False,noerase=False,
+         vmin=None,vmax=None,linewidth=None,xtitle=None,ytitle=None,title=None,
+         xr=None,yr=None,cmap=None,alpha=None,figure=None,xflip=False,yflip=False):
+    """
+    Create a line or scatter plot.  like plotc.pro
+
+    Parameters
+    ----------
+    x : numpy array
+       Array of x-values to plot.
+    y : numpy array
+       Array of x-values to plot.
+    c : numpy array, optional
+       Array of values to color-code the points by.
+    marker : float/int, optional
+       Marker type.
+    fill : boolean, optional
+       Use filled markers.  Default is fill=True.
+    size : float/int, optional
+       Marker size.
+    log : boolean, optional
+       If c input, use a logarithmic scale.
+    noerase : boolean, optional
+       Do not erase the current plotting figure.  Default is to erase the figure.
+    vmin : float, optional
+       Minimum color value to plot.
+    vmax : float, optional
+       Maximum color value to plot.
+    linewidth : float, optional
+       Linewidth to use.
+    xtitle : str, optional
+       X-axis title.
+    ytitle : str, optional
+       Y-axis title.
+    title : str, optional
+       Main figure title.
+    xr : list, optional
+       X-axis minimum and maximum range.
+    yr : list, optional
+       Y-axis minimum and maximum range.
+    cmap : str, optional
+       Color map to use.
+    alpha : float, optional
+       Alpha value to use (between 0 and 1).
+    figure : int, optional
+       Figure number.  The default is to use the current figure.
+    xflip : boolean, optional
+       Flip the x-axis.
+    yflip : boolean, optional
+       Flip the y-axis.
+
+    Returns
+    -------
+
+    Example
+    -------
+
+    """
 
     # xerr, yerr, symbol size
     
@@ -625,12 +680,29 @@ def plot(x,y,z=None,marker=None,log=False,noerase=False,zmin=None,zmax=None,line
     if noerase is False:
         plt.clf()   # clear the plot
 
+    if fill==False:
+        if c is not None:
+            edgecolor = None
+        else:
+            edgecolor = 'b'
+        facecolor = 'none'
+    else:
+        edgecolor = None
+        facecolor = None
+        
     # Make the plot
     norm = None
     if log is True:
-        norm = colors.LogNorm(vmin=zmin,vmax=zmax)
-    plt.scatter(x,y,c=z,marker=marker,cmap=cmap,norm=norm,vmin=zmin,vmax=zmax,alpha=alpha,linewidth=linewidth)
+        norm = colors.LogNorm(vmin=vmin,vmax=vmax)
+        plt.scatter(x,y,c=c,marker=marker,s=size,cmap=cmap,norm=norm,
+                    alpha=alpha,edgecolor=edgecolor,facecolor=facecolor,
+                    linewidth=linewidth)        
+    else:
+        plt.scatter(x,y,c=c,marker=marker,s=size,cmap=cmap,norm=norm,
+                    edgecolor=edgecolor,facecolor=facecolor,vmin=vmin,
+                    vmax=vmax,alpha=alpha,linewidth=linewidth)
 
+    
     # Axis titles
     if xtitle is not None:
         plt.xlabel(xtitle)
@@ -638,11 +710,29 @@ def plot(x,y,z=None,marker=None,log=False,noerase=False,zmin=None,zmax=None,line
         plt.ylabel(ytitle)        
     if title is not None:
         plt.title(title)
-    
+
+    # Axis ranges
+    if xr is not None:
+        plt.xlim(xr)
+    if yr is not None:
+        plt.xlim(yr)
+
+    # Flip axes
+    if xflip:
+        if xr is None:
+            xr = dln.minmax(x)
+            xr = [xr[0]-0.05*dln.valrange(x),xr[1]+0.05*dln.valrange(x)]            
+        plt.xlim(np.flip(xr))
+    if yflip:
+        if yr is None:
+            yr = dln.minmax(y)
+            yr = [yr[0]-0.05*dln.valrange(y),yr[1]+0.05*dln.valrange(y)]  
+        plt.ylim(np.flip(yr))
+                         
     # Add the colorbar
-    if z is not None:
+    if c is not None:
         plt.colorbar()
-    
+
     return
 
 
