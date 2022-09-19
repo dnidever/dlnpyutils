@@ -4,7 +4,7 @@
 from setuptools import setup, find_packages
 
 setup(name='dlnpyutils',
-      version='1.0.39',
+      version='1.0.40',
       description='David Nidever Python Utility Functions',
       author='David Nidever',
       author_email='dnidever@montana.edu',
