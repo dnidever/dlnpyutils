@@ -126,7 +126,7 @@ def zscaling(im,contrast=0.25,nsample=50000):
 def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=200,
            zscale=None,log=None,noerase=False,zmin=None,zmax=None,center=True,force=True,cmap=None,
            xtitle=None,ytitle=None,title=None,colorlabel=None,origin='lower',aspect='auto',
-           bright=None,minhue=0.0,maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9):
+           bright=None,minhue=0.0,maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9,save=None):
     """
     Make a 2D histogram of points.
     
@@ -183,6 +183,8 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
        The origin of the plot.  Default is 'lower'.
     aspect : str, optional
        The aspect ratio of the plot.  Default is 'auto'.
+    save : str, optional
+       Save the figure to this file.
 
     Returns
     -------
@@ -487,11 +489,16 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
             colorlabel = statistic+'(Z)'
     plt.colorbar(label=colorlabel)
 
+    # Save the figure
+    if save is not None:
+        plt.savefig(save,bbox_inches='tight')
+    
     return
 
 
 def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=False,zmin=None,zmax=None,
-            xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',cmap=None,figure=None):
+            xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',cmap=None,figure=None,
+            save=None,colorlabel=None,interpolation=None):
     """
     Display an image.  The usual python convention is used where the image is [NY,NX]
 
@@ -531,6 +538,12 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
       The color map.  Default is "viridis".
     figure : int, optional
       The figture window number.  Default is to use the current window.
+    save : str, optional
+       Save the figure to this file.
+    colorlabel : str, optional
+       The colorbar label.  Default is statistic+'(Z)'.
+    interpolation : str, optional
+       The type of interpolation.
 
     Returns
     -------
@@ -553,7 +566,7 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     if noerase is False:
         plt.clf()   # clear the plot
 
-    nx,ny = im.shape        
+    ny,nx = im.shape        
         
     # No X/Y inputs
     if x is None:
@@ -593,8 +606,10 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     if zscale is True:
         zmin,zmax = zscaling(im)
 
+    # (left, right, bottom, top)
     extent = [xmin, xmax, ymin, ymax]
-    plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,vmin=zmin,vmax=zmax,origin=origin,extent=extent)
+    plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,vmin=zmin,vmax=zmax,origin=origin,
+               extent=extent,interpolation=interpolation)
         
     # Axis titles
     if xtitle is not None:
@@ -605,14 +620,21 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
         plt.title(title)
         
     # Add the colorbar
-    plt.colorbar()
+    if colorlabel is None:
+        colorlabel = ''
+    plt.colorbar(label=colorlabel)
+
+    # Save the figure
+    if save is not None:
+        plt.savefig(save,bbox_inches='tight')
     
     return
 
 
-def plot(x,y,c=None,marker=None,fill=True,size=None,log=False,noerase=False,
+def plot(x,y=None,c=None,marker=None,fill=True,size=None,log=False,noerase=False,
          vmin=None,vmax=None,linewidth=None,xtitle=None,ytitle=None,title=None,
-         xr=None,yr=None,cmap=None,alpha=None,figure=None,xflip=False,yflip=False):
+         xr=None,yr=None,cmap=None,alpha=None,figure=None,xflip=False,
+         yflip=False,save=None,colorlabel=None):
     """
     Create a line or scatter plot.  like plotc.pro
 
@@ -660,16 +682,28 @@ def plot(x,y,c=None,marker=None,fill=True,size=None,log=False,noerase=False,
        Flip the x-axis.
     yflip : boolean, optional
        Flip the y-axis.
+    save : str, optional
+       Save the figure to this file.
+    colorlabel : str, optional
+       The colorbar label.  Default is statistic+'(Z)'.
 
     Returns
     -------
+    Figure is plotted to the screen.
 
     Example
     -------
 
+    plotting(x,y)
+
     """
 
     # xerr, yerr, symbol size
+
+    # No Y-input
+    if y is None:
+        y = np.array(x).copy()
+        x = np.arange(len(y))
     
     # Getting the current figure, creating a new one if necessary
     if figure is None:
@@ -715,7 +749,7 @@ def plot(x,y,c=None,marker=None,fill=True,size=None,log=False,noerase=False,
     if xr is not None:
         plt.xlim(xr)
     if yr is not None:
-        plt.xlim(yr)
+        plt.ylim(yr)
 
     # Flip axes
     if xflip:
@@ -730,11 +764,22 @@ def plot(x,y,c=None,marker=None,fill=True,size=None,log=False,noerase=False,
         plt.ylim(np.flip(yr))
                          
     # Add the colorbar
-    if c is not None:
-        plt.colorbar()
+    if c is not None and len(c)==len(x):
+        if colorlabel is None:
+            colorlabel = ''
+        plt.colorbar(label=colorlabel)
 
+    # Save the figure
+    if save is not None:
+        plt.savefig(save,bbox_inches='tight')
+        
     return
 
+def oplot(*args,**kwargs):
+    plot(*args,**kwargs,noerase=True)
+
+def scatter(*args,**kwargs):
+    plot(*args,**kwargs)
 
 
 class Cursor():
