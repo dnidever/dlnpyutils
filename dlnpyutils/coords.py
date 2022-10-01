@@ -9,13 +9,14 @@ __authors__ = 'David Nidever <dnidever@montana.edu>'
 __version__ = '20190723'  # yyyymmdd
 
 import numpy as np
+import copy
 from scipy.spatial import cKDTree
-from . import utils
-from astropy.coordinates import frame_transform_graph
+from scipy.optimize import minimize
+from . import utils,ladfit
+from astropy.coordinates import frame_transform_graph,SkyCoord
 from astropy.coordinates.matrix_utilities import rotation_matrix, matrix_product, matrix_transpose
 import astropy.coordinates as coord
 import astropy.units as u
-from astropy.coordinates import SkyCoord
 
 def rotsph(lon,lat,clon,clat,anode=None,reverse=False,original=False):
     '''
@@ -847,53 +848,82 @@ def mag2gal(mlon,mlat):
     glon,glat = c_glon.l.degree, c_glon.b.degree #subtract off 360 from ms_l
     return glon,glat
 
-def wcsfit(wcs,tab):
+def wcsfit(wcs,tab,verbose=False):
     """
     wcs  WCS object
     tab  catalog with x, y, ra, and dec of matched sources
     """
 
-    coo = Skycoord(ra=tab['ra'],dec=tab['dec'],unit='deg')
+    coo = SkyCoord(ra=tab['ra'],dec=tab['dec'],unit='deg')
     
     #func = partial(wcs.pixel_to_world((x,y),0))
 
-    def newwcs(x,*pars):
+    def newwcs(pars):
         # pars = [CRVAL1,CRVAL2,CDELT1,CDELT2,PC1_1,PC1_2,PC2_1,PC2_2]
         # pars = [delta_ra (arcsec), delta_dec (arcsec), cdelt1_scale_change (multiplicative)
         #  cdelt2_scale_change (multiplicate), rotation (deg)]
-        twcs = wcs.copy()
+        twcs = copy.deepcopy(wcs)
         twcs.wcs.crval[0] += pars[0]/3600.0
         twcs.wcs.crval[1] += pars[1]/3600.0  
         twcs.wcs.cdelt[0] *= pars[2]
         twcs.wcs.cdelt[1] *= pars[3]
         # Rotation matrix
         # R = [[cos(theta), -sin(theta)], [sin(theta), cos(theta)]]
-        twcs.wcs.pc[0,:] *= [np.cos(np.deg2rad(pars[4])),-np.sin(np.deg2rad(pars[4]))]
-        twcs.wcs.pc[1,:] *= [np.sin(np.deg2rad(pars[4])),np.cos(np.deg2rad(pars[4]))]
+        rot = np.array([[np.cos(np.deg2rad(pars[4])),-np.sin(np.deg2rad(pars[4]))],
+                        [np.sin(np.deg2rad(pars[4])),np.cos(np.deg2rad(pars[4]))] ])
+        newpc = np.dot(twcs.wcs.pc,rot)
+        twcs.wcs.pc = newpc
         return twcs
-    def diffcoords(x,*pars):
-        twcs = newwcs(x,*pars)
-        vcoo = twcs.pixel_to_world(tab['x'],tab['dec'])
-        diff = coo.separation(vcoo)
+    def diffcoords(pars):
+        twcs = newwcs(pars)
+        try:
+            vcoo = twcs.pixel_to_world(tab['x'],tab['y'])
+            diff = coo.separation(vcoo)
+            meddiff = np.nanmean(diff.arcsec)
+        except:
+            meddiff = 999999.
+        return meddiff
 
+    def diffcoords_jac(pars):
+        delta = [0.2,0.2,0.1,0.1,0.5]
+        jac = np.zeros(5,float)
+        y0 = diffcoords(pars)
+        for i in range(len(pars)):
+            tpars = np.array(pars).copy()
+            tpars[i] += delta[i]
+            y1 = diffcoords(tpars)
+            jac[i] = (y1-y0)/delta[i]
+        return y0,jac
+            
+    
     # fit delta_ra (arcsec), delta_dec (arcsec), cdelt1_scale_change (multiplicative)
     #  cdelt2_scale_change (multiplicate), rotation (deg)]
 
 
     # Get initial guess of delta_ra and delta_dec using the coordinate ra/dec values
     # and initial WCS coordinates
-    vcoo = wcs.pixel_to_world(tab['x'],tab['dec'])
+    vcoo = wcs.pixel_to_world(tab['x'],tab['y'])
     vra = vcoo.ra.deg
     vdec = vcoo.dec.deg
-    dra = np.median(vra-tab['ra'])*3600
-    ddec = np.median(vdec-tab['dec'])*3600
-        
-    estimates = [dra,ddec,1.0,1.0,0.0]
-    bounds = (np.zeros(len(estimates),float)-np.inf,np.zeros(len(estimates),float)+np.inf)
-    x = np.zeros(len(tab),float)
-    y = np.zeros(len(tab),float)    
-    popt,pcov = curve_fit(diffcoords,x,y,x0=estimates,bounds=bounds)
+    dra = np.median(tab['ra']-vra)*3600
+    ddec = np.median(tab['dec']-vdec)*3600
 
-    wcs2 = newwcs(1,*popt)
-    
-    return wcs2
+    # Estimate the rotation
+    vx,vy = wcs.world_to_pixel(coo)
+    coefx,absdevx = ladfit.ladfit(tab['y'],tab['x']-vx)
+    coefy,absdevy = ladfit.ladfit(tab['x'],tab['y']-vy)    
+    rot = np.mean([coefx[1],-coefy[1]])
+
+    estimates = [dra,ddec,1.0,1.0,rot]    
+    bounds = len(estimates)*[[-np.inf,np.inf]]
+    res = minimize(diffcoords,estimates,bounds=bounds)
+    pars = res.x
+    fwcs = newwcs(pars)
+
+    if verbose:
+        resid0 = diffcoords([0.0,0.0,1.0,1.0,0.0])
+        resid = diffcoords(pars)
+        print('Original mean residuals: {:.3f} arcsec'.format(resid0))
+        print('Final mean residuals: {:.3f} arcsec'.format(resid))
+        
+    return fwcs
