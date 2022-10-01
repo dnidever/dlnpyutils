@@ -850,13 +850,30 @@ def mag2gal(mlon,mlat):
 
 def wcsfit(wcs,tab,verbose=False):
     """
-    wcs  WCS object
-    tab  catalog with x, y, ra, and dec of matched sources
+    Fit the WCS using a catalog of stars with known X/Y and RA/DEC coordinates.
+
+    Parameters
+    ----------
+    wcs : WCS object
+      The WCS object with an estimate of the WCS.
+    tab : table
+      Catalog with x, y, ra, and dec of matched sources.
+    verbose : boolean, optional
+      Print informaton to the screen.  Default is False.
+
+    Returns
+    -------
+    fwcs : WCS object
+      WCS with improved paramters.
+    
+    Example
+    -------
+
+    fwcs = wcsfit(wcs,tab)L
+
     """
 
     coo = SkyCoord(ra=tab['ra'],dec=tab['dec'],unit='deg')
-    
-    #func = partial(wcs.pixel_to_world((x,y),0))
 
     def newwcs(pars):
         # pars = [CRVAL1,CRVAL2,CDELT1,CDELT2,PC1_1,PC1_2,PC2_1,PC2_2]
@@ -921,9 +938,15 @@ def wcsfit(wcs,tab,verbose=False):
     fwcs = newwcs(pars)
 
     if verbose:
+        print('--- Original WCS ---')
+        print(wcs)
+        print(' ')
+        print('--- Final WCS ---')
+        print(fwcs)
+        print(' ')
         resid0 = diffcoords([0.0,0.0,1.0,1.0,0.0])
         resid = diffcoords(pars)
         print('Original mean residuals: {:.3f} arcsec'.format(resid0))
-        print('Final mean residuals: {:.3f} arcsec'.format(resid))
+        print('Final mean residuals   : {:.3f} arcsec'.format(resid))
         
     return fwcs
