@@ -847,3 +847,53 @@ def mag2gal(mlon,mlat):
     glon,glat = c_glon.l.degree, c_glon.b.degree #subtract off 360 from ms_l
     return glon,glat
 
+def wcsfit(wcs,tab):
+    """
+    wcs  WCS object
+    tab  catalog with x, y, ra, and dec of matched sources
+    """
+
+    coo = Skycoord(ra=tab['ra'],dec=tab['dec'],unit='deg')
+    
+    #func = partial(wcs.pixel_to_world((x,y),0))
+
+    def newwcs(x,*pars):
+        # pars = [CRVAL1,CRVAL2,CDELT1,CDELT2,PC1_1,PC1_2,PC2_1,PC2_2]
+        # pars = [delta_ra (arcsec), delta_dec (arcsec), cdelt1_scale_change (multiplicative)
+        #  cdelt2_scale_change (multiplicate), rotation (deg)]
+        twcs = wcs.copy()
+        twcs.wcs.crval[0] += pars[0]/3600.0
+        twcs.wcs.crval[1] += pars[1]/3600.0  
+        twcs.wcs.cdelt[0] *= pars[2]
+        twcs.wcs.cdelt[1] *= pars[3]
+        # Rotation matrix
+        # R = [[cos(theta), -sin(theta)], [sin(theta), cos(theta)]]
+        twcs.wcs.pc[0,:] *= [np.cos(np.deg2rad(pars[4])),-np.sin(np.deg2rad(pars[4]))]
+        twcs.wcs.pc[1,:] *= [np.sin(np.deg2rad(pars[4])),np.cos(np.deg2rad(pars[4]))]
+        return twcs
+    def diffcoords(x,*pars):
+        twcs = newwcs(x,*pars)
+        vcoo = twcs.pixel_to_world(tab['x'],tab['dec'])
+        diff = coo.separation(vcoo)
+
+    # fit delta_ra (arcsec), delta_dec (arcsec), cdelt1_scale_change (multiplicative)
+    #  cdelt2_scale_change (multiplicate), rotation (deg)]
+
+
+    # Get initial guess of delta_ra and delta_dec using the coordinate ra/dec values
+    # and initial WCS coordinates
+    vcoo = wcs.pixel_to_world(tab['x'],tab['dec'])
+    vra = vcoo.ra.deg
+    vdec = vcoo.dec.deg
+    dra = np.median(vra-tab['ra'])*3600
+    ddec = np.median(vdec-tab['dec'])*3600
+        
+    estimates = [dra,ddec,1.0,1.0,0.0]
+    bounds = (np.zeros(len(estimates),float)-np.inf,np.zeros(len(estimates),float)+np.inf)
+    x = np.zeros(len(tab),float)
+    y = np.zeros(len(tab),float)    
+    popt,pcov = curve_fit(diffcoords,x,y,x0=estimates,bounds=bounds)
+
+    wcs2 = newwcs(1,*popt)
+    
+    return wcs2
