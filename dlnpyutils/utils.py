@@ -2622,3 +2622,74 @@ def help(*args,verbose=False):
                     else:
                         print(fmt % data)
 
+
+def modfits(filename,data=None,header=None,wcs=None,update=False,
+            extnum=None,extname=None):
+    """
+    Update data or header in an existing FITS file
+
+    Parameters
+    ----------
+    filename : str
+      Filename of the FITS file to modify.
+    data : numpy array, optional
+      New data to stick in the FITS file.
+    header : Header object, optional
+      New header to add to FITS.  Default is to replace the existing header.
+        If update=True, then the existing header is updated.
+    wcs : WCS object, optional
+      WCS object.  The header is updated with this WCS.
+    update : boolean, optional
+      Update header rather than replace.  Default is False.
+    extnum : int, optional
+      Extension number.  Default is 0.
+    extname : str, optional
+      Extension name.
+
+    Returns
+    -------
+    FITS file is updated.
+
+    Example
+    -------
+
+    modfits('filename.fits',header=newhead)
+
+    """
+
+    if os.path.exists(filename)==False:
+        raise ValueError(filename+" NOT FOUND")
+    if data is None and header is None:
+        raise ValueError('data or header must not be None')
+
+    hdu = fits.open(filename)
+
+    if extnum is not None:
+        if int(extnum) > len(hdu)-1:
+            raise ValueError('EXTNUM '+str(extnum)+' error. Only '+str(len(hdu))+' HDUs')
+    
+    # EXTNAME
+    if extname is not None:
+        extnames = [h.header.get('EXTNAME') for h in hdu]
+        if extname not in extnames and extname.upper() not in extnames:
+            raise ValueError('EXTNAME '+extname+' not found in '+filename)
+        extnum, = np.where(np.char.array(extnames).astype(str).lower() == extname.lower())
+        extnum = extnum[0]
+    # Use first extension by default
+    if extnum is None: extnum = 0
+
+    # Update data
+    if data is not None:
+        hdu[extnum].data = data
+    # Update header
+    if header is not None:
+        if update:
+            hdu[extnum].header.extend(header,update=True)
+        else:
+            hdu[extnum].header = header
+    # Add WCS
+    if wcs is not None:
+        hdu[extnum].header.extend(wcs.to_header(),update=True)
+    
+    hdu.close()
+    
