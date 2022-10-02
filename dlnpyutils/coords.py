@@ -891,12 +891,15 @@ def wcsfit(wcs,tab,verbose=False):
         newpc = np.dot(twcs.wcs.pc,rot)
         twcs.wcs.pc = newpc
         return twcs
-    def diffcoords(pars):
+    def diffcoords(pars,good=None):
         twcs = newwcs(pars)
         try:
             vcoo = twcs.pixel_to_world(tab['x'],tab['y'])
             diff = coo.separation(vcoo)
-            meddiff = np.nanmean(diff.arcsec)
+            if good is not None:
+                meddiff = np.nanmean(diff[good].arcsec)
+            else:
+                meddiff = np.nanmean(diff.arcsec)
         except:
             meddiff = 999999.
         return meddiff
@@ -931,12 +934,31 @@ def wcsfit(wcs,tab,verbose=False):
     coefy,absdevy = ladfit.ladfit(tab['x'],tab['y']-vy)    
     rot = np.mean([coefx[1],-coefy[1]])
 
+    # Do the fit
     estimates = [dra,ddec,1.0,1.0,rot]    
     bounds = len(estimates)*[[-np.inf,np.inf]]
-    res = minimize(diffcoords,estimates,bounds=bounds)
-    pars = res.x
+    res1 = minimize(diffcoords,estimates,bounds=bounds)
+    pars1 = res1.x
+    
+    # Remove outliers and refit
+    twcs = newwcs(pars1)
+    vcoo = twcs.pixel_to_world(tab['x'],tab['y'])
+    diff = coo.separation(vcoo)
+    meddiff = np.nanmedian(diff.arcsec)
+    sigdiff = utils.mad(diff.arcsec)
+    good, = np.where(diff.arcsec < (meddiff+3.5*sigdiff))
+    noutlier = len(tab)-len(good)
+    if noutlier>0:
+        if verbose:
+            print('Rejecting '+str(noutlier)+' outlier(s)')
+        res = minimize(diffcoords,pars1,args=good,bounds=bounds)
+        pars = res.x
+    else:
+        res = res1
+        pars = pars1
+                  
     fwcs = newwcs(pars)
-
+    
     if verbose:
         print('--- Original WCS ---')
         print(wcs)
@@ -945,7 +967,7 @@ def wcsfit(wcs,tab,verbose=False):
         print(fwcs)
         print(' ')
         resid0 = diffcoords([0.0,0.0,1.0,1.0,0.0])
-        resid = diffcoords(pars)
+        resid = diffcoords(pars,good)
         print('Original mean residuals: {:.3f} arcsec'.format(resid0))
         print('Final mean residuals   : {:.3f} arcsec'.format(resid))
         
