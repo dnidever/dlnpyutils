@@ -124,9 +124,10 @@ def zscaling(im,contrast=0.25,nsample=50000):
     
 
 def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=200,
-           zscale=None,log=None,noerase=False,zmin=None,zmax=None,center=True,force=True,cmap=None,
-           xtitle=None,ytitle=None,title=None,colorlabel=None,origin='lower',aspect='auto',
-           bright=None,minhue=0.0,maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9,save=None):
+           zscale=None,log=None,noerase=False,vmin=None,vmax=None,center=True,xflip=False,
+           yflip=False,force=True,cmap=None,xtitle=None,ytitle=None,title=None,
+           colorlabel=None,origin='lower',aspect='auto',interpolation='none',bright=None,
+           minhue=0.0,maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9,save=None):
     """
     Make a 2D histogram of points.
     
@@ -160,15 +161,19 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
        Use logarithmic scaling of the statistic.  Default is linear.
     noerase : bool, optional
        Do not erase or clear the figure window.  Default is to clear the figure.
-    zmin : float, optional
+    vmin : float, optional
        Minimum value to plot on colorbar.  Default is the minimum of the statistic.
-    zmax : float, optional
+    vmax : float, optional
        Maximum value to plot on colorbar.  Default is the maximum of the statistic.    
     force : bool, optional
        Force the xrange and yrange to be exactly as the way they are set (default).
     center : bool, optional
        The x/y values of a bin should correspond to the center.  By default they
          correspond to the bottom-left corner.
+    xflip : bool, optional
+       Flip the X-coordinate axis.  Default is False.
+    yflip : bool, optional
+       Flip the Y-coordinate axis.  Default is False.
     cmap : str, optional
        The matplotlib color map to use.  Default is 'viridis'.
     xtitle : str, optional
@@ -183,6 +188,8 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
        The origin of the plot.  Default is 'lower'.
     aspect : str, optional
        The aspect ratio of the plot.  Default is 'auto'.
+    interpolation : str, optional
+       Type of interpolation in the image.  Default is 'none'.
     save : str, optional
        Save the figure to this file.
 
@@ -222,10 +229,10 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
         dy0 = copy.copy(dy)
         
     # Min and Max's
-    xmin = np.min(x)
-    xmax = np.max(x)
-    ymin = np.min(y)
-    ymax = np.max(y)    
+    xmin = np.nanmin(x)
+    xmax = np.nanmax(x)
+    ymin = np.nanmin(y)
+    ymax = np.nanmax(y)    
 
     # Temporary DX and DY if not input
     # X-axis
@@ -388,8 +395,9 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
         yr = [ymin,ymax]
         
     # No z input
-    if z is None:
+    if z is None or statistic=='count':
         im, xedges, yedges = np.histogram2d(x,y,range=[xr,yr],bins=[nx,ny])
+        im = im.T  # np.histogram2d() returns [x,y], while python/matplotlib convention is [y,x]
     # Statistic using z-values
     else:
         if statistic=='avg':
@@ -418,8 +426,8 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
             #ima2 = -ima    ; (blue-green-red)
             # color_convert, hue, bright, im*0.+saturation, r, g, b, /HLS_RGB
             gooda = np.isfinite(ima)
-            if zmin is None: zmin = np.min(ima[gooda])
-            if zmax is None: zmax = np.max(ima[gooda])            
+            if vmin is None: vmin = np.min(ima[gooda])
+            if vmax is None: vmax = np.max(ima[gooda])            
             #ima = -ima
 
             # hue goes: red, orange, yellow, green, light blue, dark blue, purple, red
@@ -428,7 +436,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
             # hsv is hue, saturation, value or hue, saturation, brightness
             hueim = np.zeros(ima.shape,float)
             #hueim[gooda] = dln.limit(dln.scale(ima[gooda],[-zmax,-zmin],[minhue,maxhue]),minhue,maxhue)
-            hueim[gooda] = dln.limit(dln.scale(ima[gooda],[zmin,zmax],[minhue,maxhue]),minhue,maxhue)
+            hueim[gooda] = dln.limit(dln.scale(ima[gooda],[vmin,vmax],[minhue,maxhue]),minhue,maxhue)
             # flip hue to get blue to red
             hueim = 1-hueim
             goodt = np.isfinite(imt)
@@ -457,16 +465,23 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
     #fig, ax = plt.subplots()
     norm = None
     if log is True and statistic != 'avg':
-        norm = colors.LogNorm(vmin=zmin,vmax=zmax)
+        norm = colors.LogNorm(vmin=vmin,vmax=vmax)
     if zscale is True:
-        zmin,zmax = zscaling(im)
-    if zmin is None:
-        zmin = np.min(im[np.isfinite(im)])
-    if zmax is None:
-        zmax = np.max(im[np.isfinite(im)])        
+        vmin,vmax = zscaling(im)
+    if vmin is None:
+        vmin = np.min(im[np.isfinite(im)])
+    if vmax is None:
+        vmax = np.max(im[np.isfinite(im)])        
     extent = [xr[0], xr[1], yr[0], yr[1]]
-    plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,vmin=zmin,vmax=zmax,origin=origin,extent=extent)
-    
+    if log and statistic != 'avg':
+        plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,origin=origin,
+                   extent=extent,interpolation=interpolation)
+    else:
+        plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,vmin=vmin,vmax=vmax,origin=origin,
+                   extent=extent,interpolation=interpolation)
+    if xflip: plt.xlim(xr[1],xr[0])
+    if yflip: plt.ylim(yr[1],yr[0])
+                       
     # Axis titles
     if xtitle is None:
         xtitle = 'X'
@@ -493,12 +508,12 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
     if save is not None:
         plt.savefig(save,bbox_inches='tight')
     
-    return
+    return xedges, yedges, im
 
 
-def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=False,zmin=None,zmax=None,
-            xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',cmap=None,figure=None,
-            save=None,colorlabel=None,interpolation=None):
+def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=False,vmin=None,vmax=None,
+            xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',xflip=False,yflip=False,
+            cmap=None,figure=None,save=None,colorlabel=None,interpolation=None):
     """
     Display an image.  The usual python convention is used where the image is [NY,NX]
 
@@ -520,9 +535,9 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
       Do not erase the plot window.  Default is to erase.
     zscale : boolean, optional
       Set image min/max values using the zscale algorithm.
-    zmin : float, optional
+    vmin : float, optional
       Minimum image value to plot.  Default is minimum of the entire image.
-    zmax : float, optional
+    vmax : float, optional
       Maximum image value to plot.  Default is maximum of the entire image.
     xtitle : str, optional
       X-axis title  Default is no title.
@@ -534,6 +549,10 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
       The origin.  Default is "lower".
     aspect : str, optional
       The aspect of the plot window.  Default is "auto".
+    xflip : bool, optional
+       Flip the X-coordinate axis.  Default is False.
+    yflip : bool, optional
+       Flip the Y-coordinate axis.  Default is False.    
     cmap : str, optional
       The color map.  Default is "viridis".
     figure : int, optional
@@ -552,7 +571,7 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     Example
     -------
     
-    display(im,zmin=100,zmax=5000,xr=[100,300])
+    display(im,vmin=100,vmax=5000,xr=[100,300])
 
 
     """
@@ -602,15 +621,29 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     #fig, ax = plt.subplots()
     norm = None
     if log is True:
-        norm = colors.LogNorm(vmin=zmin,vmax=zmax)
+        norm = colors.LogNorm(vmin=vmin,vmax=vmax)
     if zscale is True:
-        zmin,zmax = zscaling(im)
+        vmin,vmax = zscaling(im)
 
     # (left, right, bottom, top)
     extent = [xmin, xmax, ymin, ymax]
-    plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,vmin=zmin,vmax=zmax,origin=origin,
-               extent=extent,interpolation=interpolation)
-        
+    if log:
+        plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,origin=origin,
+                   extent=extent,interpolation=interpolation)
+    else:
+        plt.imshow(im,cmap=cmap,aspect=aspect,vmin=vmin,vmax=vmax,origin=origin,
+                   extent=extent,interpolation=interpolation)        
+    if xflip:
+        if xr is not None:
+            plt.xlim(xr[1],xr[0])
+        else:
+            plt.xlim(xmax,xmin)            
+    if yflip:
+        if yr is not None:
+            plt.ylim(yr[1],yr[0])
+        else:
+            plt.ylim(ymax,ymin)
+            
     # Axis titles
     if xtitle is not None:
         plt.xlabel(xtitle)
