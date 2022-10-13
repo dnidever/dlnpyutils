@@ -12,6 +12,7 @@ import time
 import numpy as np
 import warnings
 from astropy.utils.exceptions import AstropyWarning
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib.backend_bases import MouseButton
@@ -124,10 +125,10 @@ def zscaling(im,contrast=0.25,nsample=50000):
     
 
 def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=200,
-           zscale=None,log=None,noerase=False,vmin=None,vmax=None,center=True,xflip=False,
-           yflip=False,force=True,cmap=None,xtitle=None,ytitle=None,title=None,
-           colorlabel=None,origin='lower',aspect='auto',interpolation='none',bright=None,
-           minhue=0.0,maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9,save=None):
+           zscale=None,log=None,norm=None,noerase=False,vmin=None,vmax=None,center=True,xflip=False,
+           yflip=False,force=True,cmap=None,figure=None,figsize=(8,8),xtitle=None,ytitle=None,title=None,
+           colorlabel=None,charsize=12,origin='lower',aspect='auto',interpolation='none',bright=None,
+           minhue=0.0,maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9,noplot=False,save=None):
     """
     Make a 2D histogram of points.
     
@@ -159,6 +160,11 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
        Automatic min and max interval of statistic based on IRAF's zscale.
     log : bool, optional
        Use logarithmic scaling of the statistic.  Default is linear.
+    norm : normalize object, optional
+        The `.Normalize` instance used to scale scalar data to the [0, 1]
+        range before mapping to colors using *cmap*. By default, a linear
+        scaling mapping the lowest value to 0 and the highest to 1 is used.
+        This parameter is ignored for RGB(A) data.
     noerase : bool, optional
        Do not erase or clear the figure window.  Default is to clear the figure.
     vmin : float, optional
@@ -182,14 +188,22 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
        The label for the y-axis.  Default is 'Y'.
     title : str, optional
        The plot title.  Default is statistic+'(Z)'.
+    figure : int, optional
+      The figure window number.  Default is to use the current window.
+    figsize : list, optional
+       Two-element list giving figure size in X and Y.  Default is (8,8).
     colorlabel : str, optional
        The colorbar label.  Default is statistic+'(Z)'.
+    charsize : int, optional
+       Character size.  Default is 12.
     origin : str, optional
        The origin of the plot.  Default is 'lower'.
     aspect : str, optional
        The aspect ratio of the plot.  Default is 'auto'.
     interpolation : str, optional
        Type of interpolation in the image.  Default is 'none'.
+    noplot : boolean, optional
+       Do not plot anything.  Just return the data.
     save : str, optional
        Save the figure to this file.
 
@@ -206,11 +220,18 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
     """
 
     # Getting the current figure, creating a new one if necessary
-    fig = plt.gcf()
-    
-    if noerase is False:
-        plt.clf()   # clear the plot
+    if figure is None:
+        fig = plt.gcf()
+    else:
+        fig = plt.figure(figure,figsize=figsize)
 
+    # Character size
+    font = {'size': charsize}
+    matplotlib.rc('font', **font)
+
+    if noerase is False:
+        plt.clf()   # clear the plot    
+    
     # Statistic default
     if statistic is None:
         if z is None:
@@ -462,58 +483,59 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
             im = im.T
 
     # Plot the image
-    #fig, ax = plt.subplots()
-    norm = None
-    if log is True and statistic != 'avg':
-        norm = colors.LogNorm(vmin=vmin,vmax=vmax)
-    if zscale is True:
-        vmin,vmax = zscaling(im)
-    if vmin is None:
-        vmin = np.min(im[np.isfinite(im)])
-    if vmax is None:
-        vmax = np.max(im[np.isfinite(im)])        
-    extent = [xr[0], xr[1], yr[0], yr[1]]
-    if log and statistic != 'avg':
-        plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,origin=origin,
-                   extent=extent,interpolation=interpolation)
-    else:
-        plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,vmin=vmin,vmax=vmax,origin=origin,
-                   extent=extent,interpolation=interpolation)
-    if xflip: plt.xlim(xr[1],xr[0])
-    if yflip: plt.ylim(yr[1],yr[0])
-                       
-    # Axis titles
-    if xtitle is None:
-        xtitle = 'X'
-    plt.xlabel(xtitle)
-    if ytitle is None:
-        ytitle = 'Y'
-    plt.ylabel(ytitle)        
-    if title is None:
-        if statistic is 'count':
-            title = statistic
-        else:
-            title = statistic+'(Z)'
-    plt.title(title)
-        
-    # Add the colorbar
-    if colorlabel is None:
-        if statistic is 'count':
-            colorlabel = statistic
-        else:
-            colorlabel = statistic+'(Z)'
-    plt.colorbar(label=colorlabel)
+    if noplot==False:
+        if log is True and statistic != 'avg' and norm is None:
+            norm = colors.LogNorm(vmin=vmin,vmax=vmax)
+        if zscale is True:
+            vmin,vmax = zscaling(im)
+        if vmin is None:
+            vmin = np.min(im[np.isfinite(im)])
+        if vmax is None:
+            vmax = np.max(im[np.isfinite(im)])        
+        extent = [xr[0], xr[1], yr[0], yr[1]]
 
-    # Save the figure
-    if save is not None:
-        plt.savefig(save,bbox_inches='tight')
+        if norm is not None:
+            plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,origin=origin,
+                       extent=extent,interpolation=interpolation)
+        else:
+            plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,vmin=vmin,vmax=vmax,origin=origin,
+                       extent=extent,interpolation=interpolation)
+        if xflip: plt.xlim(xr[1],xr[0])
+        if yflip: plt.ylim(yr[1],yr[0])
+                       
+        # Axis titles
+        if xtitle is None:
+            xtitle = 'X'
+        plt.xlabel(xtitle)
+        if ytitle is None:
+            ytitle = 'Y'
+        plt.ylabel(ytitle)        
+        if title is None:
+            if statistic is 'count':
+                title = statistic
+            else:
+                title = statistic+'(Z)'
+        plt.title(title)
+        
+        # Add the colorbar
+        if colorlabel is None:
+            if statistic is 'count':
+                colorlabel = statistic
+            else:
+                colorlabel = statistic+'(Z)'
+        plt.colorbar(label=colorlabel)
+
+        # Save the figure
+        if save is not None:
+            plt.savefig(save,bbox_inches='tight')
     
     return xedges, yedges, im
 
 
-def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=False,vmin=None,vmax=None,
-            xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',xflip=False,yflip=False,
-            cmap=None,figure=None,save=None,colorlabel=None,interpolation=None):
+def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=False,norm=None,
+            vmin=None,vmax=None,xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',
+            xflip=False,yflip=False,cmap=None,figure=None,figsize=(8,8),save=None,colorlabel=None,
+            charsize=12,interpolation=None):
     """
     Display an image.  The usual python convention is used where the image is [NY,NX]
 
@@ -535,6 +557,11 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
       Do not erase the plot window.  Default is to erase.
     zscale : boolean, optional
       Set image min/max values using the zscale algorithm.
+    norm : normalize object, optional
+        The `.Normalize` instance used to scale scalar data to the [0, 1]
+        range before mapping to colors using *cmap*. By default, a linear
+        scaling mapping the lowest value to 0 and the highest to 1 is used.
+        This parameter is ignored for RGB(A) data.
     vmin : float, optional
       Minimum image value to plot.  Default is minimum of the entire image.
     vmax : float, optional
@@ -556,11 +583,15 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     cmap : str, optional
       The color map.  Default is "viridis".
     figure : int, optional
-      The figture window number.  Default is to use the current window.
+      The figure window number.  Default is to use the current window.
+    figsize : list, optional
+       Two-element list giving figure size in X and Y.  Default is (8,8).
     save : str, optional
        Save the figure to this file.
     colorlabel : str, optional
        The colorbar label.  Default is statistic+'(Z)'.
+    charsize : int, optional
+       Character size.  Default is 12.
     interpolation : str, optional
        The type of interpolation.
 
@@ -580,11 +611,15 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     if figure is None:
         fig = plt.gcf()
     else:
-        fig = plt.figure(figure)
+        fig = plt.figure(figure,figsize=figsize)
+
+    # Character size
+    font = {'size': charsize}
+    matplotlib.rc('font', **font)
         
     if noerase is False:
         plt.clf()   # clear the plot
-
+        
     ny,nx = im.shape        
         
     # No X/Y inputs
@@ -619,15 +654,14 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
         
     # Plot the image
     #fig, ax = plt.subplots()
-    norm = None
-    if log is True:
+    if log is True and norm is None:
         norm = colors.LogNorm(vmin=vmin,vmax=vmax)
     if zscale is True:
         vmin,vmax = zscaling(im)
 
     # (left, right, bottom, top)
     extent = [xmin, xmax, ymin, ymax]
-    if log:
+    if norm is not None:
         plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,origin=origin,
                    extent=extent,interpolation=interpolation)
     else:
@@ -666,8 +700,8 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
 
 def plot(x,y=None,c=None,marker=None,fill=True,size=None,log=False,noerase=False,
          vmin=None,vmax=None,linewidth=None,xtitle=None,ytitle=None,title=None,
-         xr=None,yr=None,cmap=None,alpha=None,figure=None,xflip=False,
-         yflip=False,save=None,colorlabel=None):
+         xr=None,yr=None,cmap=None,alpha=None,figure=None,figsize=(8,8),xflip=False,
+         yflip=False,save=None,colorlabel=None,charsize=12):
     """
     Create a line or scatter plot.  like plotc.pro
 
@@ -711,6 +745,8 @@ def plot(x,y=None,c=None,marker=None,fill=True,size=None,log=False,noerase=False
        Alpha value to use (between 0 and 1).
     figure : int, optional
        Figure number.  The default is to use the current figure.
+    figsize : list, optional
+       Two-element list giving figure size in X and Y.  Default is (8,8).
     xflip : boolean, optional
        Flip the x-axis.
     yflip : boolean, optional
@@ -719,6 +755,8 @@ def plot(x,y=None,c=None,marker=None,fill=True,size=None,log=False,noerase=False
        Save the figure to this file.
     colorlabel : str, optional
        The colorbar label.  Default is statistic+'(Z)'.
+    charsize : int, optional
+       Character size.  Default is 12.
 
     Returns
     -------
@@ -742,7 +780,11 @@ def plot(x,y=None,c=None,marker=None,fill=True,size=None,log=False,noerase=False
     if figure is None:
         fig = plt.gcf()
     else:
-        fig = plt.figure(figure)
+        fig = plt.figure(figure,figsize=figsize)
+
+    # Character size
+    font = {'size': charsize}
+    matplotlib.rc('font', **font)
         
     if noerase is False:
         plt.clf()   # clear the plot

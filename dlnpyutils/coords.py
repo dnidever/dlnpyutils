@@ -534,13 +534,17 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False,sphere=True):
     ra2/dec2 : array_like
         second dataset, arrays of RA and DEC
         both measured in degrees
+    dcr : float (optional)
+        maximum radius of search, measured in arcsec.
+        This can be an array of the same size as ra1/dec1.
+    unique : boolean, optional
+        Return unique one-to-one matches.  Default is False and
+           allows duplicates.
     sphere : boolean, optional
         The coordinates are spherical in degrees.  Otherwise, the dcr
           is assumed to be in the same units as the input values.
           Default is True.
-    dcr : float (optional)
-        maximum radius of search, measured in arcsec.
-        This can be an array of the same size as ra1/dec1.
+
 
     Returns
     -------
@@ -873,6 +877,12 @@ def wcsfit(wcs,tab,verbose=False):
 
     """
 
+    if len(tab)==0:
+        raise ValueError('Input catalog has no stars')
+    
+    if verbose:
+        print('Fitting WCS with '+str(len(tab))+' stars')
+    
     coo = SkyCoord(ra=tab['ra'],dec=tab['dec'],unit='deg')
 
     def newwcs(pars):
