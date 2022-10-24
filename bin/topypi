@@ -9,16 +9,18 @@ then
   name=`grep name setup.py.orig | grep -v pypiname | sed -nE "s/.*=\s*'(.*)'.*/\1/p"`
 fi
 dirname=${PWD##*/}
+echo "pypiname" ${pypiname}
 if [ -z $pypiname ] || [ $pypiname == '' ]
 then
+  echo "using original name"
   pypiname=${name}
   cp -f setup.py.orig setup.py >& /dev/null
 else
+  echo "using new pypiname"
   cat setup.py.orig | sed 's/name="'${name}'"/name="'${pypiname}'"/g' > setup.py
 fi
 printf '%s\n' "Uploading new version to pypi as package '${pypiname}'"
-
-\rm -R dist build ${pypiname}.egg-info >& /dev/null
+\rm -R dist build ${pypiname}.egg-info ${name}.egg-info >& /dev/null
 python setup.py sdist
 python setup.py bdist_wheel --universal
 twine upload dist/*
