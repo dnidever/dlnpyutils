@@ -698,7 +698,7 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     return
 
 
-def plot(x,y=None,c=None,marker=None,fill=True,size=None,log=False,noerase=False,
+def plot(x,y=None,c=None,fmt=None,marker=None,fill=True,size=None,log=False,noerase=False,
          vmin=None,vmax=None,linewidth=None,xtitle=None,ytitle=None,title=None,
          xr=None,yr=None,cmap=None,alpha=None,figure=None,figsize=(8,8),xflip=False,
          yflip=False,save=None,colorlabel=None,charsize=12):
@@ -711,8 +711,10 @@ def plot(x,y=None,c=None,marker=None,fill=True,size=None,log=False,noerase=False
        Array of x-values to plot.
     y : numpy array
        Array of x-values to plot.
-    c : numpy array, optional
-       Array of values to color-code the points by.
+    c : numpy array or str, optional
+       Array of values to color-code the points by, or a single color name.
+    fmt : str, optional
+      Format string for plotting.
     marker : float/int, optional
        Marker type.
     fill : boolean, optional
@@ -799,17 +801,25 @@ def plot(x,y=None,c=None,marker=None,fill=True,size=None,log=False,noerase=False
         edgecolor = None
         facecolor = None
         
-    # Make the plot
-    norm = None
-    if log is True:
-        norm = colors.LogNorm(vmin=vmin,vmax=vmax)
-        plt.scatter(x,y,c=c,marker=marker,s=size,cmap=cmap,norm=norm,
-                    alpha=alpha,edgecolor=edgecolor,facecolor=facecolor,
-                    linewidth=linewidth)        
+    # Line plot
+    if (c is None or type(c) is str) and marker is None:
+        if fmt is not None:
+            plt.plot(x,y,fmt,c=c)
+        else:
+            plt.plot(x,y,c=c)
+        
+    # Scatter plot
     else:
-        plt.scatter(x,y,c=c,marker=marker,s=size,cmap=cmap,norm=norm,
-                    edgecolor=edgecolor,facecolor=facecolor,vmin=vmin,
-                    vmax=vmax,alpha=alpha,linewidth=linewidth)
+        norm = None
+        if log is True:
+            norm = colors.LogNorm(vmin=vmin,vmax=vmax)
+            plt.scatter(x,y,c=c,marker=marker,s=size,cmap=cmap,norm=norm,
+                        alpha=alpha,edgecolor=edgecolor,facecolor=facecolor,
+                        linewidth=linewidth)        
+        else:
+            plt.scatter(x,y,c=c,marker=marker,s=size,cmap=cmap,norm=norm,
+                        edgecolor=edgecolor,facecolor=facecolor,vmin=vmin,
+                        vmax=vmax,alpha=alpha,linewidth=linewidth)
 
     
     # Axis titles
@@ -853,8 +863,8 @@ def plot(x,y=None,c=None,marker=None,fill=True,size=None,log=False,noerase=False
 def oplot(*args,**kwargs):
     plot(*args,**kwargs,noerase=True)
 
-def scatter(*args,**kwargs):
-    plot(*args,**kwargs)
+def scatter(*args,marker='o',**kwargs):
+    plot(*args,marker=marker,**kwargs)
 
 
 class Cursor():
@@ -997,8 +1007,12 @@ def curpdiff(spherical=False,arcsec=False):
                 print('Delta X = %.4f %s' % (deltax,units))
                 print('Delta Y = %.4f %s' % (deltay,units))
                 print('Angle = %.4f %s' % (angle,'(CCW from Right)'))
-                slp,yoff = linear_coefficients([x1,x2],[y1,y2])
-
+                slp,yoff = dln.linear_coefficients([x1,x2],[y1,y2])
+                if yoff >= 0:
+                    print('y = %.3f*x - %.3f' % (slp,yoff))                    
+                else:
+                    print('y = %.3f*x - %.3f' % (slp,abs(yoff)))
+                          
                 curs.coords['dist'] = dist
                 curs.coords['units'] = units
                 curs.coords['deltax'] = deltax
