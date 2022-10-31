@@ -248,7 +248,8 @@ def extract_optimal(im,ytrace,imerr=None,verbose=False,off=10,backoff=50,smlen=3
     mask = (yy >= ylo) & (yy <= yhi)
     sim = subim*mask
     serr = suberr*mask
-    serr[serr<=0] = 1e20
+    badpix = (serr <= 0)
+    serr[badpix] = 1e20
     # Compute the profile/probability matrix from the image
     tot = np.sum(np.maximum(sim,0),axis=0)
     tot[(tot<=0) | ~np.isfinite(tot)] = 1
@@ -256,6 +257,7 @@ def extract_optimal(im,ytrace,imerr=None,verbose=False,off=10,backoff=50,smlen=3
     psf = np.zeros(psf1.shape,float)
     for i in range(nback):
         psf[i,:] = utils.medfilt(psf1[i,:],smlen)
+        #psf[i,:] = utils.gsmooth(psf1[i,:],smlen)        
     psf[(psf<0) | ~np.isfinite(psf)] = 0
     totpsf = np.sum(psf,axis=0)
     totpsf[(totpsf<=0) | (~np.isfinite(totpsf))] = 1
@@ -272,7 +274,7 @@ def extract_optimal(im,ytrace,imerr=None,verbose=False,off=10,backoff=50,smlen=3
     fluxerr = np.sqrt(1/totwt)    
     fluxerr[badcol] = 1e30  # bad columns
     # Recompute the trace
-    trace = np.sum(psf*yy,axis=0)
+    trace = np.sum(psf*yy,axis=0)+yblo
     
     # Check for outliers
     diff = (sim-flux*psf)/serr**2
@@ -290,7 +292,7 @@ def extract_optimal(im,ytrace,imerr=None,verbose=False,off=10,backoff=50,smlen=3
         fluxerr = np.sqrt(1/totwt)
         fluxerr[badcol] = 1e30  # bad columns
         # Recompute the trace
-        trace = np.sum(psf*yy,axis=0)
+        trace = np.sum(psf*yy,axis=0)+yblo
         
     return flux,fluxerr,trace
         

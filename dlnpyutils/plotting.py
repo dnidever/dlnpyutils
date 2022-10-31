@@ -125,10 +125,11 @@ def zscaling(im,contrast=0.25,nsample=50000):
     
 
 def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=200,
-           zscale=None,log=None,norm=None,noerase=False,vmin=None,vmax=None,center=True,xflip=False,
-           yflip=False,force=True,cmap=None,figure=None,figsize=(8,8),xtitle=None,ytitle=None,title=None,
-           colorlabel=None,charsize=12,origin='lower',aspect='auto',interpolation='none',bright=None,
-           minhue=0.0,maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9,noplot=False,save=None):
+           zscale=None,log=None,norm=None,noerase=False,vmin=None,vmax=None,center=True,
+           xlog=False,ylog=False,xflip=False,yflip=False,force=True,cmap=None,figure=None,
+           figsize=(8,8),xtitle=None,ytitle=None,title=None,colorlabel=None,charsize=12,
+           origin='lower',aspect='auto',interpolation='none',bright=None,minhue=0.0,
+           maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9,noplot=False,save=None):
     """
     Make a 2D histogram of points.
     
@@ -176,6 +177,10 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
     center : bool, optional
        The x/y values of a bin should correspond to the center.  By default they
          correspond to the bottom-left corner.
+    xlog : bool, optional
+       Logarithmic scaling on x-axis.  Default is linear.
+    ylog : bool, optional
+       Logarithmic scaling on y-axis.  Default is linear.
     xflip : bool, optional
        Flip the X-coordinate axis.  Default is False.
     yflip : bool, optional
@@ -502,7 +507,9 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
                        extent=extent,interpolation=interpolation)
         if xflip: plt.xlim(xr[1],xr[0])
         if yflip: plt.ylim(yr[1],yr[0])
-                       
+        if ylog: plt.yscale('log')
+        if xlog: plt.xscale('log')        
+        
         # Axis titles
         if xtitle is None:
             xtitle = 'X'
@@ -535,7 +542,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
 def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=False,norm=None,
             vmin=None,vmax=None,xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',
             xflip=False,yflip=False,cmap=None,figure=None,figsize=(8,8),save=None,colorlabel=None,
-            charsize=12,interpolation=None):
+            charsize=12,interpolation='none'):
     """
     Display an image.  The usual python convention is used where the image is [NY,NX]
 
@@ -593,7 +600,7 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     charsize : int, optional
        Character size.  Default is 12.
     interpolation : str, optional
-       The type of interpolation.
+       The type of interpolation.  Default is 'none'.
 
     Returns
     -------
