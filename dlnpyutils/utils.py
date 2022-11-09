@@ -1675,6 +1675,15 @@ def create_index(arr):
 
     return index
 
+def duplicates(mylist):
+    """
+    Find duplicates in a list
+    """
+    mylist = list(mylist)
+    dup = {x for x in mylist if mylist.count(x) > 1}
+    dup = list(dup)
+    return dup
+    
 
 def match(a,b,epsilon=0):
     """

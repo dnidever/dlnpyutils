@@ -8,7 +8,7 @@ from scipy.signal import find_peaks,argrelextrema
 from astropy.io import fits
 from scipy import ndimage
 from scipy.interpolate import interp1d
-from . import utils 
+from . import utils,robust
 
 
 def trace(im,yestimate=None,yorder=2,sigorder=2,step=50):
@@ -351,10 +351,10 @@ def continuum(spec,bin=50,perc=60,norder=4):
     xbin1 = np.zeros(nbins,float)
     ybin1 = np.zeros(nbins,float)
     for i in range(nbins):
-        xbin1[i] = np.mean(x[i*bin:i*bin+bin])
-        ybin1[i] = np.percentile(spec[i*bin:i*bin+bin],perc)
+        xbin1[i] = np.nanmean(x[i*bin:i*bin+bin])
+        ybin1[i] = np.nanpercentile(spec[i*bin:i*bin+bin],perc)
     # Fit polynomial to the binned values
-    coef1 = np.polyfit(xbin1,ybin1,norder)
+    coef1 = robust.polyfit(xbin1,ybin1,norder)
     cont1 = np.poly1d(coef1)(x)
     
     # Now remove large negative outliers and refit
@@ -363,10 +363,10 @@ def continuum(spec,bin=50,perc=60,norder=4):
     xbin = np.zeros(nbins,float)
     ybin = np.zeros(nbins,float)
     for i in range(nbins):
-        xbin[i] = np.mean(x[i*bin:i*bin+bin][gdmask[i*bin:i*bin+bin]])
-        ybin[i] = np.percentile(spec[i*bin:i*bin+bin][gdmask[i*bin:i*bin+bin]],perc)
+        xbin[i] = np.nanmean(x[i*bin:i*bin+bin][gdmask[i*bin:i*bin+bin]])
+        ybin[i] = np.nanpercentile(spec[i*bin:i*bin+bin][gdmask[i*bin:i*bin+bin]],perc)
     # Fit polynomial to the binned values
-    coef = np.polyfit(xbin,ybin,norder)
+    coef = robust.polyfit(xbin,ybin,norder)
     cont = np.poly1d(coef)(x)
     
     return cont,coef
