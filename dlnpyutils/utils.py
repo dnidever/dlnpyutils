@@ -2718,3 +2718,8 @@ def unpickle(filename):
     with open(filename,'rb') as f:
         data = pickl.load(f)
     return data
+
+def pwd():
+    """ Return the current working directory."""
+
+    return os.path.abspath(os.curdir)
