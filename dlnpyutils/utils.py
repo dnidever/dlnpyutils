@@ -33,6 +33,7 @@ import astropy.stats
 from matplotlib.backend_bases import MouseButton
 import pandas as pd
 import matplotlib.pyplot as plt
+import dill as pickl
 import traceback
 
 # Ignore these warnings, it's a bug
@@ -2702,3 +2703,18 @@ def modfits(filename,data=None,header=None,wcs=None,update=False,
     
     hdu.close()
     
+
+def pickle(filename,data):
+    """
+    Pickle data.
+    """
+    with open(filename,'wb') as f:
+        pickl.dump(data,f)
+
+def unpickle(filename):
+    """
+    Load pickled data.
+    """
+    with open(filename,'rb') as f:
+        data = pickl.load(f)
+    return data
