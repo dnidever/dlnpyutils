@@ -1,4 +1,4 @@
-name: doppler
+name: dlnpyutils
 
 channels:
   - astropy
