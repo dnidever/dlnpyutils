@@ -1,4 +1,12 @@
 #!/bin/bash
+# Check if the -n "nowheel" option was input
+export nowheel='False'
+while getopts n flag
+do
+    case "${flag}" in
+        n) nowheel='True';;
+    esac
+done
 # Fix project name in setup.py
 mv -f setup.py setup.py.orig >& /dev/null
 rm -f setup.py >& /dev/null
@@ -22,7 +30,11 @@ fi
 printf '%s\n' "Uploading new version to pypi as package '${pypiname}'"
 \rm -R dist build ${pypiname}.egg-info ${name}.egg-info >& /dev/null
 python setup.py sdist
-python setup.py bdist_wheel --universal
+# Make the wheel unless the "nowhell" -n flag was set
+if [ $nowheel = 'False' ]
+then
+    python setup.py bdist_wheel --universal
+fi
 twine upload dist/*
 # change setup.py back
 mv -f setup.py.orig setup.py >& /dev/null

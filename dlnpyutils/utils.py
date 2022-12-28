@@ -2320,14 +2320,14 @@ def fread(line,fmt):
         if fmt1.find('X')==-1:
             if fmt1[0]=='A':
                 num = int(fmt1[1:])
-                out1 = line[count:count+num+1]
+                out1 = line[count:count+num]
             elif fmt1[0]=='I':
                 num = int(fmt1[1:])
-                out1 = int(line[count:count+num+1])
+                out1 = int(line[count:count+num])
             else:
                 ind = fmt1.find('.')
                 num = int(fmt1[1:ind])
-                out1 = float(line[count:count+num+1])
+                out1 = float(line[count:count+num])
             out = out + (out1,)
             count += num
             
@@ -2536,9 +2536,16 @@ def bspline(x,y,w=None,nquantiles=10,nord=3,knots=None,extrapolate=False):
 
 def help(*args,verbose=False):
     """ Like IDL help"""
-
+    
     if len(args)==0:
-        locals()
+        local = locals().keys()
+        globl = globals().keys()
+        # remove _ and __ ones
+        globl = [g for g in globl if g[0]!='_']
+        local = [l for l in local if l[0]!='_']
+        allvars = globl+local
+        for i in range(len(allvars)):
+            print(allvars[i],exec('type('+allvars[i]+')'))
         
     # Get variables names input
     stack = traceback.extract_stack()
