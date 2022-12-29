@@ -12,6 +12,7 @@ import re
 import logging
 import os
 import sys
+import gzip
 import time
 import numpy as np
 import shutil
@@ -558,7 +559,7 @@ def readlines(fil=None,comment=None,raw=False,nreadline=None,noblank=False):
     Parameters
     ----------
     file : str
-         The name of the file to load.
+         The name of the file to load.  This can be a gzipped file.
     comment : str
          Comment line character to ignore (e.g., "#").
     raw : bool, optional, default is false
@@ -582,14 +583,23 @@ def readlines(fil=None,comment=None,raw=False,nreadline=None,noblank=False):
 
     """
     if fil is None: raise ValueError("File not input")
-    if nreadline is None:
-        with open(fil,'r') as f:
-            lines = f.readlines()
+    # Read gzipped file
+    if fil.endswith('gz'):
+        fp = gzip.open(fil)
+        contents = fp.read() # contents now has the uncompressed bytes of foo.gz
+        fp.close()
+        lines = contents.decode('utf-8') # u_str is now a unicode string
+        lines = lines.split('\n')
+    # Read normal ASCII file
     else:
-        with open(fil,'r') as f:
-            lines = []
-            for i in range(nreadline):
-                lines.append( f.readline() )
+        if nreadline is None:
+            with open(fil,'r') as f:
+                lines = f.readlines()
+        else:
+            with open(fil,'r') as f:
+                lines = []
+                for i in range(nreadline):
+                    lines.append( f.readline() )
     # Remove blank lines
     if noblank:
         lines = [l for l in lines if l.strip()!='']
