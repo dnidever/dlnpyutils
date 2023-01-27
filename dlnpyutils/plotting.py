@@ -809,9 +809,9 @@ def plot(x,y=None,c=None,fmt=None,marker=None,fill=True,size=None,log=False,noer
     # Line plot
     if (c is None or type(c) is str) and marker is None:
         if fmt is not None:
-            plt.plot(x,y,fmt,c=c)
+            plt.plot(x,y,fmt,c=c,linewidth=linewidth)
         else:
-            plt.plot(x,y,c=c)
+            plt.plot(x,y,c=c,linewidth=linewidth)
         
     # Scatter plot
     else:

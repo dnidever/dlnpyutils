@@ -1286,6 +1286,11 @@ def gmean(data,weights=None):
     # can add an array of weights as well
     return mstats.gmean(data,weights=weights)
 
+def running_mean(x, N):
+    """ Computing running mean."""
+    #https://stackoverflow.com/questions/13728392/moving-average-or-running-mean    
+    cumsum = np.cumsum(np.insert(x, 0, 0)) 
+    return (cumsum[N:] - cumsum[:-N]) / float(N)
 
 def skewquartile(data):
     """ Measure the skewness robustly based on quartiles."""
