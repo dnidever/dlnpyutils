@@ -1016,7 +1016,7 @@ def curpdiff(spherical=False,arcsec=False):
                 print('Angle = %.4f %s' % (angle,'(CCW from Right)'))
                 slp,yoff = dln.linear_coefficients([x1,x2],[y1,y2])
                 if yoff >= 0:
-                    print('y = %.3f*x - %.3f' % (slp,yoff))                    
+                    print('y = %.3f*x + %.3f' % (slp,yoff))                    
                 else:
                     print('y = %.3f*x - %.3f' % (slp,abs(yoff)))
                           
