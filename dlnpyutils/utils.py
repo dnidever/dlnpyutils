@@ -2746,6 +2746,12 @@ def pwd():
 
     return os.path.abspath(os.curdir)
 
+def poly2d_wrap(x,*args):
+    """ thin wrapper for curve_fit"""
+    xx = x[:,0]
+    yy = x[:,1]
+    return poly2d(xx,yy,*args)
+
 def poly2d(x,y,*args):
     """ 2D polynomial surface"""
 
