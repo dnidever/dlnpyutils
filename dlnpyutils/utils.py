@@ -1468,9 +1468,15 @@ def poly_fit(x,y,nord,robust=False,sigma=None,initpar=None,bounds=(-np.inf,np.in
     # using jac='3-point' seems to improve the results a lot!
     res = least_squares(poly_resid, initpar, loss=loss, f_scale=f_scale, args=(x,y,sigma), max_nfev=max_nfev, jac='3-point')
     if res.success is False:
-        #import pdb; pdb.set_trace()
-        raise Exception("Problem with least squares polynomial fitting. Status="+str(res.status))
-        return initpar+np.nan
+        print("Problem with least squares polynomial fitting. Status="+str(res.status)+" Trying np.polyfit instead.")
+        # Try np.polyfit
+        if error:
+            coef,cov = np.polyfit(x,y,nord,w=1/sigma**2,cov=True)
+            perr = np.sqrt(np.diag(cov))
+            return coef,perr
+        else:
+            coef = np.polyfit(x,y,nord,w=1/sigma**2)
+            return coef
     coef = res.x
     
     # Calculate the covariance matrix
@@ -2365,7 +2371,7 @@ def isnumber(s):
     try:
         float(s)
         return True
-    except ValueError:
+    except:
         return False
 
 def bootstrap(data,statistic,niter=100,indexargs=False,args=None,kwargs=None):
