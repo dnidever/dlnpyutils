@@ -2789,3 +2789,49 @@ def poly2d(x,y,*args):
         raise Exception('Only 3, 4, 6, 8, 11 amd 15 parameters supported')
 
     return a
+
+def gradient_n(arr, n, d=1, axis=0):
+    """Differentiate np.ndarray n times.
+
+    Similar to np.diff, but additional support of pixel distance d
+    and padding of the result to the same shape as arr.
+
+    If n is even: np.diff is applied and the result is zero-padded
+    If n is odd: 
+        np.diff is applied n-1 times and zero-padded.
+        Then gradient is applied. This ensures the right output shape.
+    https://stackoverflow.com/questions/23419193/second-order-gradient-in-numpy
+    """
+    n2 = int((n // 2) * 2)
+    diff = arr
+
+    if n2 > 0:
+        a0 = max(0, axis)
+        a1 = max(0, arr.ndim-axis-1)
+        diff = np.diff(arr, n2, axis=axis) / d**n2
+        diff = np.pad(diff, tuple([(0,0)]*a0 + [(1,1)] +[(0,0)]*a1),
+                      'constant', constant_values=0)
+
+    if n > n2:
+        assert n-n2 == 1, 'n={:f}, n2={:f}'.format(n, n2)
+        diff = np.gradient(diff, d, axis=axis)
+
+    return diff
+
+def splice(a,b,axis=0):
+    """ Splice/interleave two arrays."""
+    # Get new shape
+    newshape = list(a.shape)
+    newshape[axis] = a.shape[axis] + b.shape[axis]
+    # Create new array
+    new = np.zeros(newshape,a.dtype)
+    # Create slice list
+    slc = []
+    for i in range(a.ndim):
+        slc.append(slice(0,a.shape[i]))
+    # Add first array
+    slc[axis] = slice(0,newshape[axis],2)
+    new[tuple(slc)] = a
+    slc[axis] = slice(1,newshape[axis],2)    
+    new[tuple(slc)] = b    
+    return new

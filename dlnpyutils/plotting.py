@@ -16,7 +16,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib.backend_bases import MouseButton
-from scipy import stats
+#from scipy.stats import binned_statistic_2d
+from .bindata import binned_statistic_2d
 import copy
 from . import utils as dln
 from . import ladfit
@@ -210,8 +211,15 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
 
     Returns
     -------
+    xedges : numpy array
+       Array of edges in the X-direction.
+    yedges : numpy array
+       Array of edges in the Y-direction.
+    result : numpy array
+       The resulting 2-D numpy array.
 
     Figure is plotted to the screen.
+
 
     Example
     -------
@@ -424,17 +432,17 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
     else:
         if statistic=='avg':
             cmap = 'jet'
-            ima, xedges, yedges, binnumber = stats.binned_statistic_2d(x,y,z,statistic='mean',range=[xr,yr],bins=[nx,ny])
+            ima, xedges, yedges, binnumber = binned_statistic_2d(x,y,z,statistic='mean',range=[xr,yr],bins=[nx,ny])
             ima = ima.T
             if bright is None:
-                imt, xedges, yedges, binnumber = stats.binned_statistic_2d(x,y,z,statistic='count',range=[xr,yr],bins=[nx,ny])
+                imt, xedges, yedges, binnumber = binned_statistic_2d(x,y,z,statistic='count',range=[xr,yr],bins=[nx,ny])
                 imt = imt.T
                 if log:
                     pos = (imt > 0)
                     imt[pos] = np.log10(imt[pos])
                     imt[~pos] = -10
             else:
-                imt, xedges, yedges, binnumber = stats.binned_statistic_2d(x,y,bright,statistic='sum',range=[xr,yr],bins=[nx,ny])
+                imt, xedges, yedges, binnumber = binned_statistic_2d(x,y,bright,statistic='sum',range=[xr,yr],bins=[nx,ny])
                 imt = imt.T
                 if log:
                     pos = (imt > 0)
@@ -480,7 +488,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
             
         # Normal statistic
         else:
-            im, xedges, yedges, binnumber = stats.binned_statistic_2d(x,y,z,statistic=statistic,range=[xr,yr],bins=[nx,ny])
+            im, xedges, yedges, binnumber = binned_statistic_2d(x,y,z,statistic=statistic,range=[xr,yr],bins=[nx,ny])
             im = im.T
 
     # Plot the image
