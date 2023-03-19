@@ -2835,3 +2835,72 @@ def splice(a,b,axis=0):
     slc[axis] = slice(1,newshape[axis],2)    
     new[tuple(slc)] = b    
     return new
+
+def roll(a, shift, axis=0, wrapvalue=np.nan):
+    """
+    This is like numpy.roll() but masks the wrapping elements.
+    https://stackoverflow.com/questions/30399534/shift-elements-in-a-numpy-array
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+    shift : int or tuple of ints
+        The number of places by which elements are shifted.  If a tuple,
+        then `axis` must be a tuple of the same size, and each of the
+        given axes is shifted by the corresponding number.  If an int
+        while `axis` is a tuple of ints, then the same value is used for
+        all given axes.
+    axis : int or tuple of ints, optional
+        Axis or axes along which elements are shifted.  By default, the
+        array is flattened before shifting, after which the original
+        shape is restored.  Default is axis=0.
+    wrapvalue : int or float, optional
+        The value to insert for wrapped elements.  Default is numpy.nan
+        for floats and -999999 for integers.
+
+    Returns
+    -------
+    res : ndarray
+        Output array, with the same shape as `a`.
+
+    """
+
+    # Cannot use NaN for integers
+    if np.issubdtype(np.array(a).dtype,np.integer) and np.isnan(wrapvalue):
+        wrapvalue = -999999
+    
+    # Use the regular np.roll(), then mask the values
+    res = np.roll(a,shift,axis=axis)
+    
+    # Shifts along ultiple axes
+    shft = np.atleast_1d(shift)
+    axs = np.atleast_1d(axis)
+    nshift = np.array(shift).size
+    naxis = np.array(axis).size
+    nroll = np.max([nshift,naxis])
+    if nshift>1 or naxis>1:
+        if nshift>1 and naxis==1:
+            raise ValueError('If shift is an array/tuple, then axis must be an array/tuple of the same size')
+        elif nshift==1 and naxis>1:
+            shft = np.zeros(naxis,int)+shift
+
+    # By default np.roll() uses axis=None which shifts all of the
+    # values in across axes.
+            
+    # Loop over each shifting axis and mask
+    for i in range(nroll):
+        shft1 = shft[i]
+        ax1 = axs[i]
+        # Create slice list
+        slc = []
+        for j in range(a.ndim):
+            slc.append(slice(0,a.shape[j]))
+        if shft1 >= 0:
+            slc[ax1] = slice(0,shft1)
+            res[tuple(slc)] = wrapvalue
+        else: 
+            slc[ax1] = slice(shft1,a.shape[ax1])           
+            res[tuple(slc)] = wrapvalue
+            
+    return res

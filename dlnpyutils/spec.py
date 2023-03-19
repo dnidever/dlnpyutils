@@ -8,8 +8,256 @@ from scipy.signal import find_peaks,argrelextrema
 from astropy.io import fits
 from scipy import ndimage
 from scipy.interpolate import interp1d
+from numba import njit
 from . import utils,robust
 
+
+@njit
+def gvals(x,y):
+    """
+    Simple Gaussian fit to central 5 pixel values.
+
+    Parameters
+    ----------
+    x : numpy array
+       Numpy array of x-values.
+    y : numpy array
+       Numpy array of flux values.  Can be a single or
+       mulitple profiles.  If mulitple profiles, the dimensions
+       should be [Nprofiles,5].
+
+    Returns
+    -------
+    pars : numpy array
+       Gaussian parameters [height, center, sigma].  If multiple
+       profiles are input, then the output dimensions are [Nprofiles,3].
+
+    Example
+    -------
+    
+    pars = gvals(x,y)
+
+    """
+    
+    if y.ndim==1:
+        nprofiles = 1
+        y = np.atleast_1d(y)
+    else:
+        nprofiles = y.shape[0]
+    nx = y.shape[1]
+    nhalf = nx//2
+    # Loop over profiles
+    pars = np.zeros((nprofiles,3),float)
+    for i in range(nprofiles):
+        x1 = x[i,:]
+        y1 = y[i,:]
+        gd = (np.isfinite(y1) & (y1>0))
+        if np.sum(gd)<5:
+            x1 = x1[gd]
+            y1 = y1[gd]
+        totflux = np.sum(y1)
+        ht0 = y[i,nhalf]
+        if np.isfinite(ht0)==False:
+            ht0 = np.max(y1)
+        # Use flux-weighted moment to get center
+        cen = np.sum(y1*x1)/totflux
+        #  Gaussian area is A = ht*wid*sqrt(2*pi)
+        sigma = np.maximum( totflux/(ht0*np.sqrt(2*np.pi)) , 0.01)
+        # Use linear-least squares to calculate height and sigma
+        psf = np.exp(-0.5*(x1-cen)**2/sigma**2)          # normalized Gaussian
+        wtht = np.sum(y1*psf)/np.sum(psf*psf)          # linear least squares
+        pars[i,:] = [wtht,cen,sigma]
+        
+    return pars
+
+
+def findtrace(im,nbin=50,height_thresh=100,hratio2=0.8,verbose=False):
+    """ Find traces in the image."""
+    if height_thresh < 0:
+        raise ValueError('height_thresh must be positive')
+    if hratio2 < 0.1 or hratio2 > 0.9:
+        raise ValueError('hratio2 must be >0.1 and <0.9')        
+    # This assumes that the dispersion direction is along the X-axis
+    #  Y-axis is spatial dimension
+    ny,nx = im.shape
+    y,x = np.arange(ny),np.arange(nx)
+    # Median filter in nbin column blocks all in one shot
+    medim1 = utils.rebin(im,binsize=[1,nbin])
+    xmed1 = utils.rebin(x,binsize=nbin)
+    # half-steps
+    medim2 = utils.rebin(im[:,nbin//2:],binsize=[1,nbin])
+    xmed2 = utils.rebin(x[nbin//2:],binsize=nbin)
+    # Splice them together
+    medim = utils.splice(medim1,medim2,axis=1)
+    xmed = utils.splice(xmed1,xmed2,axis=0)
+    nxb = medim.shape[1]
+    
+    # Compare flux values to neighboring spatial pixels
+    #  and two pixels away
+    # Shift and mask wrapped values with NaN
+    rollyp2 = utils.roll(medim,2,axis=0)
+    rollyp1 = utils.roll(medim,1,axis=0)
+    rollyn1 = utils.roll(medim,-1,axis=0)
+    rollyn2 = utils.roll(medim,-2,axis=0)
+    rollxp1 = utils.roll(medim,1,axis=1)
+    rollxn1 = utils.roll(medim,-1,axis=1)
+    peaks = ( (medim >= rollyn1) & (medim >= rollyp1) &
+              (rollyp2 < 0.8*medim) & (rollyn2 < 0.8*medim) &
+	      (medim > height_thresh))
+    # Now require trace heights to be within 30% of at least one neighboring
+    #   median-filtered column block
+    peaksht = ((np.abs(medim[peaks]-rollxp1[peaks])/medim[peaks] < 0.3) |
+              (np.abs(medim[peaks]-rollxn1[peaks])/medim[peaks] < 0.3))
+    ind = np.where(peaks.ravel())[0][peaksht]
+    ypind,xpind = np.unravel_index(ind,peaks.shape)
+    xindex = utils.create_index(xpind)
+    
+    # Boolean mask image for the trace peak pixels
+    pmask = np.zeros(medim.shape,bool)
+    pmask[ypind,xpind] = True
+    
+    # Now match up the traces across column blocks
+    # Loop over the column blocks and either connect a peak
+    # to an existing trace or start a new trace
+    # only connect traces that haven't been "lost"
+    tracelist = []
+    # Looping over unique column blocks, not every one might be represented
+    for i in range(len(xindex['value'])):
+        ind = xindex['index'][xindex['lo'][i]:xindex['hi'][i]+1]
+        nind = len(ind)
+        xind = xpind[ind]
+        yind = ypind[ind]
+        yind.sort()    # sort y-values
+        xb = xind[0]   # this column block index
+        if verbose: print(i,xb,len(xind),'peaks')
+        # Adding traces
+        #   Loop through all of the existing traces and try to match them
+        #   to new ones in this row
+        tymatches = []
+        for j in range(len(tracelist)):
+            itrace = tracelist[j]
+            y1 = itrace['yvalues'][-1]
+            x1 = itrace['xbvalues'][-1]
+            deltax = xb-x1
+            # Only connect traces that haven't been lost
+            if deltax<3:
+                # Check the pmask boolean image to see if it connects
+                if pmask[y1,xb]:
+                    itrace['yvalues'].append(y1)
+                    itrace['xbvalues'].append(xb)
+                    itrace['xvalues'].append(xmed[xb])
+                    itrace['heights'].append(medim[y1,xb])
+                    itrace['ncol'] += 1
+                    tymatches.append(y1)
+                    if verbose: print(' Trace '+str(j)+' matched')
+                elif y1!=0 and pmask[y1-1,xb]:
+                    itrace['yvalues'].append(y1-1)
+                    itrace['xbvalues'].append(xb)
+                    itrace['xvalues'].append(xmed[xb])
+                    itrace['heights'].append(medim[y1-1,xb])
+                    itrace['ncol'] += 1                    
+                    tymatches.append(y1-1)
+                    if verbose: print(' Trace '+str(j)+' matched')                        
+                elif y1!=(ny-1) and pmask[y1+1,xb]:
+                    itrace['yvalues'].append(y1+1)
+                    itrace['xbvalues'].append(xb)
+                    itrace['xvalues'].append(xmed[xb])
+                    itrace['heights'].append(medim[y1+1,xb])
+                    itrace['ncol'] += 1                    
+                    tymatches.append(y1+1)
+                    if verbose: print(' Trace '+str(j)+' matched')                        
+                else:
+                    # lost
+                    if itrace['lost']:
+                        itrace['lost'] = True
+                        if verbose: print(' Trace '+str(j)+' LOST')
+            # Lost, separation too large
+            else:
+                # lost
+                if itrace['lost']:
+                    itrace['lost'] = True
+                    if verbose: print(' Trace '+str(j)+' LOST')        
+        # Add new traces
+        # Remove the ones that matched
+        yleft = yind.copy()
+        if len(tymatches)>0:
+            ind1,ind2 = utils.match(yind,tymatches)
+            nmatch = len(ind1)
+            if nmatch>0 and nmatch<len(yind):
+                yleft = np.delete(yleft,ind1)
+            else:
+                yleft = []
+        # Add the ones that are left
+        if len(yleft)>0:
+            if verbose: print(' Adding '+str(len(yleft))+' new traces')
+        for j in range(len(yleft)):
+            # Skip traces too low or high
+            if yleft[j]<2 or yleft[j]>(ny-3):
+                continue
+            itrace = {'index':0,'ncol':0,'yvalues':[],'xbvalues':[],'xvalues':[],'heights':[],
+                      'lost':False}
+            itrace['index'] = len(tracelist)+1
+            itrace['ncol'] = 1
+            itrace['yvalues'].append(yleft[j])
+            itrace['xbvalues'].append(xb)
+            itrace['xvalues'].append(xmed[xb])                
+            itrace['heights'].append(medim[yleft[j],xb])
+            tracelist.append(itrace)
+
+    # Calculate Gaussian parameters
+    nprofiles = np.sum([tr['ncol'] for tr in tracelist])
+    profiles = np.zeros((nprofiles,5),float)
+    xprofiles = np.zeros((nprofiles,5),int)
+    count = 0
+    for tr in tracelist:
+        for i in range(tr['ncol']):
+            profiles[count,:] = medim[tr['yvalues'][i]-2:tr['yvalues'][i]+3,tr['xbvalues'][i]]
+            xprofiles[count,:] = np.arange(5)+tr['yvalues'][i]-2
+            count += 1
+
+    # Get Gaussian values
+    gpars = gvals(xprofiles,profiles)
+    # Stuff them in to the list
+    count = 0
+    for tr in tracelist:
+        tr['gyheight'] = np.zeros(tr['ncol'],float)
+        tr['gycenter'] = np.zeros(tr['ncol'],float)
+        tr['gysigma'] = np.zeros(tr['ncol'],float)
+        for i in range(tr['ncol']):
+            tr['gyheight'][i] = gpars[count,0]
+            tr['gycenter'][i] = gpars[count,1]
+            tr['gysigma'][i] = gpars[count,2]
+            count += 1
+
+    # Fit trace coefficients
+    for tr in tracelist:
+        tr['tcoef'] = None
+        tr['xmin'] = np.min(tr['xvalues'])-nbin//2
+        tr['xmax'] = np.max(tr['xvalues'])+nbin//2
+        if tr['ncol']>5:
+            xt = np.array(tr['xvalues'])
+            yt = tr['gycenter']
+            norder = 3
+            coef = np.polyfit(xt,yt,norder)
+            resid = yt-np.polyval(coef,xt)
+            std = np.std(resid)
+            # Check if we need to go to 4th order
+            if std>0.1:
+                norder = 4
+                coef = np.polyfit(xt,yt,norder)
+                resid = yt-np.polyval(coef,xt)
+                std = np.std(resid)
+            # Check if we need to go to 5th order
+            if std>0.1:
+                norder = 5
+                coef = np.polyfit(xt,yt,norder)
+                resid = yt-np.polyval(coef,xt)
+                std = np.std(resid)
+            tr['tcoef'] = coef
+            tr['tstd'] = std
+            
+    return tracelist
+    
 
 def trace(im,yestimate=None,yorder=2,sigorder=2,step=50):
     """ Trace the spectrum.  Spectral dimension is assumed to be on the horizontal axis."""
@@ -24,6 +272,9 @@ def trace(im,yestimate=None,yorder=2,sigorder=2,step=50):
         ypeaks = ypeaks[gd]
         #ypeaks,ptab = find_peaks(ymed,height=10*sig,width=1,prominence=10*sig,wlen=100,distance=10)
         print(len(ypeaks),' peaks found')
+    else:
+        ypeaks = yestimate
+        print(len(ypeaks),' peaks input')
         
     # Smooth in spectral dimension
     # a uniform (boxcar) filter with a width of 50
@@ -53,7 +304,7 @@ def trace(im,yestimate=None,yorder=2,sigorder=2,step=50):
                 tcat['status'][i] = 1
             except:
                 pass
-        # Fit polynomail to y vs. x and gaussian sigma vs. x
+        # Fit polynomial to y vs. x and gaussian sigma vs. x
         gd, = np.where(tcat['status']==1)
         ypars = np.polyfit(tcat['x'][gd],tcat['pars'][gd,1],yorder)
         sigpars = np.polyfit(tcat['x'][gd],tcat['pars'][gd,2],sigorder)
