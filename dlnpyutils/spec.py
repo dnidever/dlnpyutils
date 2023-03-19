@@ -4,12 +4,12 @@
 import numpy as np
 from scipy.special import erf,wofz
 from scipy.optimize import curve_fit, least_squares
-from scipy.signal import find_peaks,argrelextrema
+from scipy.signal import find_peaks,argrelextrema,convolve2d
 from astropy.io import fits
 from scipy import ndimage
 from scipy.interpolate import interp1d
 from numba import njit
-from . import utils,robust
+from . import utils,robust,mmm
 
 
 @njit
@@ -70,23 +70,104 @@ def gvals(x,y):
         
     return pars
 
+def backvals(backpix):
+    """ Estimate the median and sigma of background pixels."""
+    vals = backpix.copy()
+    medback = np.nanmedian(vals)
+    sigback = utils.mad(vals)
+    lastmedback = 1e30
+    lastsigback = 1e30
+    done = False
+    # Outlier rejection
+    while (done==False):
+        gdback, = np.where(vals < (medback+3*sigback))
+        vals = vals[gdback]
+        medback = np.nanmedian(vals)
+        sigback = utils.mad(vals)
+        if np.abs(medback-lastmedback) < 0.01*lastmedback and \
+           np.abs(sigback-lastsigback) < 0.01*lastsigback:
+            done = True
+        lastmedback = medback
+        lastsigback = sigback
+    return medback,sigback
 
-def findtrace(im,nbin=50,height_thresh=100,hratio2=0.8,verbose=False):
-    """ Find traces in the image."""
-    if height_thresh < 0:
-        raise ValueError('height_thresh must be positive')
+def findtrace(im,nbin=50,minsigheight=3,minheight=None,hratio2=0.8,
+              neifluxratio=0.3,mincol=0.5,verbose=False):
+    """
+    Find traces in the image.  The dispersion dimension is assumed
+    to be along the X-axis.
+
+    Parameters
+    ----------
+    im : numpy array
+       2-D image to find the traces in.
+    nbin : int, optional
+       Number of columns to bin to find peaks.  Default is 50.
+    minsigheight : float, optional
+       Height threshold for the trace peaks based on standard deviation
+       in the background pixels (median filtered).  Default is 3.
+    minheight : float, optional
+       Absolute height threshold for the trace peaks.  Default is to
+       use `minsigheight`.
+    hratio2 : float, optional
+       Ratio of peak height to the height two pixels away in the
+       spatial profile, e.g. height_2pixelsaway < 0.8*height_peak.
+       Default is 0.8.
+    neifluxratio : float, optional
+       Ratio of peak flux in one column block and the next column
+       block.  Default is 0.3.
+    mincol : float or int, optional
+       Minimum number of column blocks required to keep a trace.
+       Note that float values <= 1.0 are considered fractions of
+       total number of columns blocks. Default is 0.5.
+    verbose : boolean, optional
+       Verbose output to the screen.  Default is False.
+
+    Returns
+    -------
+    tracelist : list
+       List of traces and their information.
+
+    Example
+    -------
+
+    tracelist = findtrace(im)
+
+    """
+    
+    if minsigheight < 0:
+        raise ValueError('minsigheight must be positive')
+    if minheight is not None and minheight < 0:
+        raise ValueError('minheight must be positive')    
     if hratio2 < 0.1 or hratio2 > 0.9:
-        raise ValueError('hratio2 must be >0.1 and <0.9')        
+        raise ValueError('hratio2 must be >0.1 and <0.9')
+    if neifluxratio < 0 or neifluxratio > 0.9:
+        raise ValueError('neifluxratio must be >0.0 and <0.9')
+
+    # How to set the height threshold so it will work properly in the two
+    # limiting cases?
+    # 1) Few traces, most pixels are dominated by background
+    # 2) Lots of traces, most pixels are dominated by the traces.
+    # Also, the trace flux can be weaker at the edges.
+    # We use our regular criteria to find good peaks (without any
+    # threshold).  This already limits the pixels quite a bit.
+    # Then we grow these to exclude pixels near the traces.
+    # Those pixels not "excludes" are assumed to be "background"
+    # pixels and used to determine the median and standard deviation
+    # of the background.  The height threshold is then determined
+    # from the these two values, i.e.
+    # height_thresh = medback + nsig * sigback
+    
     # This assumes that the dispersion direction is along the X-axis
     #  Y-axis is spatial dimension
     ny,nx = im.shape
     y,x = np.arange(ny),np.arange(nx)
     # Median filter in nbin column blocks all in one shot
-    medim1 = utils.rebin(im,binsize=[1,nbin])
-    xmed1 = utils.rebin(x,binsize=nbin)
+    medim1 = utils.rebin(im,binsize=[1,nbin],med=True)
+    xmed1 = utils.rebin(x,binsize=nbin,med=True)
     # half-steps
-    medim2 = utils.rebin(im[:,nbin//2:],binsize=[1,nbin])
-    xmed2 = utils.rebin(x[nbin//2:],binsize=nbin)
+    medim2 = utils.rebin(im[:,nbin//2:],binsize=[1,nbin],med=True)
+    xmed2 = utils.rebin(x[nbin//2:],binsize=nbin,med=True)
     # Splice them together
     medim = utils.splice(medim1,medim2,axis=1)
     xmed = utils.splice(xmed1,xmed2,axis=0)
@@ -101,13 +182,17 @@ def findtrace(im,nbin=50,height_thresh=100,hratio2=0.8,verbose=False):
     rollyn2 = utils.roll(medim,-2,axis=0)
     rollxp1 = utils.roll(medim,1,axis=1)
     rollxn1 = utils.roll(medim,-1,axis=1)
+    if minheight is not None:
+        height_thresh = minheight
+    else:
+        height_thresh = 0.0
     peaks = ( (medim >= rollyn1) & (medim >= rollyp1) &
-              (rollyp2 < 0.8*medim) & (rollyn2 < 0.8*medim) &
+              (rollyp2 < hratio2*medim) & (rollyn2 < hratio2*medim) &
 	      (medim > height_thresh))
-    # Now require trace heights to be within 30% of at least one neighboring
+    # Now require trace heights to be within ~30% of at least one neighboring
     #   median-filtered column block
-    peaksht = ((np.abs(medim[peaks]-rollxp1[peaks])/medim[peaks] < 0.3) |
-              (np.abs(medim[peaks]-rollxn1[peaks])/medim[peaks] < 0.3))
+    peaksht = ((np.abs(medim[peaks]-rollxp1[peaks])/medim[peaks] < neifluxratio) |
+              (np.abs(medim[peaks]-rollxn1[peaks])/medim[peaks] < neifluxratio))
     ind = np.where(peaks.ravel())[0][peaksht]
     ypind,xpind = np.unravel_index(ind,peaks.shape)
     xindex = utils.create_index(xpind)
@@ -115,6 +200,24 @@ def findtrace(im,nbin=50,height_thresh=100,hratio2=0.8,verbose=False):
     # Boolean mask image for the trace peak pixels
     pmask = np.zeros(medim.shape,bool)
     pmask[ypind,xpind] = True
+    
+    # Compute height threshold from the background pixels
+    if minheight is None:
+        # Grow peak mask by 7 pixels in spatial and 5 in dispersion direction
+        #  the rest of the pixels are background
+        exclude_mask = convolve2d(pmask,np.ones((7,5)),mode='same')
+        backmask = (exclude_mask < 0.5)
+        backpix = medim[backmask]
+        medback,sigback = backvals(backpix)
+        # Use the final background values to set the height threshold
+        height_thresh = medback + minsigheight * sigback
+        if verbose: print('height threshold',height_thresh)
+        # Impose this on the peak mask
+        oldpmask = pmask
+        pmask = (medim*pmask > height_thresh)
+        ypind,xpind = np.where(pmask)
+        # Create the X-values index
+        xindex = utils.create_index(xpind)
     
     # Now match up the traces across column blocks
     # Loop over the column blocks and either connect a peak
@@ -142,38 +245,30 @@ def findtrace(im,nbin=50,height_thresh=100,hratio2=0.8,verbose=False):
             # Only connect traces that haven't been lost
             if deltax<3:
                 # Check the pmask boolean image to see if it connects
+                ymatch = None
                 if pmask[y1,xb]:
-                    itrace['yvalues'].append(y1)
+                    ymatch = y1
+                elif pmask[y1-1,xb]:
+                    ymatch = y1-1                       
+                elif pmask[y1+1,xb]:
+                    ymatch = y1+1
+
+                if ymatch is not None:
+                    itrace['yvalues'].append(ymatch)
                     itrace['xbvalues'].append(xb)
                     itrace['xvalues'].append(xmed[xb])
-                    itrace['heights'].append(medim[y1,xb])
-                    itrace['ncol'] += 1
-                    tymatches.append(y1)
+                    itrace['heights'].append(medim[ymatch,xb])
+                    itrace['ncol'] += 1                    
+                    tymatches.append(ymatch)
                     if verbose: print(' Trace '+str(j)+' matched')
-                elif y1!=0 and pmask[y1-1,xb]:
-                    itrace['yvalues'].append(y1-1)
-                    itrace['xbvalues'].append(xb)
-                    itrace['xvalues'].append(xmed[xb])
-                    itrace['heights'].append(medim[y1-1,xb])
-                    itrace['ncol'] += 1                    
-                    tymatches.append(y1-1)
-                    if verbose: print(' Trace '+str(j)+' matched')                        
-                elif y1!=(ny-1) and pmask[y1+1,xb]:
-                    itrace['yvalues'].append(y1+1)
-                    itrace['xbvalues'].append(xb)
-                    itrace['xvalues'].append(xmed[xb])
-                    itrace['heights'].append(medim[y1+1,xb])
-                    itrace['ncol'] += 1                    
-                    tymatches.append(y1+1)
-                    if verbose: print(' Trace '+str(j)+' matched')                        
                 else:
-                    # lost
+                    # Lost
                     if itrace['lost']:
                         itrace['lost'] = True
                         if verbose: print(' Trace '+str(j)+' LOST')
             # Lost, separation too large
             else:
-                # lost
+                # Lost
                 if itrace['lost']:
                     itrace['lost'] = True
                     if verbose: print(' Trace '+str(j)+' LOST')        
@@ -204,6 +299,16 @@ def findtrace(im,nbin=50,height_thresh=100,hratio2=0.8,verbose=False):
             itrace['heights'].append(medim[yleft[j],xb])
             tracelist.append(itrace)
 
+    # Impose minimum number of column blocks
+    if mincol <= 1.0:
+        mincolblocks = int(mincol*nxb)
+    else:
+        mincolbocks = int(mincol)
+    tracelist = [tr for tr in tracelist if tr['ncol']>mincolblocks]
+    if len(tracelist)==0:
+        print('No traces left')
+        return []
+    
     # Calculate Gaussian parameters
     nprofiles = np.sum([tr['ncol'] for tr in tracelist])
     profiles = np.zeros((nprofiles,5),float)
@@ -214,10 +319,9 @@ def findtrace(im,nbin=50,height_thresh=100,hratio2=0.8,verbose=False):
             profiles[count,:] = medim[tr['yvalues'][i]-2:tr['yvalues'][i]+3,tr['xbvalues'][i]]
             xprofiles[count,:] = np.arange(5)+tr['yvalues'][i]-2
             count += 1
-
-    # Get Gaussian values
+    # Get Gaussian parameters for all profiles at once
     gpars = gvals(xprofiles,profiles)
-    # Stuff them in to the list
+    # Stuff the Gaussian parameters into the list
     count = 0
     for tr in tracelist:
         tr['gyheight'] = np.zeros(tr['ncol'],float)
@@ -234,27 +338,26 @@ def findtrace(im,nbin=50,height_thresh=100,hratio2=0.8,verbose=False):
         tr['tcoef'] = None
         tr['xmin'] = np.min(tr['xvalues'])-nbin//2
         tr['xmax'] = np.max(tr['xvalues'])+nbin//2
-        if tr['ncol']>5:
-            xt = np.array(tr['xvalues'])
-            yt = tr['gycenter']
-            norder = 3
+        xt = np.array(tr['xvalues'])
+        yt = tr['gycenter']
+        norder = 3
+        coef = np.polyfit(xt,yt,norder)
+        resid = yt-np.polyval(coef,xt)
+        std = np.std(resid)
+        # Check if we need to go to 4th order
+        if std>0.1:
+            norder = 4
             coef = np.polyfit(xt,yt,norder)
             resid = yt-np.polyval(coef,xt)
             std = np.std(resid)
-            # Check if we need to go to 4th order
-            if std>0.1:
-                norder = 4
-                coef = np.polyfit(xt,yt,norder)
-                resid = yt-np.polyval(coef,xt)
-                std = np.std(resid)
-            # Check if we need to go to 5th order
-            if std>0.1:
-                norder = 5
-                coef = np.polyfit(xt,yt,norder)
-                resid = yt-np.polyval(coef,xt)
-                std = np.std(resid)
-            tr['tcoef'] = coef
-            tr['tstd'] = std
+        # Check if we need to go to 5th order
+        if std>0.1:
+            norder = 5
+            coef = np.polyfit(xt,yt,norder)
+            resid = yt-np.polyval(coef,xt)
+            std = np.std(resid)
+        tr['tcoef'] = coef
+        tr['tstd'] = std
             
     return tracelist
     
