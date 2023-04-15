@@ -1518,18 +1518,37 @@ def smooth(y, width, fillvalue=np.nan):
         ma_vec = np.apply_along_axis(convfunc, axis=1, arr=first_pass)
     return ma_vec
 
+def boxcar(y, box_pts,boundary='wrap'):
+    """ Boxcar smooth a 1-D or 2-D array."""
+    if y.ndim==1:
+        kernel = np.ones(box_pts)/box_pts
+        y_smooth = np.convolve(y, kernel, mode='same')
+    else:
+        if np.array(box_pts).ndim == 0:
+	   kernel = np.ones([box_pts,box_pts])/box_pts**2
+        elif np.array(box_pts).ndim == 1:
+	   kernel = np.ones([box_pts[0],box_pts[0]])/box_pts[0]**2	   
+	else:
+	   kernel = np.ones(box_pts)/(box_pts[0]*box_pts[1])
+        from scipy.signal import convolve2d
+        y_smooth = convolve2d(y,kernel,mode='same',boundary=boundary)
+    return y_smooth
+
 # Gaussian filter
 def gsmooth(data,fwhm,mask=None,boundary='extend',fill=0.0,truncate=4.0,squared=False):
     # astropy.convolve automatically ignores NaNs
     # Create kernel
     xsize = np.ceil(fwhm/2.35*truncate*2)
-    if xsize % 2 == 0: xsize+=1   # must be odd
     if data.ndim==1:
+        if xsize % 2 == 0: xsize+=1   # must be odd        
         g = Gaussian1DKernel(stddev=fwhm/2.35,x_size=xsize)
     else:
         if size(fwhm)==1:
+            if xsize % 2 == 0: xsize+=1   # must be odd            
             g = Gaussian2DKernel(fwhm/2.35,x_size=xsize)
         else:
+            if xsize[0] % 2 == 0: xsize[0]+=1   # must be odd
+            if xsize[1] % 2 == 0: xsize[1]+=1   # must be odd              
             g = Gaussian2DKernel(fwhm[0]/2.35,fwhm[1]/2.35,x_size=xsize)            
     if squared is False:
         return convolve(data, g.array, mask=mask, boundary=boundary, fill_value=fill)
