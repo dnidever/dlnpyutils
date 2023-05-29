@@ -130,7 +130,8 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
            xflip=False,yflip=False,force=True,cmap=None,figure=None,
            figsize=(8,8),xtitle=None,ytitle=None,title=None,colorlabel=None,charsize=12,
            origin='lower',aspect='auto',interpolation='none',bright=None,minhue=0.0,
-           maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9,noplot=False,save=None):
+           maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9,noplot=False,save=None,
+           nocolorbar=False):
     """
     Make a 2D histogram of points.
     
@@ -208,6 +209,8 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
        Do not plot anything.  Just return the data.
     save : str, optional
        Save the figure to this file.
+    nocolorbar : bool, optional
+       Do not add a colorbar.  Default is False.
 
     Returns
     -------
@@ -532,7 +535,8 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
                 colorlabel = statistic
             else:
                 colorlabel = statistic+'(Z)'
-        plt.colorbar(label=colorlabel)
+        if not nocolorbar:
+            plt.colorbar(label=colorlabel)
 
         # Save the figure
         if save is not None:
