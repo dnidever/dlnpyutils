@@ -607,7 +607,7 @@ def readlines(fil=None,comment=None,raw=False,nreadline=None,noblank=False):
     if raw is False: lines = [l.rstrip('\n') for l in lines]
     # Check for comment string:
     if comment is not None:
-        lines = [l for l in lines if l[0]!=comment]                
+        lines = [l for l in lines if l.startswith(comment)==False]
     return lines
 
 
@@ -2937,3 +2937,25 @@ def roll(a, shift, axis=0, wrapvalue=np.nan):
             res[tuple(slc)] = wrapvalue
             
     return res
+
+def tail(filename,nlines=10,verbose=False):
+    """ https://gist.github.com/amitsaha/5990310 """
+
+    bufsize = 8192
+    fsize = os.stat(filename).st_size
+
+    niter = 0
+    with open(filename) as f:
+        if bufsize > fsize:
+            bufsize = fsize-1
+        data = []
+        while True:
+            niter +=1
+            f.seek(fsize-bufsize*niter)
+            data.extend(f.readlines())
+            if len(data) >= nlines or f.tell() == 0:
+                if verbose:
+                    print(''.join(data[-nlines:]))
+                break
+    out = data[-nlines:]
+    return out
