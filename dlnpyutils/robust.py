@@ -145,19 +145,6 @@ def mean(inputData, cut=3.0, axis=None, dtype=None):
         good = numpy.where(  numpy.abs(data-data0) <= cutOff )
         good = good[0]
         dataMean = data[good].mean()
-        if len(good) > 3:
-            dataSigma = math.sqrt( ((data[good]-dataMean)**2.0).sum() / len(good) )
-        else:
-            raise ValueError("Distribution is too strange to compute mean")
-            
-        if cut > 1.0:
-            sigmacut = cut
-        else:
-            sigmacut = 1.0
-        if sigmacut <= 4.5:
-            dataSigma = dataSigma / (-0.15405 + 0.90723*sigmacut - 0.23584*sigmacut**2.0 + 0.020142*sigmacut**3.0)
-            
-        dataSigma = dataSigma / math.sqrt(len(good)-1)
         
     return dataMean
 
@@ -253,7 +240,7 @@ def std(inputData, zero=False, axis=None, dtype=None):
         good = numpy.where( u2 <= 1.0 )
         good = good[0]
         if len(good) < 3:
-            raise ValueError("Distribution is too strange to compute standard deviation")
+            return numpy.std(data)
             
         numerator = ((data[good]-data0)**2.0 * (1.0-u2[good])**4.0).sum()
         nElements = (data.ravel()).shape[0]
