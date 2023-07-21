@@ -633,8 +633,9 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False,sphere=True):
 
             # closest matches
             not_inf1 = ~np.isinf(dist[:,0])
-            ind1 = np.arange(len(ra1))[not_inf1]
-            ind2 = ind[:,0][not_inf1]
+            not_inf1_ind, = np.where(~np.isinf(dist[:,0]))
+            ind1 = np.arange(len(ra1))[not_inf1]  # index into original ra1/dec1 arrays
+            ind2 = ind[:,0][not_inf1]             # index into original ra2/dec2 arrays
             mindist = dist[:,0][not_inf1]
             if len(ind2)==0:
                 return [], [], [np.inf]
@@ -642,8 +643,9 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False,sphere=True):
             # some duplicates to deal with
             bd,nbd = utils.where(index['num']>1)
             if nbd>0:
-                torem = []            
+                torem = []   # index into shortened ind1/ind2/mindist
                 for i in range(nbd):
+                    # index into shortened ind1/ind2/mindist
                     indx = index['index'][index['lo'][bd[i]]:index['hi'][bd[i]]+1]
                     # keep the one with the smallest minimum distance
                     si = np.argsort(mindist[indx])
@@ -652,17 +654,19 @@ def xmatch(ra1, dec1, ra2, dec2, dcr=2.0,unique=False,sphere=True):
                     else:
                         torem.append(indx[si[1:]][0])  # add single element
                 ntorem = utils.size(torem)
+                torem_orig_index = not_inf1_ind[torem]  # index into original ind/dist arrays
                 # For each object that was "removed" and is now unmatched, check the next possible
                 # match and move it up in the dist/ind list if it isn't INF
                 for i in range(ntorem):
                     # There is a next possible match 
-                    if ~np.isinf(dist[torem[i],niter-1]):
-                        ind[torem[i],:] = np.hstack( (ind[torem[i],niter:].squeeze(), np.repeat(-1,niter)) )
-                        dist[torem[i],:] = np.hstack( (dist[torem[i],niter:].squeeze(), np.repeat(np.inf,niter)) )
+                    if ~np.isinf(dist[torem_orig_index[i],niter-1]):
+                        ind[torem_orig_index[i],:] = np.hstack( (ind[torem_orig_index[i],niter:].squeeze(), np.repeat(-1,niter)) )
+                        dist[torem_orig_index[i],:] = np.hstack( (dist[torem_orig_index[i],niter:].squeeze(), np.repeat(np.inf,niter)) )
                     # All INFs
                     else:
-                        ind[torem[i],:] = -1
-                        dist[torem[i],:] = np.inf
+                        ind[torem_orig_index[i],:] = -1
+                        dist[torem_orig_index[i],:] = np.inf
+                        # in the next iteration these will be ignored
             else:
                 ntorem = 0
 
