@@ -145,7 +145,8 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
        Array of z-data points to plot if we using a statistic.
     statistic : str, optional
        The statistic to use.  Default is 'count' if z is not input otherwise 'sum'.
-         The options are: 'sum', 'mean', 'median', 'std', 'mad'.
+         The options are: 'sum', 'mean', 'median', 'std', 'mad'.  A function can
+         also be input to compute the statistic.
     xr : list, optional
        The range of x-values to plot.  The default is [min(x),max(x)]
     yr : list, optional
@@ -526,7 +527,10 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
             if statistic is 'count':
                 title = statistic
             else:
-                title = statistic+'(Z)'
+                if isinstance(statistic,str):
+                    title = statistic+'(Z)'
+                else:
+                    title = 'function(Z)'
         plt.title(title)
         
         # Add the colorbar
@@ -534,7 +538,10 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
             if statistic is 'count':
                 colorlabel = statistic
             else:
-                colorlabel = statistic+'(Z)'
+                if isinstance(statistic,str):
+                    colorlabel = statistic+'(Z)'
+                else:
+                    colorlabel = 'function(Z)'
         if not nocolorbar:
             plt.colorbar(label=colorlabel)
 

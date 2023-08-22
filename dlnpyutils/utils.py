@@ -1847,7 +1847,7 @@ def match(a,b,epsilon=0):
                 suba, = np.where(np.abs(a-b) < epsilon)
                 nw = len(suba)
             if (nw>0):
-                subb, = np.zeros(nw,int)
+                subb = np.zeros(nw,int)
             else:
                 subb = np.array([])
         count = nw
