@@ -118,9 +118,9 @@ def check_killfile(jobs=None,hyperthread=True):
             else:
                 # Using negative PID will also kill subprocesses
                 try:
-                    out = asubprocess.check_output(['kill','-9','-'+jobs['jobid'][sub[i]]],stderr=subprocess.STDOUT,shell=False)
+                    out = subprocess.check_output(['kill','-9','-'+jobs['jobid'][sub[i]]],stderr=subprocess.STDOUT,shell=False)
                 except:
-                    out = asubprocess.check_output(['kill','-9',jobs['jobid'][sub[i]]],stderr=subprocess.STDOUT,shell=False)                    
+                    out = subprocess.check_output(['kill','-9',jobs['jobid'][sub[i]]],stderr=subprocess.STDOUT,shell=False)                    
         # Remove the kill file
         print('Deleting kill file "'+killfile+'"')
         os.remove(killfile)
@@ -172,9 +172,18 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
     if (inp is None):
         raise ValueError('No input given')
 
-    ninp = dln.size(inp)
-    ndir = dln.size(indir)
-    nname = dln.size(name)
+    if isinstance(inp,str):
+        ninp = 1
+    else:
+        ninp = dln.size(inp)
+    if isinstance(indir,str):
+        ndir = 1
+    else:
+        ndir = dln.size(indir)
+    if isinstance(name,str):
+        nname =1 
+    else:
+        nname = dln.size(name)
 
     # Not enough directories input
     if (ndir>0) & (ndir!=ninp):
@@ -383,13 +392,17 @@ def getstat(jobid=None,hyperthread=True):
 
     """
     if jobid is None: raise ValueError("Must input jobid")
-    njobid = dln.size(jobid)
+    if isinstance(jobid,str) or isinstance(jobid,int):
+        njobid = 1
+    else:
+        njobid = dln.size(jobid)
+        jobid = jobid[0]
 
     # PBS
     #--------
     if hyperthread is False:
         if njobid>0: 
-            out = subprocess.check_output(['qstat',jobid[0]],stderr=subprocess.STDOUT,shell=False)
+            out = subprocess.check_output(['qstat',jobid],stderr=subprocess.STDOUT,shell=False)
         else:
             out = subprocess.check_output(['qstat'],stderr=subprocess.STDOUT,shell=False)
         nout = np.sum(out.strip() != '')
@@ -424,7 +437,7 @@ def getstat(jobid=None,hyperthread=True):
             return mkstatstr(1)
 
         try:
-            out = subprocess.check_output(['ps','-o','pid,user,etime,command','-p',str(dln.first_el(jobid))],
+            out = subprocess.check_output(['ps','-o','pid,user,etime,command','-p',str(jobid)],
                                           stderr=subprocess.STDOUT,shell=False)
         except:
             statstr = mkstatstr(1)
@@ -456,6 +469,7 @@ def getstat(jobid=None,hyperthread=True):
             statstr = mkstatstr(1)
             statstr['jobid'] = jobid
             statstr['queue'] = 'hyperthread'
+
     return statstr
 
 
