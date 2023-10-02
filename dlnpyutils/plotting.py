@@ -524,7 +524,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
             ytitle = 'Y'
         plt.ylabel(ytitle)        
         if title is None:
-            if statistic is 'count':
+            if statistic == 'count':
                 title = statistic
             else:
                 if isinstance(statistic,str):
@@ -535,7 +535,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
         
         # Add the colorbar
         if colorlabel is None:
-            if statistic is 'count':
+            if statistic == 'count':
                 colorlabel = statistic
             else:
                 if isinstance(statistic,str):
@@ -892,6 +892,23 @@ def oplot(*args,**kwargs):
 def scatter(*args,marker='o',**kwargs):
     plot(*args,marker=marker,**kwargs)
 
+def hist(*args,figure=None,noerase=False,charsize=12,**kwargs):
+
+    # Getting the current figure, creating a new one if necessary
+    if figure is None:
+        fig = plt.gcf()
+    else:
+        fig = plt.figure(figure,figsize=figsize)
+
+    # Character size
+    font = {'size': charsize}
+    matplotlib.rc('font', **font)
+        
+    if noerase is False:
+        plt.clf()   # clear the plot
+        
+    return plt.hist(*args,**kwargs)
+        
 
 class Cursor():
 
