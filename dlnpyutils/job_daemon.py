@@ -38,7 +38,7 @@ def mkstatstr(n=None):
 def mkjobstr(n=None):
     """ This returns the job structure schema or an instance of the job structure."""
     dtype = np.dtype([('host',str,20),('jobid',(str,100)),('input',str,1000),('dir',str,500),('name',str,100),('scriptname',str,200),
-                      ('logfile',str),('submitted',np.bool),('done',np.bool),('begtime',np.float64),('endtime',np.float64),('duration',float)])
+                      ('logfile',str),('submitted',bool),('done',bool),('begtime',float),('endtime',float),('duration',float)])
     if n is None:
         return dtype
     else:
