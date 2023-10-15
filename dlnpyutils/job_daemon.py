@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
 def mkstatstr(n=None):
     """ This returns the stat structure schema or an instance of the stat structure."""
-    dtype = np.dtype([('jobid',np.str,20),('name',np.str,100),('user',np.str,100),('timeuse',np.str,100),('status',np.str,10),('queue',np.str,20)])
+    dtype = np.dtype([('jobid',str,20),('name',str,100),('user',str,100),('timeuse',str,100),('status',str,10),('queue',str,20)])
     if n is None:
         return dtype
     else:
@@ -37,8 +37,8 @@ def mkstatstr(n=None):
 
 def mkjobstr(n=None):
     """ This returns the job structure schema or an instance of the job structure."""
-    dtype = np.dtype([('host',np.str,20),('jobid',(np.str,100)),('input',np.str,1000),('dir',np.str,500),('name',np.str,100),('scriptname',np.str,200),
-                      ('logfile',np.str),('submitted',np.bool),('done',np.bool),('begtime',np.float64),('endtime',np.float64),('duration',float)])
+    dtype = np.dtype([('host',str,20),('jobid',(str,100)),('input',str,1000),('dir',str,500),('name',str,100),('scriptname',str,200),
+                      ('logfile',str),('submitted',np.bool),('done',np.bool),('begtime',np.float64),('endtime',np.float64),('duration',float)])
     if n is None:
         return dtype
     else:
@@ -198,7 +198,7 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
 
     # Construct names
     if (nname==0):
-        name = np.zeros(ninp,dtype=(np.str,200))
+        name = np.zeros(ninp,dtype=(str,200))
         if prefix is not None:
             pre = dln.first_el(prefix)
         else:
