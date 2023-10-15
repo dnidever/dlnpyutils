@@ -280,7 +280,7 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
             # IDL files should end in .batch
             if idle is True: scriptname[i] = str(indir[i])+'/'+base+'.batch'
             # Writing the file
-            dln.writelines(scriptname[i],cmd,overwrite=True,raw=True)
+            dln.writelines(scriptname[i],[cmd],overwrite=True)
             # Make SHELL scripts executable
             if idle is False: os.chmod(scriptname[i],0o755)
             # Print info
