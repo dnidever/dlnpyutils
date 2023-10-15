@@ -377,7 +377,7 @@ def strjoin(a=None,b=None,c=None,sep=None):
         len3 = 0
         t3 = t2
     nlen = np.max(len1)+np.max(len2)+np.max(len3)+len(sep)
-    out = np.zeros(n,(np.str,nlen))
+    out = np.zeros(n,(str,nlen))
     for i in range(n):
         if na>1:
             a1 = a[i]
@@ -412,7 +412,7 @@ def strsplit(lst=None,delim=None,asarray=False):
         nlst = np.array(lst).size
         nel = [len(o) for o in out]
         nlen = np.max(strlen(lst))
-        outarr = np.zeros((nlst,np.max(nel)),(np.str,nlen))
+        outarr = np.zeros((nlst,np.max(nel)),(str,nlen))
         for i in range(nlst):
             temp = np.array(out[i])
             ntemp = len(temp)
@@ -432,7 +432,7 @@ def pathjoin(indir=None,name=None):
     len1 = strlen(indir)
     len2 = strlen(name)
     nlen = np.max(len1)+np.max(len2)+1
-    out = np.zeros(n,(np.str,nlen))
+    out = np.zeros(n,(str,nlen))
     for i in range(n):
         if nindir>1:
             indir1 = indir[i]
@@ -665,7 +665,7 @@ def writelines(filename=None,lines=None,overwrite=True,raw=False):
             #    if lines[0].endswith('\n'):
             #        lines = lines[0][0:-1]
     # Convert string to list
-    if (type(lines) is str) | (type(lines) is np.str_): lines=list(lines)
+    if (type(lines) is str) | (type(lines) is str_): lines=list(lines)
     # Convert numpy array and numbers to list of strings
     if type(lines) is not list:
         if hasattr(lines,'__iter__'):
@@ -863,7 +863,7 @@ def exists(files=None):
     """ Check if a list of files exist."""
     if files is None: raise ValueError("No files input")
     nfiles = np.array(files).size
-    out = np.zeros(nfiles,np.bool)+False
+    out = np.zeros(nfiles,bool)+False
     for i,f in enumerate(np.array(files,ndmin=1)):
         if os.path.exists(f): out[i] = True
     return out
@@ -1856,8 +1856,8 @@ def match(a,b,epsilon=0):
     # Conver to numpy.chararray if either of them are strings
     a1 = first_el(a)
     b1 = first_el(b)
-    if isinstance(a,np.chararray) | isinstance(a1,str) | isinstance(a1,np.string_) | \
-       isinstance(b,np.chararray) | isinstance(b1,str) | isinstance(b1,np.string_):
+    if isinstance(a,np.chararray) | isinstance(a1,str) | \
+       isinstance(b,np.chararray) | isinstance(b1,str):
         atemp = np.char.array(a)
         btemp = np.char.array(b)
         # Use the dtype with the largest number of characters
@@ -2035,7 +2035,7 @@ def concatenate(a,b=None):
     if np.min(ncols) != np.max(ncols):
         raise Exception('Number of columns are not the same: min='+str(np.min(ncols))+' max='+str(np.max(ncols)))
     # Checking column names
-    colnames = np.zeros((ncat,ncols[0]),dtype=(np.str,100))
+    colnames = np.zeros((ncat,ncols[0]),dtype=(str,100))
     for i in range(ncat):
         colnames[i,:] = a[i].dtype.names
         if i>0:
