@@ -906,9 +906,30 @@ def hist(*args,bins=20,figure=None,noerase=False,charsize=12,**kwargs):
         
     if noerase is False:
         plt.clf()   # clear the plot
-        
-    return plt.hist(*args,bins=bins,**kwargs)
-        
+
+    xtitle,ytitle,title = None,None,None
+    if 'xtitle' in kwargs:
+        xtitle = kwargs['xtitle']
+        del kwargs['xtitle']
+    if 'ytitle' in kwargs:
+        ytitle = kwargs['ytitle']
+        del kwargs['ytitle']        
+    if 'title' in kwargs:
+        title = kwargs['title']        
+        del kwargs['title']
+
+    # Run regular matplotlib hist()
+    out = plt.hist(*args,bins=bins,**kwargs)
+
+    # titles
+    if xtitle is not None:
+        plt.xlabel(xtitle)
+    if ytitle is not None:
+        plt.ylabel(ytitle)
+    if title is not None:
+        plt.title(title)        
+    
+    return out
 
 class Cursor():
 
