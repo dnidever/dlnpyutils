@@ -651,8 +651,10 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     # Min's and Max's
     xmin = np.min(x)
     xmax = np.max(x)
+    dx = x[1]-x[0]
     ymin = np.min(y)
     ymax = np.max(y)
+    dy = y[1]-y[0]
 
     # Trim based on xrange/yrange
     if xr is not None:
@@ -663,6 +665,7 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
         nx,ny = im.shape
         xmin = np.min(x)
         xmax = np.max(x)
+        dx = x[1]-x[0]
     if yr is not None:
         val0,ylo = dln.closest(y,yr[0])
         val1,yhi = dln.closest(y,yr[1])        
@@ -671,6 +674,7 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
         nx,ny = im.shape        
         ymin = np.min(y)
         ymax = np.max(y)
+        dy = y[1]-y[0]
         
     # Plot the image
     #fig, ax = plt.subplots()
@@ -680,7 +684,9 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
         vmin,vmax = zscaling(im)
 
     # (left, right, bottom, top)
-    extent = [xmin, xmax, ymin, ymax]
+    #extent = [xmin, xmax, ymin, ymax]
+    extent = [xmin-0.5*dx, xmax+0.5*dx,  # 1/2 pixel offset
+              ymin-0.5*dy, ymax+0.5*dy]    
     if norm is not None:
         plt.imshow(im,cmap=cmap,norm=norm,aspect=aspect,origin=origin,
                    extent=extent,interpolation=interpolation)

@@ -34,11 +34,10 @@ def thumbnail(files,nbin=4,outfile=None,ext='jpg'):
         sig = np.median(np.abs(im-med))*1.4826
 
         # Make image
-        if outfile is None:
-            base = os.path.basename(filename)
-            base,_ = os.path.splitext(base)
-            dirname = os.path.abspath(os.path.dirname(filename))
-            outfile = dirname+'/'+base+'_thumb.'+ext
+        base = os.path.basename(filename)
+        base,_ = os.path.splitext(base)
+        dirname = os.path.abspath(os.path.dirname(filename))
+        outfile = dirname+'/'+base+'_thumb.'+ext
         figsize = 8 
         fig, ax = plt.subplots(1,1,figsize=(figsize,0.5*figsize))
         vmin = med-5*sig
