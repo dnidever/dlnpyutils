@@ -13,7 +13,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-def thumbnail(files,nbin=4,outfile=None,ext='jpg'):
+def thumbnail(files,nbin=4,outfile=None,ext='jpg',nsig=3,cmap='Greys'):
     """ Make a thumbnail for an exposure."""
 
     if type(files) is str:
@@ -39,12 +39,10 @@ def thumbnail(files,nbin=4,outfile=None,ext='jpg'):
         dirname = os.path.abspath(os.path.dirname(filename))
         outfile = dirname+'/'+base+'_thumb.'+ext
         figsize = 8 
-        fig, ax = plt.subplots(1,1,figsize=(figsize,0.5*figsize))
-        vmin = med-5*sig
-        vmax = med+5*sig
-        ax1 = ax.imshow(smim,origin='lower',vmin=vmin,vmax=vmax,extent=(-3072,3072,0,2047))
-        ax.plot([-1024,-1024],[0,2047],c='w',linewidth=0.5)
-        ax.plot([1024,1024],[0,2047],c='w',linewidth=0.5)
+        fig, ax = plt.subplots(1,1,figsize=(figsize,figsize))
+        vmin = med-nsig*sig
+        vmax = med+nsig*sig
+        ax1 = ax.imshow(smim,origin='lower',vmin=vmin,vmax=vmax,cmap=cmap)
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         title = str(filename)
