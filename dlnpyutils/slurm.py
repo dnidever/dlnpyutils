@@ -309,7 +309,8 @@ def submit(tasks,label,nodes=1,cpus=64,account='priority-davidnidever',partition
         lines += ['# Auto-generated '+datetime.now().ctime()+' -- '+label+' ['+nodefile+']']
         if account is not None:
             lines += ['#SBATCH --account='+account]
-        lines += ['#SBATCH --partition='+partition]
+        if partition is not None:
+            lines += ['#SBATCH --partition='+partition]
         lines += ['#SBATCH --nodes=1']
         lines += ['#SBATCH --ntasks='+str(nproc)]
         lines += [' ']
@@ -380,7 +381,8 @@ def submit(tasks,label,nodes=1,cpus=64,account='priority-davidnidever',partition
     lines += ['# Auto-generated '+datetime.now().ctime()+' ['+masterfile+']']
     if account is not None:
         lines += ['#SBATCH --account='+account]
-    lines += ['#SBATCH --partition='+partition]
+    if partition is not None:
+        lines += ['#SBATCH --partition='+partition]
     lines += ['#SBATCH --nodes=1']
     lines += ['#SBATCH --ntasks='+str(nproc)]
     lines += [' ']
