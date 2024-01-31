@@ -224,7 +224,8 @@ def queue_wait(label,key,jobid,sleeptime=60,logger=None,verbose=True):
         
 def submit(tasks,label,nodes=1,cpus=64,account='priority-davidnidever',partition='priority',
            shared=True,walltime='12-00:00:00',notification=False,memory=7500,
-           numpy_num_threads=2,stagger=True,nodelist=None,verbose=True,logger=None):
+           numpy_num_threads=2,stagger=True,nodelist=None,precommands=None,
+           verbose=True,logger=None):
     """
     Submit a bunch of jobs
 
@@ -313,9 +314,8 @@ def submit(tasks,label,nodes=1,cpus=64,account='priority-davidnidever',partition
             lines += ['#SBATCH --partition='+partition]
         lines += ['#SBATCH --nodes=1']
         lines += ['#SBATCH --ntasks='+str(nproc)]
-        lines += [' ']
         lines += ['#SBATCH --mem-per-cpu='+str(memory)]
-        lines += [' ']
+        lines += ['#SBATCH --cpus-per-task=1']
         lines += ['#SBATCH --time='+walltime]
         lines += ['#SBATCH --job-name='+label]
         lines += ['#SBATCH --output='+label+'_%j.out']
@@ -328,6 +328,11 @@ def submit(tasks,label,nodes=1,cpus=64,account='priority-davidnidever',partition
         lines += ['export NUMEXPR_NUM_THREADS=2']
         lines += ['# ------------------------------------------------------------------------------']
         lines += ['export CLUSTER=1']
+        # Adding extra command to execute
+        if precommands is not None:
+            if type(precommands) is not list:
+                precommands = [precommands]
+            lines += precommands
         lines += [' ']
         for j in range(nproc):
             proc = proc_index['value'][j]
@@ -385,10 +390,8 @@ def submit(tasks,label,nodes=1,cpus=64,account='priority-davidnidever',partition
         lines += ['#SBATCH --partition='+partition]
     lines += ['#SBATCH --nodes=1']
     lines += ['#SBATCH --ntasks='+str(nproc)]
-    lines += [' ']
-    lines += [' ']
     lines += ['#SBATCH --mem-per-cpu='+str(memory)]
-    lines += [' ']
+    lines += ['#SBATCH --cpus-per-task=1']
     lines += ['#SBATCH --time='+walltime]
     lines += ['#SBATCH --array=1-'+str(nodes)]
     lines += ['#SBATCH --job-name='+label]
