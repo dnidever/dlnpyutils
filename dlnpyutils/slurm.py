@@ -222,9 +222,9 @@ def queue_wait(label,key,jobid,sleeptime=60,logger=None,verbose=True):
         msg += ' and ExitCode='+str(state['ExitCode'][0])
         logger.info(msg)
         
-def submit(tasks,label,nodes=1,cpus=64,account='priority-davidnidever',partition='priority',
-           shared=True,walltime='12-00:00:00',notification=False,memory=7500,
-           numpy_num_threads=2,stagger=True,nodelist=None,precommands=None,
+def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
+           partition='priority',shared=True,walltime='12-00:00:00',notification=False,
+           memory=7500,numpy_num_threads=2,stagger=True,nodelist=None,precommands=None,
            verbose=True,logger=None):
     """
     Submit a bunch of jobs
@@ -238,7 +238,8 @@ def submit(tasks,label,nodes=1,cpus=64,account='priority-davidnidever',partition
     if logger is None:
         logger = dln.basiclogger()
 
-    ppn = np.minimum(64,cpus)
+    if ppn is None:
+        ppn = np.minimum(64,cpus)
     slurmpars = {'nodes':nodes, 'account':account, 'shared':shared, 'ppn':ppn,
                  'cpus':cpus, 'walltime':walltime, 'partition':partition,
                  'notification':notification}
