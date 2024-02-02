@@ -686,7 +686,7 @@ def readlines(fil=None,comment=None,raw=False,nreadline=None,noblank=False):
     """
     if fil is None: raise ValueError("File not input")
     # Read gzipped file
-    if fil.endswith('gz'):
+    if fil.endswith('.gz'):
         fp = gzip.open(fil)
         contents = fp.read() # contents now has the uncompressed bytes of foo.gz
         fp.close()
