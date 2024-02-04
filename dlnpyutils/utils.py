@@ -1119,7 +1119,8 @@ def quadratic_coefficients(x,y,axis=0):
     denom = Sxx*Sx2x2 - Sxx2**2
     if np.array(x).ndim==1:
         if denom==0:
-            return [np.nan,np.nan,np.nan]
+            coef = np.zeros(3,float)+np.nan
+            return coef
     else:
         bad = (denom==0)
         denom[bad] = 1
@@ -1127,7 +1128,8 @@ def quadratic_coefficients(x,y,axis=0):
     b = ( Sxy*Sx2x2 - Sx2y*Sxx2 ) / denom
     c = np.median(y - (a*x**2+b*x),axis=axis)
     if np.array(x).ndim==1:
-        coef = [a,b,c]
+        coef = np.zeros(3,float)
+        coef[:] = [a,b,c]
     else:
         coef = np.zeros((3,np.array(x).shape[1]),float)
         coef[0,:] = a
