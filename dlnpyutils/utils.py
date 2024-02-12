@@ -36,6 +36,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import dill as pickl
 import traceback
+import inspect
 
 # Ignore these warnings, it's a bug
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
@@ -3073,3 +3074,16 @@ def tail(filename,nlines=10,verbose=False):
                 break
     out = data[-nlines:]
     return out
+
+def isdefined(myvariable):
+    """
+    Check if a variable has been defined yet or not.
+    """
+    frame = inspect.currentframe()
+    res = False
+    try:
+        if myvariable in frame.f_back.f_locals or myvariable in frame.f_back.f_globals:
+            res = True
+    finally:
+        del frame
+    return res
