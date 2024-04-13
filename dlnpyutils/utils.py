@@ -24,7 +24,7 @@ from astropy.convolution import Gaussian1DKernel, Gaussian2DKernel, convolve
 from glob import glob as glb
 from scipy.signal import medfilt
 from scipy.stats import mstats
-from scipy.ndimage.filters import median_filter,gaussian_filter1d
+from scipy.ndimage import median_filter,gaussian_filter1d,generic_filter
 from scipy.optimize import curve_fit, least_squares
 from scipy.special import erf
 from scipy.interpolate import interp1d,splrep,BSpline
@@ -3087,3 +3087,9 @@ def isdefined(myvariable):
     finally:
         del frame
     return res
+
+def nanmedfilt(x,size,mode='reflect'):
+    """
+    Median filter than handles NaNs.
+    """
+    return generic_filter(x, np.nanmedian, size=size)
