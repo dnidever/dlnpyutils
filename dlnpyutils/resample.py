@@ -60,9 +60,9 @@ def standardize(x,y,yerr,res):
             res[i] = res[i][si]
     return x,y,yerr,res
 
-def rescale(x,y,yerr,kind='median',order=None):
+def getscale(x,y,yerr,kind='median',order=None):
     """
-    Rescale spectral so it is easier to average them.
+    Get the scale of the spectra so it is easier to average them.
 
     Parameters
     ----------
@@ -219,6 +219,46 @@ def mergearrays(x,y,yerr,res,scales):
 
     return mx,my,myerr,mres,mscales
 
+def findclosest(mx,xi,start):
+    """
+    Find closest mx point to xi.
+    """
+    index = start
+    if mx[index]==xi:
+        return index
+    # Go forward
+    if mx[index]<xi:
+        while (mx[index]<=xi):
+            index += 1
+        if index>0 and abs(mx[index-1]-xi)<abs(mx[index]-xi):
+            index -= 1
+    # Go backwards
+    else:
+        while (mx[index]>=xi):
+            index -= 1
+        if index<(len(mx)-1) and abs(mx[index+1]-xi)<abs(mx[index]-xi):
+            index += 1
+    return index
+    
+def getlowhigh(mx,xi,start,lim):
+    """
+    Get low and high index.
+    """
+    # -- Get Low index --
+    low = start
+    while (xi-mx[low] < lim):
+        low -= 1
+    if xi-mx[low] > lim:  # went over
+        low += 1
+    # -- Get high index --
+    high = start
+    while (mx[high]-xi < lim):
+        high += 1
+    if mx[high]-xi > lim:  # went over
+        high -= 1
+    return low,high
+    
+
 def findindex(mx,mres,ksize,xout):
     """
     Find low/high index of mx for each value of xout.
@@ -239,11 +279,13 @@ def findindex(mx,mres,ksize,xout):
     indexes : numpy array
        Numpy array of low/high index values for each
           xout value.  
-
+    resout : numpy array
+       Average resolution width (FWHM) array for xout.
+    
     Examples
     --------
 
-    indexes = findindex(mx,mres,ksize,xout)
+    indexes,resout = findindex(mx,mres,ksize,xout)
 
     """
 
@@ -262,40 +304,29 @@ def findindex(mx,mres,ksize,xout):
     low = 0
     high = 0
     closeind = 0
+    resout = np.zeros(len(xout),float)
     for i in range(len(xout)):
         xi = xout[i]
-        
         # Find closest input x value to this xout value
-        while (mx[closeind]<=x1):
-            closeind += 1
-        if closeind>0 and abs(mx[closeind-1]-xi)<abs(mx[closeind]-xi):
-            closeind -= 1
-        
+        closeind = findclosest(mx,xi,closeind)
         # Limit to use for upper/lower region of kernel (in units of x)
         # res is FWHM or 2 for Nyquist
         lim = ksize*mres[closeind]/2.0
-        
-        # -- Get Low index --
-        low = closeind
-        while (xi-mx[low] < lim):
-            low -= 1
-        if xi-mx[low] > lim:  # went over
-            low += 1
+        # Find low/high indexes
+        low,high = getlowhigh()
+        # Find average kernel size
+        resi = np.mean(mres[low:high+1])
+        lim = ksize*resi/2.0
+        # Find low/high indexes
+        low,high = getlowhigh(mx,xi,closeind,lim)
         indexes[i,0] = low
-        
-        # -- Get high index --
-        high = closeind
-        while (mx[high]-xi < lim):
-            high += 1
-        if mx[high]-xi > lim:  # went over
-            high -= 1
         indexes[i,1] = high
+        resout[i] = resi
+    return indexes,resout
 
-    return indexes
-
-def lanczosresample(mx,my,myerr,mres,mscales,xout,indexes,kind='sinc',ksize=3):
+def doresample(mx,my,myerr,mres,mscales,xout,indexes,kind='sinc',ksize=3):
     """
-    Perform the Lanczos resampling of the y/yerr arrays.
+    Perform the Sinc/Lanczos resampling of the y/yerr arrays.
 
     Parameters
     ----------
@@ -315,11 +346,13 @@ def lanczosresample(mx,my,myerr,mres,mscales,xout,indexes,kind='sinc',ksize=3):
     indexes : numpy array
        Numpy array of low/high index values for each
           xout value.
+    resout : numpy array
+       Average resolution width (FWHM) array for xout.
     kind : str, optional
        Type of resampling.  Either 'sinc' (dampled sinc) or 'lanczos'.
           Default is 'sinc'.
     ksize : int, optional
-       Lanczos filter size. Generally values between 3 and 7.
+       Sinc/Lanczos filter size. Generally values between 3 and 7.
           Default is 3.
 
     Returns
@@ -334,20 +367,10 @@ def lanczosresample(mx,my,myerr,mres,mscales,xout,indexes,kind='sinc',ksize=3):
     Examples
     --------
 
-    yout,yerrout,scalesout = lanczosresample(mx,my,myerr,mres,mscales,indexes,kind,ksize)
+    yout,yerrout,scalesout = doresample(mx,my,myerr,mres,mscales,indexes,resout,kind,ksize)
 
     """
 
-    # Lanczos interpolation
-    # https://en.wikipedia.org/wiki/Lanczos_resampling
-    # S(x) = Sum_(i=floor(x)-a+1)^(floor(x)+a) s(i) * L(x-i)
-    # where a is the kernel filter size (ksize)
-    #
-    # Lanczos window
-    # L(x) = a*sin(pi*x)*sin(pi*x/a)/(pi^2 * x^2)  -a<=x<=a and x!=0
-    #        1                                     x=0
-    #        0                                     otherwise
-    
     # Initialize the output errays
     yout = np.zeros(len(xout),float)
     yerrout = np.zeros(len(xout),float)
@@ -370,58 +393,63 @@ def lanczosresample(mx,my,myerr,mres,mscales,xout,indexes,kind='sinc',ksize=3):
         if kind=='sinc':
             # From Holtzman's sincint() function
             # https://github.com/sdss/apogee_drp/blob/daily/python/apogee_drp/apred/sincint.py
-            dampfac = 3.25*nres/2.
-            ksize = int(21*nres/2.)
-            if ksize % 2 == 0 : ksize +=1
-            nhalf = ksize//2 
+            # dampfac = 3.25*nres/2.
+            # ksize = int(21*nres/2.)
+            # if ksize % 2 == 0 : ksize +=1
+            # nhalf = ksize//2 
+            #
+            # xkernel = np.arange(ksize)-nhalf - fx[i]
+            # # in units of Nyquist
+            # xkernel /= (nres/2.)
+            # u1 = xkernel/dampfac
+            # u2 = np.pi*xkernel
+            #
+            # kernel = np.exp(-(u1**2)) * np.sin(u2) / u2
+            # kernel /= (nres/2.)
+            # # the value at x = 0 is defined to be the limiting value
+            # kernel[u2 == 0] = 1
 
-            xkernel = np.arange(ksize)-nhalf - fx[i]
-            # in units of Nyquist
-            xkernel /= (nres/2.)
+            # ksize is the kernel filter size ("a" above), in units of Nyquist
+            # units of Nyquist is res/2
+            xkernel = (x1-xout[i])
+            xkernel /= (resout[i]/2.0)  # in units of Nyquist
+            dampfac = 3.25*resout[i]/2.0
             u1 = xkernel/dampfac
             u2 = np.pi*xkernel
-
-            kernel = np.exp(-(u1**2)) * np.sin(u2) / u2
-            kernel /= (nres/2.)
-            # the value at x = 0 is defined to be the limiting value
-            kernel[u2 == 0] = 1
-
-            lobe = np.arange(ksize) - nhalf + ix[i]
-            vals = np.zeros(ksize)
-            vars = np.zeros(ksize)
-            gd = np.where( (lobe>=0) & (lobe<nf) )[0]
+            u2[xkernel==0] = 1
+            kernel = np.exp(-(u1**2))*np.sin(u2)/u2
+            kernel /= (resout[i]/2.0)
+            kernel[xkernel==0] = 1
+            
         # Lanczos kernel
         #   sinc mulitiplied by Lanczos windew function, wider sinc
         elif kind=='lanczos':
+            # Lanczos interpolation
+            # https://en.wikipedia.org/wiki/Lanczos_resampling
+            # S(x) = Sum_(i=floor(x)-a+1)^(floor(x)+a) s(i) * L(x-i)
+            # where a is the kernel filter size (ksize)
+            #
+            # Lanczos window
+            # L(x) = a*sin(pi*x)*sin(pi*x/a)/(pi^2 * x^2)  -a<=x<=a and x!=0
+            #        1                                     x=0
+            #        0                                     otherwise
 
-            dampfac = 3.25*nres/2.
-            ksize = int(21*nres/2.)
-            if ksize % 2 == 0 : ksize +=1
-            nhalf = ksize//2 
-
-            xkernel = np.arange(ksize)-nhalf - fx[i]
-            # in units of Nyquist
-            xkernel /= (nres/2.)
-            u1 = xkernel/dampfac
-            u2 = np.pi*xkernel
-
-            kernel = np.exp(-(u1**2)) * np.sin(u2) / u2
-            kernel /= (nres/2.)
-            # the value at x = 0 is defined to be the limiting value
-            kernel[u2 == 0] = 1
-
-            lobe = np.arange(ksize) - nhalf + ix[i]
-            vals = np.zeros(ksize)
-            vars = np.zeros(ksize)
-            gd = np.where( (lobe>=0) & (lobe<nf) )[0]
-
+            # ksize is the kernel filter size ("a" above), in units of Nyquist
+            # units of Nyquist is res/2
+            xkernel = (x1-xout[i])
+            xkernel /= (resout[i]/2.0)  # in units of Nyquist
+            u1 = np.pi*xkernel
+            u2 = np.pi*xkernel/ksize
+            denom = np.pi**2*xkernel**2
+            denom[xkernel==0] = 1
+            kernel = ksize*np.sin(u1)*np.sin(u2)/denom
+            kernel[xkernel==0] = 1
 
         # Calculate the values
         # should we ignore bad values?
-        yout[i] = np.sum(kernel[gd]*y1[lobe[gd]])
-        yerrout[i] = np.sqrt(np.sum(kernel[gd]**2*yerr1[lobe[gd]]**2))
-        scalesout[i] = np.sum(kernel[gd]*scales1[lobe[gd]])
-        
+        yout[i] = np.sum(kernel*y1)
+        yerrout[i] = np.sqrt(np.sum(kernel**2*yerr1**2))
+        scalesout[i] = np.sum(kernel*scales1)
         
     return yout,yerrout,scalesout
 
@@ -505,9 +533,9 @@ def resample(x,y,xout,yerr=None,res=None,ksize=3,scale=True):
     x,y,yerr,res = standardize(x,y,yerr,res)
     nspectra = len(x)
     
-    # Rescale
+    # Get the scales
     if scale:
-        x,y,yerr,scales = rescale(x,y,yerr)
+        x,y,yerr,scales = getscale(x,y,yerr)
     else:
         scales = np.ones(nspectra,float)
         
@@ -515,10 +543,11 @@ def resample(x,y,xout,yerr=None,res=None,ksize=3,scale=True):
     mx,my,myerr,mres,mscales = mergearrays(x,y,yerr,res,scales)
     
     # Find the low/high input index values for each output value
-    indexes = findindex(mx,mres,ksize,xout)
+    indexes,resout = findindex(mx,mres,ksize,xout)
     
-    # Perform resampling
-    yout,yerrout,scalesout = lanczosresample(mx,my,myerr,mres,mscales,indexes,kind,ksize)
+    # Perform the resampling
+    yout,yerrout,scalesout = doresample(mx,my,myerr,mres,mscales,
+                                        indexes,resout,kind,ksize)
 
     # Rescale
     if scale:
