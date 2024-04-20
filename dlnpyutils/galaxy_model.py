@@ -11,8 +11,8 @@ __version__ = '20200305'  # yyyymmdd
 import numpy as np
 
 # Ignore these warnings, it's a bug
-warnings.filterwarnings("ignore", message="numpy.dtype size changed")
-warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
+#warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+#warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
 def xyz2lbd(x,y,z,R0=8.5):
     """ Convert galactocentric X/Y/Z coordinates to l,b,dist."""
@@ -167,7 +167,8 @@ def vgsr2vlsr(v,l,b,dir,vcirc=240.0):
     return v2
 
 
-def galaxy_model(flat=False,vcirc=240.0,R0=8.5,rscale=12.5,zscale=5.0,rmin=1.5,vdisk=240.0,vdisp=0.0,rhelcut=None,nstars=100000):
+def galaxy_model(flat=False,vcirc=240.0,R0=8.5,rscale=12.5,zscale=5.0,
+                 rmin=1.5,vdisk=240.0,vdisp=0.0,rhelcut=None,nstars=100000):
     """
     Model of the proper motions and rvs of the galaxy.
     Mostly copied from ggss/ggss_model.pro
