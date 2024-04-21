@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from numba import njit
 from . import utils,robust
 
 # Sinc resample spectra.  Can since resample and average multiple
@@ -48,7 +49,11 @@ def standardize(x,y,yerr,res):
         y = [y]
         yerr = [yerr]
         res = [res]
-    # Sort each one by X
+    if yerr is None:
+        yerr = len(x)*[None]
+    if res is None:
+        res = len(x)*[None]
+    # Sort each one by X        
     for i in range(len(x)):
         x1 = x[i]
         si = np.argsort(x1)
@@ -100,7 +105,7 @@ def getscale(x,y,yerr,kind='median',order=None):
 
     # Loop over the spectra
     scales = len(x)*[None]  # initalize the scales list
-    for i in range(x):
+    for i in range(len(x)):
         x1 = x[i]
         y1 = y[i]
         yerr1 = yerr[i]
@@ -170,6 +175,7 @@ def mergearrays(x,y,yerr,res,scales):
        Merged and sorted y values.
     myerr : numpy array
        Merged and sorted yerr values.
+         If yerr is [None], then myerr is all zeros.
     mres : numpy array
        Merged and sorted res values.
     mscales : numpy array
@@ -183,7 +189,7 @@ def mergearrays(x,y,yerr,res,scales):
     """
 
     # Initialize the merged arrays
-    n = int([len(xi) for xi in x])
+    n = np.sum([len(xi) for xi in x])
     mx = np.zeros(n,float)
     my = np.zeros(n,float)
     myerr = np.zeros(n,float)
@@ -198,8 +204,8 @@ def mergearrays(x,y,yerr,res,scales):
         if yerr[i] is not None:
             myerr[count:count+n1] = yerr[i]
         else:
-            # Use yerr=1 for None
-            myerr[count:count+n1] = np.ones(len(x[i]),float)
+            # Use yerr=0 for None
+            myerr[count:count+n1] = np.zeros(len(x[i]),float)
         if res[i] is not None:
             mres[count:count+n1] = res[i]
         else:
@@ -216,49 +222,53 @@ def mergearrays(x,y,yerr,res,scales):
     myerr = myerr[si]
     mres = mres[si]
     mscales = mscales[si]
-
+    
     return mx,my,myerr,mres,mscales
 
+@njit
 def findclosest(mx,xi,start):
     """
     Find closest mx point to xi.
     """
     index = start
+    nx = len(mx)
     if mx[index]==xi:
         return index
     # Go forward
     if mx[index]<xi:
-        while (mx[index]<=xi):
+        while ((mx[index]<=xi) and (index<=(nx-2))):
             index += 1
         if index>0 and abs(mx[index-1]-xi)<abs(mx[index]-xi):
             index -= 1
     # Go backwards
     else:
-        while (mx[index]>=xi):
+        while ((mx[index]>=xi) and (index>=1)):
             index -= 1
         if index<(len(mx)-1) and abs(mx[index+1]-xi)<abs(mx[index]-xi):
             index += 1
     return index
-    
+
+@njit
 def getlowhigh(mx,xi,start,lim):
     """
     Get low and high index.
     """
+    nx = len(mx)
     # -- Get Low index --
     low = start
-    while (xi-mx[low] < lim):
+    while ((xi-mx[low] < lim) and (low>=1)):
         low -= 1
     if xi-mx[low] > lim:  # went over
         low += 1
     # -- Get high index --
     high = start
-    while (mx[high]-xi < lim):
+    while ((mx[high]-xi < lim) and (high<=(nx-2))):
         high += 1
-    if mx[high]-xi > lim:  # went over
+    if mx[high]-xi > lim and (high>0):  # went over
         high -= 1
     return low,high
-    
 
+@njit
 def findindex(mx,mres,ksize,xout):
     """
     Find low/high index of mx for each value of xout.
@@ -278,7 +288,8 @@ def findindex(mx,mres,ksize,xout):
     -------
     indexes : numpy array
        Numpy array of low/high index values for each
-          xout value.  
+          xout value.  xout values not covered by mx 
+          have low=high=-1.
     resout : numpy array
        Average resolution width (FWHM) array for xout.
     
@@ -300,11 +311,11 @@ def findindex(mx,mres,ksize,xout):
     #        0                                     otherwise
     
     # Loop over xout
-    indexes = np.zeros((len(xout),2),int)
+    indexes = np.zeros((len(xout),2),dtype=np.int64)-1
     low = 0
     high = 0
     closeind = 0
-    resout = np.zeros(len(xout),float)
+    resout = np.zeros(len(xout),np.float64)
     for i in range(len(xout)):
         xi = xout[i]
         # Find closest input x value to this xout value
@@ -312,19 +323,41 @@ def findindex(mx,mres,ksize,xout):
         # Limit to use for upper/lower region of kernel (in units of x)
         # res is FWHM or 2 for Nyquist
         lim = ksize*mres[closeind]/2.0
+        resout[i] = lim
         # Find low/high indexes
-        low,high = getlowhigh()
+        low,high = getlowhigh(mx,xi,closeind,lim)
+        # Make sure we have some good pixels
+        ngood = np.sum(np.abs(mx[low:high+1]-xi) <= lim)
+        if ngood==0:
+            continue
+        # Do not extrapolate
+        #  the output x-value has to be covered
+        #  either there is an exact match, or there are points on either side
+        covered = (mx[low]==xi) or (mx[high]==xi) or ((mx[low]<=xi) and (mx[high]>=xi))
+        if covered==False:
+            continue 
         # Find average kernel size
         resi = np.mean(mres[low:high+1])
         lim = ksize*resi/2.0
-        # Find low/high indexes
+        # Find low/high indexes again
         low,high = getlowhigh(mx,xi,closeind,lim)
+        # Make sure we have some good pixels
+        ngood = np.sum(np.abs(mx[low:high+1]-xi) <= lim)
+        if ngood==0:
+            continue
+        # Do not extrapolate
+        covered = (mx[low]==xi) or (mx[high]==xi) or ((mx[low]<=xi) and (mx[high]>=xi))
+        if covered==False:
+            continue 
         indexes[i,0] = low
         indexes[i,1] = high
         resout[i] = resi
+        
     return indexes,resout
 
-def doresample(mx,my,myerr,mres,mscales,xout,indexes,kind='sinc',ksize=3):
+@njit
+def doresample(mx,my,myerr,mres,mscales,xout,indexes,resout,
+               kind='sinc',ksize=3,minpix=2):
     """
     Perform the Sinc/Lanczos resampling of the y/yerr arrays.
 
@@ -354,6 +387,8 @@ def doresample(mx,my,myerr,mres,mscales,xout,indexes,kind='sinc',ksize=3):
     ksize : int, optional
        Sinc/Lanczos filter size. Generally values between 3 and 7.
           Default is 3.
+    minpix : int, optional
+       Minimum number of good pixels for resampling.  Default is 2.
 
     Returns
     -------
@@ -363,29 +398,39 @@ def doresample(mx,my,myerr,mres,mscales,xout,indexes,kind='sinc',ksize=3):
        Output resampled yerr array.
     scalesout : numpy array
        Output resampled scales array.
+    numpix : numpy array
+       Number of pixels used for the resampling.
 
     Examples
     --------
 
-    yout,yerrout,scalesout = doresample(mx,my,myerr,mres,mscales,indexes,resout,kind,ksize)
+    yout,yerrout,scalesout,numpix = doresample(mx,my,myerr,mres,mscales,xout,
+                                               indexes,resout,kind,ksize)
 
     """
 
+    nout = len(xout)
+    
     # Initialize the output errays
-    yout = np.zeros(len(xout),float)
-    yerrout = np.zeros(len(xout),float)
-    scalesout = np.zeros(len(xout),float)
+    yout = np.zeros(nout,float)+np.nan
+    yerrout = np.zeros(nout,float)+np.nan
+    scalesout = np.zeros(nout,float)+np.nan
+    numpix = np.zeros(nout,np.int64)
     
     # Loop over each xout value and calculate the sinc resampled value
-    for i in range(xout):
+    for i in range(nout):
         # Get low/high index values from indexes
         lo,hi = indexes[i,:]
+        # No good pixels
+        if lo==-1 and hi==-1:
+            continue
+        npix = hi-lo+1
+        if npix < minpix:
+            continue
         x1 = mx[lo:hi+1]
         y1 = my[lo:hi+1]
         yerr1 = myerr[lo:hi+1]
         scales1 = mscales[lo:hi+1]
-
-        # Lanczos interpolation
         
         # Calculate the kernel
         # Sinc kernel
@@ -420,7 +465,8 @@ def doresample(mx,my,myerr,mres,mscales,xout,indexes,kind='sinc',ksize=3):
             kernel = np.exp(-(u1**2))*np.sin(u2)/u2
             kernel /= (resout[i]/2.0)
             kernel[xkernel==0] = 1
-            
+            kernel /= np.sum(kernel)  # normalize
+
         # Lanczos kernel
         #   sinc mulitiplied by Lanczos windew function, wider sinc
         elif kind=='lanczos':
@@ -444,16 +490,18 @@ def doresample(mx,my,myerr,mres,mscales,xout,indexes,kind='sinc',ksize=3):
             denom[xkernel==0] = 1
             kernel = ksize*np.sin(u1)*np.sin(u2)/denom
             kernel[xkernel==0] = 1
-
+            kernel /= np.sum(kernel)  # normalize
+            
         # Calculate the values
         # should we ignore bad values?
-        yout[i] = np.sum(kernel*y1)
+        yout[i] = np.sum(kernel*y1)/np.sum(kernel)
         yerrout[i] = np.sqrt(np.sum(kernel**2*yerr1**2))
         scalesout[i] = np.sum(kernel*scales1)
+        numpix[i] = npix
         
-    return yout,yerrout,scalesout
+    return yout,yerrout,scalesout,numpix
 
-def rescale(yout,yerrout,scalesout):
+def rescale(yout,yerrout,scalesout,medbin=5,gaussbin=10):
     """
     Rescale the output y/yerr arrays.
 
@@ -465,6 +513,10 @@ def rescale(yout,yerrout,scalesout):
        Resampled yerr array.
     scalesout : numpy array
        Resampled scales array.
+    medbin : int, optional
+       Median binning value.  Default is 5.
+    gaussbin : int, optional
+       Gaussian smoothing binning value.  Default is 10.
 
     Returns
     -------
@@ -479,12 +531,28 @@ def rescale(yout,yerrout,scalesout):
     yout,yerrout = rescale(yout,yerrout,scalesout)
 
     """
+
+    # The "scalesout" values can have some high-frequency noise
+    # in them.  Need to smooth them out.
+    # Use median first to get rid of outliers
+    # Then Gaussian smooth
     
-    yout,yerrout = rescale(yout,yerrout,scalesout)
+    # Smooth the scales
+    #  beware, some might be NaNs
+    mask = np.isfinite(scalesout)
+    medscales = utils.median_filter(scalesout,medbin)
+    medscales[~mask] = np.nan
+    smscalesout = utils.gsmooth(medscales,gaussbin)
+    smscalesout[~mask] = np.nan
+
+    # Mutiply by the scales
+    yout *= smscalesout
+    yerrout *= smscalesout
 
     return yout,yerrout
 
-def resample(x,y,xout,yerr=None,res=None,ksize=3,scale=True):
+def resample(x,y,xout,yerr=None,res=None,kind='lanczos',ksize=3,
+             scale=True,sclkind='median'):
     """
     Resample spectrum or list of spectra onto a new wavelength/pixel scale.
 
@@ -497,7 +565,8 @@ def resample(x,y,xout,yerr=None,res=None,ksize=3,scale=True):
        Input y-values.  This can be a list of arrays, i.e. multiple
          spectra.
     xout : numpy array
-       Output x-values.
+       Output x-values.  Note, xout values not covered by x will have
+        yout values of NaN.
     yerr : numpy array or list, optional
        Uncertainties in "y".  Default is None.
     res : numpy array or list, optional
@@ -511,13 +580,18 @@ def resample(x,y,xout,yerr=None,res=None,ksize=3,scale=True):
     scale : bool, optional
        Scale the y values before combining and then rescale at the end.
          Default is True.
+    sclkind : str, optional
+       Type of method to use to determine the scale of the spectra.
+         Options are: 'median', 'poly', 'medfilt', 'gaussfilt'.
+         Default is 'median'.
 
     Returns
     -------
     yout : numpy array
-       Output resampled y array.
+       Output resampled y array.  Any xout values not covered by the
+         input data will have yout of NaN.
     yerrout : numpy array
-       Output resampled uncertainty array.
+       Output resampled uncertainty array.  Only if yerr was input.
 
     Examples
     --------
@@ -528,6 +602,8 @@ def resample(x,y,xout,yerr=None,res=None,ksize=3,scale=True):
 
     if kind not in ['sinc','lanczos']:
         raise ValueError('kind '+str(kind)+' not supported.  Only sinc or lanczos')
+
+    noerror = (yerr is None)
     
     # Standardize data
     x,y,yerr,res = standardize(x,y,yerr,res)
@@ -535,7 +611,7 @@ def resample(x,y,xout,yerr=None,res=None,ksize=3,scale=True):
     
     # Get the scales
     if scale:
-        x,y,yerr,scales = getscale(x,y,yerr)
+        y,yerr,scales = getscale(x,y,yerr,kind=sclkind)
     else:
         scales = np.ones(nspectra,float)
         
@@ -546,11 +622,14 @@ def resample(x,y,xout,yerr=None,res=None,ksize=3,scale=True):
     indexes,resout = findindex(mx,mres,ksize,xout)
     
     # Perform the resampling
-    yout,yerrout,scalesout = doresample(mx,my,myerr,mres,mscales,
-                                        indexes,resout,kind,ksize)
-
+    yout,yerrout,scalesout,numpix = doresample(mx,my,myerr,mres,mscales,xout,
+                                               indexes,resout,kind,ksize)
+    
     # Rescale
     if scale:
         yout,yerrout = rescale(yout,yerrout,scalesout)
-
-    return yout,yerrout
+        
+    if noerror:
+        return yout
+    else:
+        return yout,yerrout
