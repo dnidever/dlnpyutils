@@ -1694,7 +1694,8 @@ def savgol(y,nbin,order=3):
     return yhat
         
 # Rebin data
-def rebin(arr, new_shape=None, binsize=None, tot=False,med=False,maximum=False):
+def rebin(arr,new_shape=None,binsize=None,tot=False,med=False,maximum=False,
+          bitwiseor=False):
     """
     Rebin data in 1D or 2D
 
@@ -1712,6 +1713,8 @@ def rebin(arr, new_shape=None, binsize=None, tot=False,med=False,maximum=False):
        Return the median instead of the mean.
     maximum : boolean, optional
        Return the maximum instead of the mean.
+    bitwiseor : boolean, optional
+       Return the bitwise OR of the binned data.
 
     Returns
     -------
@@ -1748,12 +1751,15 @@ def rebin(arr, new_shape=None, binsize=None, tot=False,med=False,maximum=False):
         # Maximum
         elif maximum:
             out = arr[slc].reshape(shape).max(-1).max(1)
+        # Bitwise OR
+        elif bitwiseor:
+            out = np.bitwise_or.reduce(arr[slc].reshape(shape),axis=1)
+            out = np.bitwise_or.reduce(out,axis=-1)
         # Mean
         else:
             out = arr[slc].reshape(shape).mean(-1).mean(1)
-        return out
     
-    if arr.ndim==1:
+    elif arr.ndim==1:
         if binsize is None:
             binsize = arr.shape[0] // np.array(new_shape,ndmin=1)[0]
         else:
@@ -1768,12 +1774,20 @@ def rebin(arr, new_shape=None, binsize=None, tot=False,med=False,maximum=False):
             out = arr[slc].reshape(shape).sum(-1)
         # Maximum
         elif maximum:
-            out = arr[slc].reshape(shape).max(-1)        
+            out = arr[slc].reshape(shape).max(-1)
+        # Bitwise OR
+        elif bitwiseor:
+            out = arr[slc].reshape(shape)
+            out = np.bitwise_or.reduce(out,axis=-1)
         # Mean
         else:
             out = arr[slc].reshape(shape).mean(-1)
-        return out
 
+    else:
+        raise NotImplementedError('Only 1-D and 2-D arrays supported so far')
+
+    return out
+    
 def roi_cut(xcut,ycut,x,y):
     """
     Use cuts in a 2D plane to select points from arrays.
