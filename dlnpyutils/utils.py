@@ -39,8 +39,8 @@ import traceback
 import inspect
 
 # Ignore these warnings, it's a bug
-warnings.filterwarnings("ignore", message="numpy.dtype size changed")
-warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
+#warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+#warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
 
 # NUMPY_LT_1_18
