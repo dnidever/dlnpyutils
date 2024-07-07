@@ -250,7 +250,7 @@ def vgsr2vlsr(v,l,b,dir,vcirc=240.0):
 
     return v2
 
-def lmcvlos(ra,dec,halo=False,hi=False,helio=False):
+def lmcvlos(ra,dec,halo=False,hicenter=False):
     """
     This computes van der Marel's (AJ 2002), line-of-sight
     velocity for the LMC, RA and DEC should be in degrees!!
@@ -265,10 +265,8 @@ def lmcvlos(ra,dec,halo=False,hi=False,helio=False):
           velocity is desired.
     halo : boolean, optional
        Halo model.  Default is False.
-    hi : boolean, optional
+    hicenter : boolean, optional
        Use the HI parameters (stellar by default).
-    helio : boolean, optional
-       Output Heliocentric velocity NOT Vgsr.
 
     Returns
     -------
@@ -297,7 +295,7 @@ def lmcvlos(ra,dec,halo=False,hi=False,helio=False):
     bigtheta = 129.9         # counter-clockwise from North
 
     # HI LMC center from Kim et al.(1998)
-    if hi:
+    if hicenter:
         alpha_lmc = 79.4        # deg
         delta_lmc = -69.03333   # deg
         # HI line-of-nodes
@@ -433,17 +431,6 @@ def lmcvlos(ra,dec,halo=False,hi=False,helio=False):
     #vlos = vlos + (vtc*sin(rho/!radeg)-f*VR*sin(inc/!radeg))*cos((bigphi-bigtheta)/!radeg)
     #vgsr = vlos1 + vlos2 + vlos3 + vlos4
     vlos = vlos1 + vlos2 + vlos3 + vlos4
-        
-    #vlos = vsys*cos(rho/!radeg) + wts*sin(rho/!radeg)*sin((bigphi-bigtheta)/!radeg)
-    #vlos = vlos + (vtc*sin(rho/!radeg)-f*VR*sin(inc/!radeg))*cos((bigphi-bigtheta)/!radeg)
-    #vgsr = vlos
-
-    ## Heliocentric velocity
-    #if keyword_set(helio) then begin
-    #  glactc,ra,dec,2000.,glon,glat,1,/deg
-    #  vhelio = vgsr2vhelio(vgsr,glon,glat)
-    #  vgsr = vhelio    # Copy to output array
-    #endif
 
     # Put the results in a table
     dt = [('ra',float),('dec',float),('rho',float),('vlos',float),('bigphi',float)]
