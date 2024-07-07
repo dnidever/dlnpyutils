@@ -110,7 +110,7 @@ def vgsr2vlsr(v,l,b,dir,vcirc=240.0):
     Given an input array called vhel with values of heliocentric
     radial velocities and input arrays of the same length with
     the Galactic coordinates of the object (gl,gb),
-  this code calculates Vlsr and Vgsr.
+    this code calculates Vlsr and Vgsr.
 
     INPUTS:
     vel     Vgsr/Vlsr velocity to convert

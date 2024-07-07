@@ -12,11 +12,11 @@ import numpy as np
 import copy
 from scipy.spatial import cKDTree
 from scipy.optimize import minimize
-from . import utils,ladfit
 from astropy.coordinates import frame_transform_graph,SkyCoord
 from astropy.coordinates.matrix_utilities import rotation_matrix, matrix_product, matrix_transpose
 import astropy.coordinates as coord
 import astropy.units as u
+from . import utils,ladfit
 
 def rotsph(lon,lat,clon,clat,anode=None,reverse=False,original=False):
     '''
@@ -36,32 +36,40 @@ def rotsph(lon,lat,clon,clat,anode=None,reverse=False,original=False):
 
     Parameters
     ----------
-    lon       Array of longitudes to be rotated
-    lat       Array of latitudes to be rotated
-    clon      Longitude of the new NORTH POLE in the old coordinate system
-    clat      Latitude of the new NORTH POLE in the old coordinate system
-    =anode    The "Ascending Node" which is the longitude (in the new
-             system) of the first point where the old equator cross
-             the new one.  This sets the zero-point of the new
-             longitude.  By default the zero-point of the new
-             coordinate system is the point where the two equators
-             cross.
-    /original Set the new longitude zero-point to be clon (if clat>0)
+    lon : numpy array
+       Array of longitudes to be rotated
+    lat : numpy array
+       Array of latitudes to be rotated
+    clon : numpy array
+       Longitude of the new NORTH POLE in the old coordinate system
+    clat : numpy array
+       Latitude of the new NORTH POLE in the old coordinate system
+    anode : float
+       The "Ascending Node" which is the longitude (in the new
+         system) of the first point where the old equator cross
+         the new one.  This sets the zero-point of the new
+         longitude.  By default the zero-point of the new
+         coordinate system is the point where the two equators
+         cross.
+    original : bool, optional
+       Set the new longitude zero-point to be clon (if clat>0)
              and clon+180 (if clat<0).  This is the way it was
              originally done.  DON'T USE WITH "ANODE"
-    /stp      Stop at the end of the program
-    /reverse  The reverse operation.  In that case (nlon,nlat) should be input
-           as (lon,lat). E.g.
+    reverse : bool, optional
+       The reverse operation.  In that case (nlon,nlat) should be input
+         as (lon,lat). E.g.
 
-           rotsph,ra,dec,cra,cdec,nlon,nlat
-           rotsph,nlon,nlat,cra,cdec,nra,ndec,/reverse
+         rotsph,ra,dec,cra,cdec,nlon,nlat
+         rotsph,nlon,nlat,cra,cdec,nra,ndec,/reverse
            
-           (ra,dec) and (nra,ndec) should be identical to 1E-10.
+         (ra,dec) and (nra,ndec) should be identical to 1E-10.
 
     Returns
     -------
-    nlon  Array of rotated longitudes
-    nlat  Array of rotated latitudes
+    nlon : numpy array
+       Array of rotated longitudes
+    nlat : numpy array
+       Array of rotated latitudes
 
     '''
 
@@ -257,6 +265,233 @@ def rotsphcen(lon,lat,clon,clat,polar=False,gnomic=False,reverse=False):
             nlon, nlat = rotsph(phi,theta,clon,clat,reverse=True,original=True)
 
     return nlon, nlat
+
+def rotate_lb(lon,lat,npole,equator,verbose=False,
+              reverse=False,contin=False):
+    """
+    This program rotates Latitude and Longitude to a new coordinate
+    system given L,B coordinates of the new Z and X axes in the
+    old coordinate system.
+
+    If the REVERSE keyword is set then the points are actually
+    rotated.
+
+    Parameters
+    ----------
+    lon : numpy array
+       Original longitude (scalar or array)
+    lat : numpy array
+       Original latitude (scalar or array)
+    npole : list or numpy array
+       The north pole of the new coordinate system
+         in the old coordinate system [L,B].
+    equator : list or numpy array
+       The zero-point of the equator of the new coordinate
+         system in the old coordinate system [L,B].
+    verbose : bool, optional
+       Print results to screen.  Default is False.
+    reverse : bool, optional
+       Actually rotate the points, not the coordinates.
+         Default is False.
+    contin : bool, optional
+       Make the points continuous.  Default is False.
+
+    Returns
+    -------
+    nlon : numpy array
+       The longitude(s) in the new coordinate system
+    nlat : numpy array
+       The latitude(s) in the new coordinate system
+    rot : numpy array
+       The rotation matrix
+    r_inv : numpy array
+       The inverse rotation matrix.  The actual operation
+         to get the new coordinates is: nvec = R_inv # vec
+         Where vec is the cartesian vector on a unit circle
+         for the old coordinates and nvec for the new ones.
+    nvec : numpy array
+       The cartesian vector on a unit circle for the new
+         coordinates.  Only for the last scalar.
+
+    Examples
+    --------
+
+    newlon,newlat = rotate_lb(lon,lat,npole,equator)
+
+    Written by David Nidever Dec 2004
+    Translated to Python by D. Nidever  July 2024
+    """
+
+    # INPUT:
+    #  LON - galactic longitude
+    #  LAT - galactic latitude
+    #  Npole - 2-element array for (L,B) of North pole of new 
+    #          coordinate system
+    #  equator - 2-element array for (L,B) of equator zero-point
+    #            (x-axis) of new coordinate system
+
+    # have three euler angles: A, B, G
+
+    # 1st Rotation: Rotate A about original Z-axis in +phi direction
+    # 2nd Rotation: Rotate B about the new Y-axis (Y2) in +theta direction
+    # 3rd Rotation: Rotate G about the new Z-axis (Z2=Z3) in +phi2
+    #      direction (in the X2-Y2 / X3-Y3 plane).
+    #
+    
+    # I should convert L and B coordinates into a vector in a right hand
+    # reference frame.  That frame is: Z is at B=+90, X is at B=0,L=0
+    # (galactic center) and Y is at B=0,L=+90. (where L is measured
+    # counterclockwise looking down onto the z axis).
+
+    # Given L and B we get x1,y1,z1 (1 meaning in the original coordinate
+    # system).  We can convert L and B into the usual PHI and THETA.
+    # Where PHI is identical to L and THETA=0 at the +Z axis and 180 at
+    # the -Z axis:
+    #    PHI = L,    THETA = 90-B
+    # Then our conversion from PHI and THETA to x1, y1 and z1 is:
+    #    x1 = sin(THETA)*cos(PHI)
+    #    y1 = sin(THETA)*sin(PHI)
+    #    z1 = cos(THETA)
+    # Where r=1 because we don't have a distance, we only care about the
+    # angles.
+
+    # Converting new coordinate system L and B to PHI and THETA and
+    # vectors
+    Npole_PHI = np.deg2rad(npole[0])
+    Npole_THETA = np.deg2rad(90-npole[1])
+    equator_PHI = np.deg2rad(equator[0])
+    equator_THETA = np.deg2rad(90-equator[1])
+
+    # Getting vectors for the new axes:
+    # Npole - New Z-axis
+    # equator - New X-axis
+    # Y2 - New Y-axis
+    Npole_vec = np.array([np.sin(Npole_THETA)*np.cos(Npole_PHI),
+                          np.sin(Npole_THETA)*np.sin(Npole_PHI),
+                          np.cos(Npole_THETA)])
+    equator_vec = np.array([np.sin(equator_THETA)*np.cos(equator_PHI),
+                            np.sin(equator_THETA)*np.sin(equator_PHI),
+                            np.cos(equator_THETA)])
+    Y2_vec = np.cross( Npole_vec, equator_vec )   # cross product
+    Y2_vec = Y2_vec / np.linalg.norm(Y2_vec)   # make sure it's a unit vector
+    
+    # From: http://casgm3.anorg.chemie.uni-tuebingen.de/klaus/nmr/conventions/euler/euler.html
+    # angle B is the angle between the two poles (i.e. the z axes).
+    # angle A is the angle between the X axis of the reference (original)
+    #   coordinate system and the projection of z onto the X,Y plane.
+    # angle G is the angle between the y axis and the line of nodes.
+    #   I can find G by first getting the line of nodes (or the vector
+    #   that points in that direction).  I just need to rotate the Y unit
+    #   vector by A around the Z-axis.  Then I just need to find the angle
+    #   between that and the new Y-axis.  Can use dot product to do that.
+
+    A = Npole_PHI      
+    B = Npole_THETA
+
+    # Getting the line of nodes, Rotate Y by A about Z axis
+    R1 = np.array([[np.cos(A),np.sin(A),0.],
+                   [-np.sin(A),np.cos(A),0.],
+                   [0.,0.,1]])
+    line_nodes = np.dot(np.array([0.,1.,0.]),R1)
+    
+    # Getting the final angle which is the angle between the line of nodes
+    # and the new Y axis (Y3).
+    COSG = ( np.sum(line_nodes * Y2_vec) /
+             (np.linalg.norm(line_nodes)*np.linalg.norm(Y2_vec)) )
+    if COSG > 1.0:
+        COSG = 1 - (COSG-1)
+    if COSG < -1.0:
+        COSG = -1 - (COSG+1)
+    G = np.arccos(COSG)
+    # G is only the absolute angle b/w line_nodes and Y2
+
+    crs = np.cross(line_nodes, Y2_vec)
+    # this will point either in the + or - Npole direction.
+
+    # getting the right G
+    updown = np.sum( Npole_vec * crs )
+    G = utils.signs(updown) * G
+    if G < 0:
+        G += 2*np.pi
+
+    # Here are the other two rotation matrices
+    R2 = np.array([[np.cos(B),0.,-np.sin(B)],
+                   [0.,1.,0.],
+                   [np.sin(B),0.,np.cos(B)]])
+    R3 = np.array([[np.cos(G),np.sin(G),0.],
+                   [-np.sin(G),np.cos(G),0.],
+                   [0.,0.,1.]])
+    
+    # creating the transformation matrix using the Euler angles
+    # A, B and G need to be in radians
+    # R = R1 # R2 # R3
+    cA = np.cos(A)
+    cB = np.cos(B)
+    cG = np.cos(G)
+    sA = np.sin(A)
+    sB = np.sin(B)
+    sG = np.sin(G)
+    ROT = np.array([ [  cA*cB*cG-sA*sG,  sA*cB*cG+cA*sG, -sB*cG  ],
+                     [ -cA*cB*sG-sA*cG, -sA*cB*sG+cA*cG,  sB*sG  ],
+                     [           cA*sB,           sA*sB,     cB  ]])
+    
+    # Getting the inverted rotation matrix
+    R1_rev = np.array([[np.cos(-A),np.sin(-A),0.],
+                       [-np.sin(-A),np.cos(-A),0.],
+                       [0.,0.,1.]])
+    R2_rev = np.array([[np.cos(-B),0.,-np.sin(-B)],
+                       [0.,1.,0.],
+                       [np.sin(-B),0.,np.cos(-B)]])
+    R3_rev = np.array([[np.cos(-G),np.sin(-G),0.],
+                       [-np.sin(-G),np.cos(-G),0.],
+                       [0.,0.,1.]])
+    R_inv = np.matmul(np.matmul(R1_rev, R2_rev), R3_rev)
+
+    n = len(np.atleast_1d(lon))
+    newlon = np.zeros(n,float)
+    newlat = np.zeros(n,float)
+    
+    for i in range(n):
+        Li = lon[i]
+        Bi = lat[i]
+
+        # converting L and B to PHI and THETA, and converting to radians
+        PHI = np.deg2rad(Li)
+        THETA = np.deg2rad(90-Bi)
+
+        # converting PHI and THETA to x1, y1, and z1 in the original
+        # coord. system.
+        vec = np.array([ np.sin(THETA)*np.cos(PHI),
+                         np.sin(THETA)*np.sin(PHI),
+                         np.cos(THETA)])
+
+        # Getting the new, transformed vector
+        if reverse:
+            newvec = np.matmul(vec, ROT)
+        else:
+            newvec = np.matmul(vec, R_inv)
+            
+        # Getting the new theta and phi and converting to degrees
+        newtheta = np.arctan2(np.array([np.linalg.norm(newvec[0:2])]),
+                             np.array([newvec[2]]))
+        newtheta = np.rad2deg(newtheta)
+        newphi = np.arctan2(np.array([newvec[1]]),
+                           np.array([newvec[0]]))
+        newphi = np.rad2deg(newphi)
+        
+        # Converting NTHETA and NPHI to new L and B
+        newl = newphi
+        newb = 90-newtheta
+        if contin==False and newl<0:
+            newl += 360
+
+        if verbose:
+            print('({:.5f},{:.5f}) -> ({:.5f},{:.5f})'.format(Li,Bi,newl[0],newb[0]))
+
+        newlon[i] = newl
+        newlat[i] = newb
+        
+    return newlon,newlat,ROT,R_inv
 
 
 def doPolygonsOverlap(xPolygon1, yPolygon1, xPolygon2, yPolygon2):

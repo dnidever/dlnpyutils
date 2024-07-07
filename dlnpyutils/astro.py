@@ -15,7 +15,7 @@ __version__ = '20191226'  # yyyymmdd
 import numpy as np
 import warnings
 #from astropy.io import fits
-#from astropy.table import Table, Column
+from astropy.table import Table, Column
 #from astropy import modeling
 #from astropy.convolution import Gaussian1DKernel, convolve
 #from glob import glob
@@ -31,7 +31,7 @@ from astropy.utils.exceptions import AstropyWarning
 #from scipy.ndimage.filters import convolve
 #import astropy.stats
 from . import utils
-from .coords import xyz2lbd
+from .coords import xyz2lbd,rotate_lb
 
 
 # Ignore these warnings, it's a bug
@@ -250,224 +250,208 @@ def vgsr2vlsr(v,l,b,dir,vcirc=240.0):
 
     return v2
 
-
-def galaxy_model(flat=False,vcirc=240.0,R0=8.5,rscale=12.5,zscale=5.0,rmin=1.5,vdisk=240.0,vdisp=0.0,rhelcut=None,nstars=100000):
+def lmcvlos(ra,dec,halo=False,hi=False,helio=False):
     """
-    Model of the proper motions and rvs of the galaxy.
-    Mostly copied from ggss/ggss_model.pro
+    This computes van der Marel's (AJ 2002), line-of-sight
+    velocity for the LMC, RA and DEC should be in degrees!!
+    
+    Parameters
+    ----------
+    ra : numpy array
+       Array of Right Ascension values (in degrees!) for
+          which the radial velocity is desired.
+    dec : numpy array
+       Array of Declination values for which the radial
+          velocity is desired.
+    halo : boolean, optional
+       Halo model.  Default is False.
+    hi : boolean, optional
+       Use the HI parameters (stellar by default).
+    helio : boolean, optional
+       Output Heliocentric velocity NOT Vgsr.
 
-    INPUT:
-    =vdisk    The circular velocity of the disk (default vdisk=vcirc)
-    =vcirc    The circular velocity of the sun (default vcirc=220 km/s)
-    =R0       The distance from the sun to the GC (default R0=8.5 kpc)
-    =rscale   The upper radial cutoff of the disk (default rscale=12.5 kpc)
-    =zscale   The z-height cutoff of the disk (default zscale=5.0 kpc)
-    =vdisp    Velocity dispersion (default is vdisp=0 km/s)
-    =rmin     The lower radial cutoff of the disk(default rmin=1.5 kpc)
-    =rhelcut  Only keep stars within this distance of the sun.
-    =nstars   The number of stars in the simulation (default nstars=100,000)
-    /flat     Simulate a "flat" galaxy, i.e. no thickness, all stars at b=0.
+    Returns
+    -------
+    res : table
+       Results with vlos, rho, bigphi.
 
-    OUTPUT:
-    x       Galactocentric X direction (in kpc)
-    y       Galactocentric Y direction (in kpc)
-    z       Galactocentric Z direction (in kpc)
-    vx      Velocity in the galactocentric X direction (in km/s)
-    vy      Velocity in the galactocentric Y direction (in km/s)
-    vz      Velocity in the galactocentric Z direction (in km/s)
-    l       Galactic longitude
-    b       Galactic latitude
-    vhel    Heliocentic radial velocity (in km/s)
-    vlsr    Radial velocity wrt the local standard of rest (LSR) (in km/s)
-    vgsr    Radial velocity wrt the galactic standard of rest (GSR) (in km/s)
-    mul     True proper motion in galactic longitude (in mas/yr)
-    mub     True proper motion in galactic latitude (in mas/yr)
+    Examples
+    --------
 
-    Written by D.Nidever  March 2006
+    res = lmcvlos(ra,dec)
+
+    By D.Nidever  August 2005
+    Translated to Python by D.Nidever  July 2024
     """
 
-    #The Coordinate System (right-handed):
-    # x = toward galactic center from sun
-    # y = toward l=90
-    #  z = toward NGP
-    #  phi = 0 at x, positive toward +y (against galactic rotation)
-    #  r = radial distance from GC
+    #---- All of the parameters -----
 
+    # Stellar LMC CM position in ra,dec
+    alpha_lmc = 81.9000      # deg
+    delta_lmc = -69.8666666  # deg
 
-    # Getting the random positions
-    np.random.seed(0)
-    x = (np.random.rand(2*nstars)-0.5)*2.0*rscale
-    y = (np.random.rand(2*nstars)-0.5)*2.0*rscale    
-    # Flat galaxy
-    if flat is True:
-        z = np.zeros(nstars,float)
-    # Galaxy extended in the Z direction
-    else:
-        z = np.random.randn(2*nstars)*zscale
+    # Inclination & Line of Nodes
+    inc = 34.75
+    if halo:
+        inc = 0.0
+    bigtheta = 129.9         # counter-clockwise from North
 
-    # Only want stars within a radius RSCALE and greater than RMIN*RSCALE 
-    gd, = np.where( (np.sqrt(x**2.+y**2.) < rscale) & (np.sqrt(x**2.+y**2.) > rmin))
-    x = x[gd]
-    y = y[gd]
-    z = z[gd]
+    # HI LMC center from Kim et al.(1998)
+    if hi:
+        alpha_lmc = 79.4        # deg
+        delta_lmc = -69.03333   # deg
+        # HI line-of-nodes
+        bigtheta = 162.
 
-    # RHEL CUT
-    if rhelcut is not None:
-        xhel = x+R0
-        rhel = np.sqrt(xhel**2.+y**2.+z**2.)
-        gd, = np.where(rhel <= rhelcut)
-        if len(gd)==0:
-            raise ValueError('No stars within '+str(rhelcut)+' kpc of the sun')
-        x = x[gd]
-        y = y[gd]
-        z = z[gd]
+    # di/dt
+    #didt = -103.0              # deg/Gyr = -0.37 mas/yr  # 278.378 mas/yr -> deg/Gyr  # Eq. 35
+    didt = -0.37
+    #didt = -6.0                 # mas/yr, from Kallivayalil et al.2006
+    if halo:
+        didt = 0.0
 
-    # Trim to number of stars that we want
-    if len(x)>nstars:
-        x = x[0:nstars]
-        y = y[0:nstars]
-        z = z[0:nstars]
+    # Distance (in kpc)
+    d0 = 50.1
+    
+    # CM Radial velocity (Heliocentric, in km/s)
+    vsys = 262.2          # Eq.37
         
-    # Cylindrical and spherical coordinates
-    rho = np.sqrt(x**2.+y**2.)    # distance from z axis
-    gphi = np.arctan2(y,x)         # the galactic azimuthal coordinate (0-2*pi), in radians
-    gtheta = np.arctan2(rho,z)     # the galactic polar coordinate (0-pi), in radians
-    r = np.sqrt(x**2.+y**2.+z**2.) # radial distance, in kpc
-
-    # Get Galactic coordinates
-    l,b,d = xyz2lbd(x,y,z,R0=R0)
+    # Proper motion
+    #muw = -1.68           # proper motion towards WEST ( -d alpha/dt * cos(dec) ),in mas/year
+    #mun = 0.34            # proper motion towards NORTH ( d dec/dt) in mas/year
+    # from Kallivaylil et al. (2006)
+    #muw = -1.94
+    #mun = 0.43
+    # from Kallivaylil et al. (2013)
+    #muw = -1.910  # -1.910+/-0.02
+    #mun =  0.229  #  0.229+/0.047
+    # from Luci+2021
+    muw = -1.858
+    mun = 0.385
     
-    # Use a radius-dependent rotation curve
-    vcoef = np.array([0.0, 55.0, -4.0, 0.09])
-    vdisk = np.poly1d(np.flip(vcoef))(rho)
+    # Vt = mu(arcsec/year) * 4.74 * dist(pc)
+    # bigthetat = atan(-muw,mun)*!radeg
+    # vtc = vt * cos(bigthetat-bigtheta)  Eq.26
+    # vts = vt * sin(bigthetat-bigtheta)
+    mutot = np.sqrt(muw**2 + mun**2)
+    vt = mutot*4.74*d0
+    bigthetaT = np.rad2deg(np.arctan2(-muw,mun))
+    #vtc = vt * cos((bigthetat-bigtheta)/!radeg)
+    #vts = vt * sin((bigthetat-bigtheta)/!radeg)
+    #vtc = 253.            # vt = sqrt(vtc^2.+vts^2.), Vt along the line of nodes, from Eq.43
+    #wts = -402.9          # vts + d0*(di/dt), Eq.29,37
+    #wts = vts + d0*didt
 
-    # Cartesian velocities
-    #  Moving in the -gphi direction
-    #  phihat = -sin(phi)*xhat + cos(phi)*yhat
-    vx = (-vdisk)*(-np.sin(gphi))
-    vy = (-vdisk)*np.cos(gphi)
-    vz = x.copy()*0.
-    # add velocity dispersion
-    if vdisp > 0.0:
-        np.random.seed(1)
-        vx += np.random.randn(len(vx))*vdisp/np.sqrt(3.)
-        vy += np.random.randn(len(vx))*vdisp/np.sqrt(3.)
-        vz += np.random.randn(len(vx))*vdisp/np.sqrt(3.)
-    vtot = np.sqrt(vx**2+vy**2+vz**2)     # total velocity, should be vcirc
+    # I'm not getting the same wts
 
-    # *** NOW WE "OBSERVE" THE STARS ***
+    #---- Create the projected rotation curve ----
 
-    # RADIAL VELOCITY
-    
-    #Calculating the heliocentric radial velocity
-    # Vrad = Vrel dotted with unit vector from sun to the star
-    # Vrad = V*cos(angle)
+    n = len(np.atleast_1d(ra))
 
-    ## Relative velocity of the star wrt the sun
-    # THIS ASSUMES THAT THE SUN IS IN COMPLETE CIRCULAR MOTION
-    vrelvec = np.zeros((len(x),3),np.float64)
-    vrelvec[:,0] = vx
-    vrelvec[:,1] = vy-vcirc    # the sun is moving in +y direction
-    vrelvec[:,2] = vz
+    # CONVERTING coordinates to LMC-centric coordinate system (rho,phi)
+    #  rho is radial distance from LMC CM
+    #  phi is the position angle, counter-clockwise from WEST
+    #  position angles with "big" are measured from NORTH
 
-    # unit vector for our line-of-sight toward the star, rhat
-    #  in helio cartesian coordinate, xhel=x+R0
-    # rhat = (x/r)*xhat + (y/r)*yhat + (z/r)*zhat
-    xhel = x+R0
-    rhel = np.sqrt(xhel**2+y**2+z**2)
-    rhat = np.zeros((len(x),3),np.float64)
-    rhat[:,0] = xhel/rhel 
-    rhat[:,1] = y/rhel
-    rhat[:,2] = z/rhel
+    # Copied from sphtrigdist.pro
+    # Can also use sphdist.pro
+    cosa = np.sin(np.deg2rad(delta_lmc))*np.sin(np.deg2rad(dec))
+    cosa += np.cos(np.deg2rad(delta_lmc))*np.cos(np.deg2rad(dec))*np.cos(np.deg2rad(alpha_lmc-ra))
+    rho = np.rad2deg(np.arccos(cosa))
 
-    # ****THIS IS VLSR NOT VHELIO*****
+    npole = [alpha_lmc,delta_lmc]                 # North pole at CM
+    equator = [alpha_lmc-1,delta_lmc]             # longitude starts from west
+    phi,_,_,_ = rotate_lb(ra,dec,npole,equator)
+    phi = -phi                                    # want counter-clockwise
+    phi[phi<0] += 360                             # all positive
 
-    # Take the dot product of the two vectors
-    # vvec dot rhat = vrelvec[0]*rhat[0] + vrelvec[1]*rhat[1] + vrelvec[2]*rhat[2]
-    vlsr = vrelvec*rhat
-    vlsr = np.sum(vlsr,axis=1)
-
-    # Getting Vgsr and Vhelio velocity
-    vgsr = vgsr2vlsr(vlsr,l,b,-1)
-    vhel = vgsr2vhelio(vgsr,l,b,vcirc=vcirc)
+    # Getting van der Marel's model
+    bigphi = phi-90.    # position angle from NORTH
+    bigthetat = np.rad2deg(np.arctan2(-muw,mun))     # bigthetat = thetat-90
+    # thetat is the direction of the transverse motion
+    # on the sky counter-clockwise from WEST
+    # bigthetat is measured from NORTH
+    # Calculate directly from proper motion values
+    # f from Eq.25
+    f = (np.cos(np.deg2rad(inc))*np.cos(np.deg2rad(rho)) -
+         np.sin(np.deg2rad(inc))*np.sin(np.deg2rad(rho))*np.sin(np.deg2rad(bigphi-bigtheta)))
+    f /= np.sqrt( (np.cos(np.deg2rad(inc))*np.cos(np.deg2rad(bigphi-bigtheta)))**2 +
+                  np.sin(np.deg2rad(bigphi-bigtheta))**2 )
 
 
-    # PROPER MOTIONS
+    # ROTATION component
+    # The best fit is for vtc=599.  I found eta=2.6, r0=2.5 seems to look the most
+    # like his fig.6 using Eq.36.
+    # For other vtc use Eq.34.
+    #rho = scale_vector(findgen(1000),0,0.3*50.)
+    #f = fltarr(1000)+1.
 
-    # Calculating the heliocentric transverse velocity and proper motion
+    rprime = d0*np.sin(np.deg2rad(rho))/f    # distance from LMC CM in kpc, in plane, Eq.19
+    # Olsen & Massey 2006 use eta=3.0, v0=61.1, r0/d0=0.041 (do=50.1 kpc) -> r0=2.054
+    v0 = 61.6
+    eta = 3.0
+    r0 = 2.054
+    #v0 = 130.0     #  pg. 2647 (pg.9), col.2, end of first paragraph.  for vtc=600 #49.8
+    #eta = 2.5 #2.6  #0.5
+    #r0 = 2.5   #2.5 #1.4
+    # van der Marel 2002, section 10
+    # This v0 might be a little low
+    v0 = 49.7
+    eta = 2.68
+    r0 = 2.7555       # r0/d0=0.055
 
-    # heliocentric spherical coordinates
-    htheta = 90-b   # 0 at NP, 180 at SP
-    hphi = l
+    VR = (v0*rprime**eta)/((rprime**eta)+(r0**eta))            # Eq. 36
+    ##vtc = 300.
+    #VR = VR + (vtc-599.)*tan(rho/!radeg)/sin(inc/!radeg)   # Eq. 34, also see 3rd paragraph on pg.2647 (pg.9)
 
-    # In the +LON direction
+    #r = [0.009, 0.028, 0.044, 0.06, 0.081, 0.096, 0.113, 0.130, 0.148, 0.178]*50.0
+    #v = [-27.9, 14.2, 25.3, 35.7, 57.3, 50.0, 39.4, 46.6, 55.8, 32.1]
+    #
+    #plot,rprime/50.,vr,/nodata,xr=[0.,0.23],yr=[-75,200],xs=1,ys=1
+    #oplot,rprime/50.,vr,thick=1.3
+    #oplot,[0,1],[0,0]
+    #oplot,[0,1],[100,100],linestyle=2
+    #oplot,r/50.,v,ps=8
 
-    # unit vector in the +LON direction at the star's position, lhat
-    # lhat = -sin(hphi)*xhat + cos(hphi)*yhat
-    lhat = np.zeros((len(x),3),np.float64)
-    lhat[:,0] = -np.sin(np.deg2rad(hphi))
-    lhat[:,1] = np.cos(np.deg2rad(hphi))
-    lhat[:,2] = 0.0
+    # Correction for asymmetric drift, Section 8.1 (pg.14)
+    #sigv = 21.                        # velocity dispersion, sect. 7.3, fig.6, or table 2.
+    #VR = sqrt(VR^2. + 6.*sigv^2.)
 
-    # transverse velocity in +LON direction
-    #  relative velocity dot lhat
-    vtanl = vrelvec*lhat
-    vtanl = np.sum(vtanl,axis=1)
+    # CALCULATING the Line-of-Sight velocity (Vlos), Eq.30+31
+    #vlos1 = vsys*cos(rho/!radeg)
+    #vlos2 = wts*sin(rho/!radeg)*sin((bigphi-bigtheta)/!radeg)
+    #vlos3 = vtc*sin(rho/!radeg)*cos((bigphi-bigtheta)/!radeg)
+    #vlos4 = -f*VR*sin(inc/!radeg)*cos((bigphi-bigtheta)/!radeg)
+    # Using Eq.24 instead
+    vlos1 = vsys*np.cos(np.deg2rad(rho))
+    vlos2 = vt*np.sin(np.deg2rad(rho))*np.cos(np.deg2rad(bigphi-bigthetaT))
+    # didt is in mas/yr
+    # didt(mas/yr) * d0(kpc) * 4.74 = velocity(km/s)
+    vlos3 = d0*didt*4.74*np.sin(np.deg2rad(rho))*np.sin(np.deg2rad(bigphi-bigtheta))
+    vlos4 = -f*VR*np.sin(np.deg2rad(inc))*np.cos(np.deg2rad(bigphi-bigtheta))
+    #vlos = vsys*cos(rho/!radeg) + wts*sin(rho/!radeg)*sin((bigphi-bigtheta)/!radeg)
+    #vlos = vlos + (vtc*sin(rho/!radeg)-f*VR*sin(inc/!radeg))*cos((bigphi-bigtheta)/!radeg)
+    #vgsr = vlos1 + vlos2 + vlos3 + vlos4
+    vlos = vlos1 + vlos2 + vlos3 + vlos4
+        
+    #vlos = vsys*cos(rho/!radeg) + wts*sin(rho/!radeg)*sin((bigphi-bigtheta)/!radeg)
+    #vlos = vlos + (vtc*sin(rho/!radeg)-f*VR*sin(inc/!radeg))*cos((bigphi-bigtheta)/!radeg)
+    #vgsr = vlos
 
-    # proper motion in +LON direction
-    #   mu(arcsec/year) = Vtan(km/s)/(4.74*d(pc))
-    mul = vtanl/(4.74*rhel*1000.0)          # in arcsec/year
-    mul = mul * 1000.0                      # in mas/year
+    ## Heliocentric velocity
+    #if keyword_set(helio) then begin
+    #  glactc,ra,dec,2000.,glon,glat,1,/deg
+    #  vhelio = vgsr2vhelio(vgsr,glon,glat)
+    #  vgsr = vhelio    # Copy to output array
+    #endif
 
-    # in +LAT direction
+    # Put the results in a table
+    dt = [('ra',float),('dec',float),('rho',float),('vlos',float),('bigphi',float)]
+    res = Table(np.zeros(n,dtype=np.dtype(dt)))
+    res['ra'] = ra
+    res['dec'] = dec
+    res['rho'] = rho
+    res['vlos'] = vlos
+    res['bigphi'] = bigphi
 
-    # unit vector in the +LAT direction at the star's position, bhat
-    # bhat = cos(htheta)*cos(hphi)*xhat + cos(htheta)*sin(hphi)*yhat - sin(htheta)*zhat
-    bhat = np.zeros((len(x),3),np.float64)
-    bhat[:,0] = np.cos(np.deg2rad(htheta))*np.cos(np.deg2rad(hphi))
-    bhat[:,1] = np.cos(np.deg2rad(htheta))*np.sin(np.deg2rad(hphi))
-    bhat[:,2] = -np.sin(np.deg2rad(htheta))
-
-    # transverse velocity in +LAT direction
-    #  relative velocity dot lhat
-    vtanb = vrelvec*bhat
-    vtanb = np.sum(vtanb,axis=1)
-
-    # proper motion in +LAT direction
-    #   mu(arcsec/year) = Vtan(km/s)/(4.74*d(pc))
-    mub = vtanb/(4.74*rhel*1000.0)          # in arcsec/year
-    mub = mub * 1000.0                      # in mas/year
-
-    # The position angle of the proper motion, E of N
-    pa = np.rad2deg(np.arctan2(mul,mub))
-    bd, = np.where(pa < 0.0)
-    if len(bd)>0:
-        pa[bd] = pa[bd]+360.0
-
-    # Make the output structure
-    dt = np.dtype([('x',float),('y',float),('z',float),('l',float),('b',float),('d',float),('rho',float),('phi',float),
-                   ('vx',float),('vy',float),('vz',float),('vtot',float),('vhelio',float),('vlsr',float),('vgsr',float),('pml',float),('pmb',float)])
-    out = np.zeros(len(l),dtype=dt)
-    out['x'] = x
-    out['y'] = y
-    out['z'] = z
-    out['l'] = l
-    out['b'] = b
-    out['d'] = d
-    out['rho'] = rho
-    phi = 180-np.rad2deg(gphi)
-    bd, = np.where(phi > 180)
-    if len(bd)>0:
-        phi[bd] -= 360       # left-handed system
-    out['phi'] = phi
-    out['vx'] = vx
-    out['vy'] = vy
-    out['vz'] = vz
-    out['vtot'] = np.sqrt(vx**2+vy**2+vz**2)
-    out['vhelio'] = vhel
-    out['vlsr'] = vlsr
-    out['vgsr'] = vgsr
-    out['pml'] = mul
-    out['pmb'] = mub
-
-    return out
+    return res
