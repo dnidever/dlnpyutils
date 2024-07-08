@@ -194,7 +194,7 @@ def vgsr2vlsr(v,l,b,dir,vcirc=240.0):
     Given an input array called vhel with values of heliocentric
     radial velocities and input arrays of the same length with
     the Galactic coordinates of the object (gl,gb),
-  this code calculates Vlsr and Vgsr.
+    this code calculates Vlsr and Vgsr.
 
     INPUTS:
     vel     Vgsr/Vlsr velocity to convert
@@ -250,7 +250,9 @@ def vgsr2vlsr(v,l,b,dir,vcirc=240.0):
 
     return v2
 
-def lmcvlos(ra,dec,halo=False,hicenter=False):
+def lmcvlos(ra,dec,halo=False,hicenter=False,alpha=81.9000,
+            delta=-69.8666666,dist=50.1,inc=34.75,lineofnodes=None,
+            vsys=262.0,muw=-1.858,mun=0.385,didt=-0.37):
     """
     This computes van der Marel's (AJ 2002), line-of-sight
     velocity for the LMC, RA and DEC should be in degrees!!
@@ -259,14 +261,46 @@ def lmcvlos(ra,dec,halo=False,hicenter=False):
     ----------
     ra : numpy array
        Array of Right Ascension values (in degrees!) for
-          which the radial velocity is desired.
+         which the radial velocity is desired.
     dec : numpy array
        Array of Declination values for which the radial
-          velocity is desired.
+         velocity is desired.
     halo : boolean, optional
-       Halo model.  Default is False.
+       Halo model with no rotation or nutation (didt).
+         Default is False.
     hicenter : boolean, optional
        Use the HI parameters (stellar by default).
+         alpha = 79.40 deg
+         delta = -69.03333 deg
+         lineofnodes = 162. deg
+    alpha : float, optional
+       RA at the center of the LMC in degrees.
+         Default is alpha=81.9000.
+    delta : float, optional
+       DEC at the center of the LMC in degrees.
+         Default is delta=-69.8666666.
+    dist : float, optional
+       Distance to the center of the LMC in kpc.
+         Default is dist=50.1 kpc.
+    inc : float, optional
+       Inclination of the LMC disk in degrees.
+         Default is inc=34.75 deg.
+    lineofnodes : float, optional
+       The orientation angle of the line-of-nodes CCW from North (in degrees).
+         This is "bigtheta" in vdM2002.
+         Default is lineofnodes=129.9 deg unless hicenter=True, then 162 deg is used.
+    vsys : float, optional
+       Heliocentric radial velocity of the center of the LMC in km/s.
+         Default is vsys=262.0 km/s.
+    muw : float, optional
+       Proper motion in RA towards the West (so negative pmra) in mas/yr.
+         Default is muw=-1.858 mas/yr.
+    mun : float, optional
+       Proper motion in DEC towards the North (pmdec) in mas/yr.
+         Default is mun=0.385 mas/yr.
+    didt : float, optional
+       The nutation or change in inclination over time.
+         Default is didt=-0.37 mas/yr.
 
     Returns
     -------
@@ -285,35 +319,40 @@ def lmcvlos(ra,dec,halo=False,hicenter=False):
     #---- All of the parameters -----
 
     # Stellar LMC CM position in ra,dec
-    alpha_lmc = 81.9000      # deg
-    delta_lmc = -69.8666666  # deg
-
+    # alpha = 81.9000      # deg
+    # delta = -69.8666666  # deg
+    # these are the default values
+    
     # Inclination & Line of Nodes
-    inc = 34.75
+    #inc = 34.75
     if halo:
         inc = 0.0
-    bigtheta = 129.9         # counter-clockwise from North
-
+    #bigtheta = 129.9         # bigtheta, counter-clockwise from North
+    if lineofnodes is None and hicenter==False:
+        bigtheta = 129.9         # default value if hicenter not set
+    
     # HI LMC center from Kim et al.(1998)
     if hicenter:
-        alpha_lmc = 79.4        # deg
-        delta_lmc = -69.03333   # deg
+        alpha = 79.4        # deg
+        delta = -69.03333   # deg
         # HI line-of-nodes
         bigtheta = 162.
 
     # di/dt
-    #didt = -103.0              # deg/Gyr = -0.37 mas/yr  # 278.378 mas/yr -> deg/Gyr  # Eq. 35
-    didt = -0.37
-    #didt = -6.0                 # mas/yr, from Kallivayalil et al.2006
+    ##didt = -103.0              # deg/Gyr = -0.37 mas/yr  # 278.378 mas/yr -> deg/Gyr  # Eq. 35
+    ##didt = -6.0                # mas/yr, from Kallivayalil et al.2006
+    #didt = -0.37                # default now
     if halo:
         didt = 0.0
 
     # Distance (in kpc)
-    d0 = 50.1
+    # d0 = 50.1
+    # default
     
     # CM Radial velocity (Heliocentric, in km/s)
-    vsys = 262.2          # Eq.37
-        
+    # vsys = 262.2          # Eq.37
+    # default
+    
     # Proper motion
     #muw = -1.68           # proper motion towards WEST ( -d alpha/dt * cos(dec) ),in mas/year
     #mun = 0.34            # proper motion towards NORTH ( d dec/dt) in mas/year
@@ -323,22 +362,23 @@ def lmcvlos(ra,dec,halo=False,hicenter=False):
     # from Kallivaylil et al. (2013)
     #muw = -1.910  # -1.910+/-0.02
     #mun =  0.229  #  0.229+/0.047
-    # from Luci+2021
-    muw = -1.858
-    mun = 0.385
+    # from Luri+2021
+    #muw = -1.858
+    #mun = 0.385
+    # default now
     
     # Vt = mu(arcsec/year) * 4.74 * dist(pc)
     # bigthetat = atan(-muw,mun)*!radeg
     # vtc = vt * cos(bigthetat-bigtheta)  Eq.26
     # vts = vt * sin(bigthetat-bigtheta)
     mutot = np.sqrt(muw**2 + mun**2)
-    vt = mutot*4.74*d0
-    bigthetaT = np.rad2deg(np.arctan2(-muw,mun))
+    vt = mutot*4.74*dist
+    bigthetaT = np.rad2deg(np.arctan2(-muw,mun))   # angle of transverse velocity vector
     #vtc = vt * cos((bigthetat-bigtheta)/!radeg)
     #vts = vt * sin((bigthetat-bigtheta)/!radeg)
     #vtc = 253.            # vt = sqrt(vtc^2.+vts^2.), Vt along the line of nodes, from Eq.43
-    #wts = -402.9          # vts + d0*(di/dt), Eq.29,37
-    #wts = vts + d0*didt
+    #wts = -402.9          # vts + dist*(di/dt), Eq.29,37
+    #wts = vts + dist*didt
 
     # I'm not getting the same wts
 
@@ -353,12 +393,12 @@ def lmcvlos(ra,dec,halo=False,hicenter=False):
 
     # Copied from sphtrigdist.pro
     # Can also use sphdist.pro
-    cosa = np.sin(np.deg2rad(delta_lmc))*np.sin(np.deg2rad(dec))
-    cosa += np.cos(np.deg2rad(delta_lmc))*np.cos(np.deg2rad(dec))*np.cos(np.deg2rad(alpha_lmc-ra))
+    cosa = np.sin(np.deg2rad(delta))*np.sin(np.deg2rad(dec))
+    cosa += np.cos(np.deg2rad(delta))*np.cos(np.deg2rad(dec))*np.cos(np.deg2rad(alpha-ra))
     rho = np.rad2deg(np.arccos(cosa))
 
-    npole = [alpha_lmc,delta_lmc]                 # North pole at CM
-    equator = [alpha_lmc-1,delta_lmc]             # longitude starts from west
+    npole = [alpha,delta]                 # North pole at CM
+    equator = [alpha-1,delta]             # longitude starts from west
     phi,_,_,_ = rotate_lb(ra,dec,npole,equator)
     phi = -phi                                    # want counter-clockwise
     phi[phi<0] += 360                             # all positive
@@ -384,7 +424,7 @@ def lmcvlos(ra,dec,halo=False,hicenter=False):
     #rho = scale_vector(findgen(1000),0,0.3*50.)
     #f = fltarr(1000)+1.
 
-    rprime = d0*np.sin(np.deg2rad(rho))/f    # distance from LMC CM in kpc, in plane, Eq.19
+    rprime = dist*np.sin(np.deg2rad(rho))/f    # distance from LMC CM in kpc, in plane, Eq.19
     # Olsen & Massey 2006 use eta=3.0, v0=61.1, r0/d0=0.041 (do=50.1 kpc) -> r0=2.054
     v0 = 61.6
     eta = 3.0
@@ -425,7 +465,7 @@ def lmcvlos(ra,dec,halo=False,hicenter=False):
     vlos2 = vt*np.sin(np.deg2rad(rho))*np.cos(np.deg2rad(bigphi-bigthetaT))
     # didt is in mas/yr
     # didt(mas/yr) * d0(kpc) * 4.74 = velocity(km/s)
-    vlos3 = d0*didt*4.74*np.sin(np.deg2rad(rho))*np.sin(np.deg2rad(bigphi-bigtheta))
+    vlos3 = dist*didt*4.74*np.sin(np.deg2rad(rho))*np.sin(np.deg2rad(bigphi-bigtheta))
     vlos4 = -f*VR*np.sin(np.deg2rad(inc))*np.cos(np.deg2rad(bigphi-bigtheta))
     #vlos = vsys*cos(rho/!radeg) + wts*sin(rho/!radeg)*sin((bigphi-bigtheta)/!radeg)
     #vlos = vlos + (vtc*sin(rho/!radeg)-f*VR*sin(inc/!radeg))*cos((bigphi-bigtheta)/!radeg)
