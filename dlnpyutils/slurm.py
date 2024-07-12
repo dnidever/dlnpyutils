@@ -467,3 +467,116 @@ def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
         logger.info('jobid = '+jobid)
         
     return key,jobid
+
+
+def launcher(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
+             partition='priority',shared=True,walltime='12-00:00:00',notification=False,
+             memory=7500,numpy_num_threads=2,stagger=True,nodelist=None,precommands=None,
+             slurmroot='/tmp',verbose=True,dosubmit=False,logger=None):
+    """
+    Submit a Launcher slurm job with many serial tasks
+
+    tasks : table
+      Table with the information on the tasks.  Must have columns of:
+        cmd, outfile, errfile, dir (optional)
+
+    """
+
+
+    if logger is None:
+        logger = dln.basiclogger()
+
+    if ppn is None:
+        ppn = np.minimum(64,cpus)
+    slurmpars = {'nodes':nodes, 'account':account, 'shared':shared, 'ppn':ppn,
+                 'cpus':cpus, 'walltime':walltime, 'partition':partition,
+                 'notification':notification}
+
+    username = getpwuid(getuid())[0]
+    slurmdir = os.path.join(slurmroot,username,'slurm')
+    if os.path.exists(slurmdir)==False:
+        os.makedirs(slurmdir)
+
+    # Generate unique key
+    key = genkey()
+    if verbose:
+        logger.info('key = '+key)
+    # make sure it doesn't exist yet
+
+    # job directory
+    jobdir = os.path.join(slurmdir,label,key)
+    if os.path.exists(jobdir)==False:
+        os.makedirs(jobdir)
+
+    # Figure out number of tasks per cpu
+    ntasks = len(tasks)
+
+    # Make single list of commands
+
+    # Task loop
+    lines = []
+    for i in range(ntasks):
+        line = ''
+        if 'dir' in tasks.colnames:
+            line += 'cd '+tasks['dir'][i]+'; '
+        cmd = tasks['cmd'][i]+' > '+tasks['outfile'][i]+' 2> '+tasks['errfile'][i]
+        line += cmd
+        if os.path.exists(os.path.dirname(tasks['outfile'][i]))==False:  # make sure output directory exists
+            try:
+                os.makedirs(os.path.dirname(tasks['outfile'][i]))
+            except:
+                logger.info('Problems making directory '+os.path.dirname(tasks['outfile'][tind]))
+        lines += [line]
+    jobsfile = os.path.join(jobdir,label+'_cmd.lst')
+    if verbose:
+        logger.info('Writing '+jobsfile)
+    dln.writelines(jobsfile,lines)
+
+    # Write the tasks list
+    tasks.write(os.path.join(jobdir,label+'_tasks.fits'),overwrite=True)
+    # Write the list of logfiles
+    dln.writelines(os.path.join(jobdir,label+'_logs.txt'),list(tasks['outfile']))
+
+    # Make Launcher slurm script 
+
+    # Create the "master" slurm file
+    masterfile = label+'.slurm'
+    lines = []
+    lines += ['#!/bin/bash']
+    lines += ['# Auto-generated '+datetime.now().ctime()+' ['+masterfile+']']
+    if account is not None:
+        lines += ['#SBATCH --account='+account]
+    if partition is not None:
+        lines += ['#SBATCH --partition='+partition+'  # queue (partition)']
+    lines += ['#SBATCH --job-name='+label]
+    lines += ['#SBATCH -N '+str(nodes)+'           # number of nodes requested']
+    lines += ['#SBATCH -n '+str(ntasks)+'          # total number of tasks to run in parallel']
+    lines += ['#SBATCH -t '+str(walltime)+'        # run time (hh:mm:ss)']
+    #lines += ['#SBATCH --mem-per-cpu='+str(memory)]
+    lines += ['#SBATCH --output='+label+'-%j.out']
+    lines += ['#SBATCH --err='+label+'-%j.err']
+    lines += ['']
+    lines += ['module load launcher']
+    lines += ['']
+    lines += ['export LAUNCHER_WORKDIR='+jobdir]
+    lines += ['export LAUNCHER_JOB_FILE='+jobsfile]
+    lines += ['']
+    lines += ['${LAUNCHER_DIR}/paramrun']
+    if verbose:
+        logger.info('Writing '+os.path.join(jobdir,masterfile))
+    dln.writelines(os.path.join(jobdir,masterfile),lines)
+
+    if dosubmit:
+        # Now submit the job
+        logger.info('Submitting '+os.path.join(jobdir,masterfile))
+        # Change to the job directory, because that's where the outputs will go
+        curdir = os.path.abspath(os.curdir)
+        os.chdir(jobdir)
+        try:
+            res = subprocess.check_output(['sbatch',os.path.join(jobdir,masterfile)])
+            success = True
+        except:
+            logger.info('Submitting job to SLURM failed with sbatch.')
+            success = False
+            tb = traceback.format_exc()
+            logger.info(tb)
