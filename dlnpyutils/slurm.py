@@ -225,7 +225,7 @@ def queue_wait(label,key,jobid,sleeptime=60,logger=None,verbose=True):
 def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
            partition='priority',shared=True,walltime='12-00:00:00',notification=False,
            memory=7500,numpy_num_threads=2,stagger=True,nodelist=None,precommands=None,
-           verbose=True,logger=None):
+           slurmbase='/tmp',verbose=True,logger=None):
     """
     Submit a bunch of jobs
 
@@ -245,7 +245,7 @@ def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
                  'notification':notification}
 
     username = getpwuid(getuid())[0]
-    slurmdir = SLURMDIR+username+'/slurm/'
+    slurmdir = os.path.join(slurmroot,username,'slurm')
     if os.path.exists(slurmdir)==False:
         os.makedirs(slurmdir)
 
@@ -256,7 +256,7 @@ def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
     # make sure it doesn't exist yet
 
     # job directory
-    jobdir = slurmdir+label+'/'+key+'/'
+    jobdir = os.path.join(slurmdir,label,key)
     if os.path.exists(jobdir)==False:
         os.makedirs(jobdir)
 
