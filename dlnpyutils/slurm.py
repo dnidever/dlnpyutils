@@ -338,12 +338,12 @@ def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
         for j in range(nproc):
             proc = proc_index['value'][j]
             procfile = 'node%02d_proc%02d.slurm' % (node,proc)
-            lines += ['source '+jobdir+procfile+' &']
+            lines += ['source '+os.path.join(jobdir,procfile)+' &']
         lines += ['wait']
         lines += ['echo "Done"']
         if verbose:
-            logger.info('Writing '+jobdir+nodefile)
-        dln.writelines(jobdir+nodefile,lines)
+            logger.info('Writing '+os.path.join(jobdir,nodefile))
+        dln.writelines(os.path.join(jobdir,nodefile),lines)
         
         # Create the proc files
         for j in range(nproc):
@@ -377,8 +377,8 @@ def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
                 tasknum += 1
             lines += ['cd '+jobdir]                            
             if verbose:
-                logger.info('Writing '+jobdir+procfile)
-            dln.writelines(jobdir+procfile,lines)
+                logger.info('Writing '+os.path.join(jobdir,procfile))
+            dln.writelines(os.path.join(jobdir,procfile),lines)
 
     # Create the "master" slurm file
     masterfile = label+'.slurm'
@@ -407,25 +407,25 @@ def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
     lines += ['# ------------------------------------------------------------------------------']
     lines += ['SBATCH_NODE=$( printf "%02d']
     lines += ['" "$SLURM_ARRAY_TASK_ID" )']
-    lines += ['source '+jobdir+'node${SBATCH_NODE}.slurm']
+    lines += ['source '+jobdir+'/node${SBATCH_NODE}.slurm']
     if verbose:
-        logger.info('Writing '+jobdir+masterfile)
-    dln.writelines(jobdir+masterfile,lines)
+        logger.info('Writing '+os.path.join(jobdir,masterfile))
+    dln.writelines(os.path.join(jobdir,masterfile),lines)
 
     # Write the number of tasks
-    dln.writelines(jobdir+label+'.ntasks',ntasks)
+    dln.writelines(os.path.join(jobdir,label+'.ntasks'),ntasks)
 
     # Write the inventory file
-    dln.writelines(jobdir+label+'_inventory.txt',inventory)
+    dln.writelines(os.path.join(jobdir,label+'_inventory.txt'),inventory)
 
     # Write the tasks list
-    tasks.write(jobdir+label+'_tasks.fits',overwrite=True)
+    tasks.write(os.path.join(jobdir,label+'_tasks.fits'),overwrite=True)
     # Write the list of logfiles
-    dln.writelines(jobdir+label+'_logs.txt',list(tasks['outfile']))
+    dln.writelines(os.path.join(jobdir,label+'_logs.txt'),list(tasks['outfile']))
     
     # Now submit the job
     if verbose:
-        logger.info('Submitting '+jobdir+masterfile)
+        logger.info('Submitting '+os.path.join(jobdir,masterfile))
     # Change to the job directory, because that's where the outputs will go
     curdir = os.path.abspath(os.curdir)
     os.chdir(jobdir)
@@ -438,7 +438,7 @@ def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
         if scount>0:
             logger.info('Trying to submit to SLURM again')
         try:
-            res = subprocess.check_output(['sbatch',jobdir+masterfile])
+            res = subprocess.check_output(['sbatch',os.path.join(jobdir,masterfile)])
             success = True
         except:
             logger.info('Submitting job to SLURM failed with sbatch.')
