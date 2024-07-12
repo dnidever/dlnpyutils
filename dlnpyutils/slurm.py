@@ -225,7 +225,7 @@ def queue_wait(label,key,jobid,sleeptime=60,logger=None,verbose=True):
 def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
            partition='priority',shared=True,walltime='12-00:00:00',notification=False,
            memory=7500,numpy_num_threads=2,stagger=True,nodelist=None,precommands=None,
-           slurmbase='/tmp',verbose=True,logger=None):
+           slurmroot='/tmp',verbose=True,logger=None):
     """
     Submit a bunch of jobs
 
