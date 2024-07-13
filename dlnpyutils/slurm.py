@@ -469,7 +469,7 @@ def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
     return key,jobid
 
 
-def launcher(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
+def launcher(tasks,label,nodes=1,nparallel=None,cpus=64,ppn=None,account='priority-davidnidever',
              partition='priority',shared=True,walltime='12-00:00:00',notification=False,
              memory=7500,numpy_num_threads=2,stagger=True,nodelist=None,precommands=None,
              slurmroot='/tmp',verbose=True,dosubmit=False,logger=None):
@@ -496,6 +496,10 @@ def launcher(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever
     slurmdir = os.path.join(slurmroot,username,'slurm')
     if os.path.exists(slurmdir)==False:
         os.makedirs(slurmdir)
+
+    # Run 50 tasks per node, by default
+    if nparallel is None:
+        nparallel = nodes*50
 
     # Generate unique key
     key = genkey()
@@ -550,7 +554,7 @@ def launcher(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever
         lines += ['#SBATCH --partition='+partition+'  # queue (partition)']
     lines += ['#SBATCH --job-name='+label]
     lines += ['#SBATCH -N '+str(nodes)+'           # number of nodes requested']
-    lines += ['#SBATCH -n '+str(ntasks)+'          # total number of tasks to run in parallel']
+    lines += ['#SBATCH -n '+str(nparallel)+'          # total number of tasks to run in parallel']
     lines += ['#SBATCH -t '+str(walltime)+'        # run time (hh:mm:ss)']
     #lines += ['#SBATCH --mem-per-cpu='+str(memory)]
     lines += ['#SBATCH --output='+label+'-%j.out']
