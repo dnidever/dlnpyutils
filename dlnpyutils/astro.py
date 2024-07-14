@@ -736,7 +736,10 @@ def lmcvelmodel(ra,dec,halo=False,hicenter=False,alpha=81.9000,
     # Get the three components
     vcm = lmcvelmodel_cm(rho,bigphi,bigtheta_t,vt,vsys)
     vpn = lmcvelmodel_pn(rho,bigphi,bigtheta,dist,didt,inc,dthdt)
-    vint = lmcvelmodel_int(rho,bigphi,bigtheta,dist,inc)
+    if halo==False:
+        vint = lmcvelmodel_int(rho,bigphi,bigtheta,dist,inc)
+    else:
+        vint = np.zeros(vpn.shape,float)
     v = vcm + vpn + vint
     
     # v1, v2, v3 are the velocities
