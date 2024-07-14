@@ -924,9 +924,15 @@ def numlines(fil=None):
 
     """
     if fil is None: raise ValueError("file must be input")
-    with open(fil, "r") as f:
-        return (sum(bl.count("\n") for bl in blocks(f)))
-
+    try:
+        with open(fil, "r") as f:
+            return (sum(bl.count("\n") for bl in blocks(f)))
+    except UnicodeDecodeError:
+        with open(fil,"rb") as f:
+            return f.read.count(b'\n')
+    except:
+        traceback.print_exc()
+        
     # Could also use this
     #count=0
     #for line in open(fil): count += 1
