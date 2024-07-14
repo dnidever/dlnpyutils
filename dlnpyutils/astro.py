@@ -531,7 +531,8 @@ def lmcvelmodel_pn(rho,phi,theta,d0,didt,inc,dthdt):
     v = np.stack((v1,v2,v3)).T   # [N,3]
     return v
     
-def lmcvelmodel_int(rho,phi,theta,d0,inc,spin=1):
+def lmcvelmodel_int(rho,phi,theta,d0,inc,spin=1,
+                    v0=62,r0=2.76,eta=2.7):
     """
     Internal rotation component of the LMC velocity model.
     rho : radial component of on-sky coordinates (deg).
@@ -540,7 +541,10 @@ def lmcvelmodel_int(rho,phi,theta,d0,inc,spin=1):
     d0 : LMC CM distance (kpc).
     inc : inclination angle of the LMC disk relative to
            the plane of the sky (deg).
-    spin : spin direction of LMC disk rotation.
+    spin : spin sign (+/-) of LMC disk rotation.
+    v0 : maximum velocity of rotation curve
+    r0 : scale radius of rotation curve after which it flattens.
+    eta : power law for rotation curve
     """
     
     # ROTATION component
@@ -565,17 +569,13 @@ def lmcvelmodel_int(rho,phi,theta,d0,inc,spin=1):
 
     #rprime = dist*np.sin(np.deg2rad(rho))/f    # distance from LMC CM in kpc, in plane, Eq.19
     # Olsen & Massey 2006 use eta=3.0, v0=61.1, r0/d0=0.041 (do=50.1 kpc) -> r0=2.054
-    v0 = 61.6
-    eta = 3.0
-    r0 = 2.054
-    #v0 = 130.0     #  pg. 2647 (pg.9), col.2, end of first paragraph.  for vtc=600 #49.8
-    #eta = 2.5 #2.6  #0.5
-    #r0 = 2.5   #2.5 #1.4
-    # van der Marel 2002, section 10
-    # This v0 might be a little low
-    v0 = 49.7
-    eta = 2.68
-    r0 = 2.7555       # r0/d0=0.055
+    #v0 = 61.6
+    #eta = 3.0
+    #r0 = 2.054
+    ## This v0 might be a little low
+    #v0 = 49.7
+    #eta = 2.68
+    #r0 = 2.7555       # r0/d0=0.055
     VRprime = (v0*rprime**eta)/((rprime**eta)+(r0**eta))            # Eq. 36
 
     # Eqn. 21
@@ -586,12 +586,13 @@ def lmcvelmodel_int(rho,phi,theta,d0,inc,spin=1):
     v3 = fact * (-(cosi**2 * cosphth**2 + sinphth**2))
     v = np.stack((v1,v2,v3)).T   # [N,3]
     
-    return v
+    return v,VRprime
 
 
 def lmcvelmodel(ra,dec,halo=False,hicenter=False,alpha=81.9000,
                 delta=-69.8666666,dist=50.1,inc=34.75,lineofnodes=None,
-                vsys=262.0,muw=-1.858,mun=0.385,didt=-0.37,dthdt=0.0):
+                vsys=262.0,muw=-1.858,mun=0.385,didt=-0.37,dthdt=0.0,
+                v0rot=62,r0rot=2.8,etarot=2.7):
     """
     This computes the van der Marel et al. (AJ 2002) LMC velocity model
     with line-of-sight and proper motions.
@@ -642,7 +643,14 @@ def lmcvelmodel(ra,dec,halo=False,hicenter=False,alpha=81.9000,
          Default is didt=-0.37 mas/yr.
     dthdt : float, optional
        The time derivative of the line-of-nodes orientation angle
-         in mas/yr.  Default is 0.
+         in mas/yr.  Default is 0.    
+    v0rot : float, optional
+       Maximum velocity of rotation curve (km/s).  Default is 62.
+    r0rot : float, optional
+       Scale radius of rotation curve after which it flattens (kpc).
+         Default is 2.8.
+    etarot : float, optional
+       Power law for rotation curve.  Default is 2.7.
 
     Returns
     -------
@@ -734,12 +742,18 @@ def lmcvelmodel(ra,dec,halo=False,hicenter=False,alpha=81.9000,
     # We will always work in bigphi/bigthetas
     
     # Get the three components
+    # 1) Center of Mass
     vcm = lmcvelmodel_cm(rho,bigphi,bigtheta_t,vt,vsys)
+    # 2) time derivative of angles (i,theta)
     vpn = lmcvelmodel_pn(rho,bigphi,bigtheta,dist,didt,inc,dthdt)
+    # 3) Internal rotation
     if halo==False:
-        vint = lmcvelmodel_int(rho,bigphi,bigtheta,dist,inc)
+        vint,VRprime = lmcvelmodel_int(rho,bigphi,bigtheta,dist,inc,
+                                       v0=v0rot,r0=r0rot,eta=etarot)
     else:
-        vint = np.zeros(vpn.shape,float)
+        vint = np.zeros((n,3),float)
+        VRprime = np.zeros(n,float)
+    # Sum them up
     v = vcm + vpn + vint
     
     # v1, v2, v3 are the velocities
@@ -780,7 +794,7 @@ def lmcvelmodel(ra,dec,halo=False,hicenter=False,alpha=81.9000,
     # Put the results in a table
     dt = [('ra',float),('dec',float),('rho',float),('phi',float),
           ('vcm',float,3),('vpn',float,3),('vint',float,3),
-          ('v1',float),('v2',float),('v3',float),
+          ('vrprime',float),('v1',float),('v2',float),('v3',float),
           ('vlos',float),('muw',float),('mun',float)]
     res = Table(np.zeros(n,dtype=np.dtype(dt)))
     res['ra'] = ra
@@ -790,6 +804,7 @@ def lmcvelmodel(ra,dec,halo=False,hicenter=False,alpha=81.9000,
     res['vcm'] = vcm
     res['vpn'] = vpn
     res['vint'] = vint
+    res['vrprime'] = VRprime
     res['v1'] = v[:,0]
     res['v2'] = v[:,1]
     res['v3'] = v[:,2]
