@@ -472,7 +472,7 @@ def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
 def launcher(tasks,label,nodes=1,nparallel=None,cpus=64,ppn=None,account='priority-davidnidever',
              partition='priority',shared=True,walltime='12-00:00:00',notification=False,
              memory=7500,numpy_num_threads=2,stagger=True,nodelist=None,precommands=None,
-             slurmroot='/tmp',verbose=True,dosubmit=False,logger=None):
+             slurmroot='/tmp',verbose=True,nosubmit=False,logger=None):
     """
     Submit a Launcher slurm job with many serial tasks
 
@@ -570,7 +570,7 @@ def launcher(tasks,label,nodes=1,nparallel=None,cpus=64,ppn=None,account='priori
         logger.info('Writing '+os.path.join(jobdir,masterfile))
     dln.writelines(os.path.join(jobdir,masterfile),lines)
 
-    if dosubmit:
+    if nosubmit==False:
         # Now submit the job
         logger.info('Submitting '+os.path.join(jobdir,masterfile))
         # Change to the job directory, because that's where the outputs will go
@@ -584,3 +584,5 @@ def launcher(tasks,label,nodes=1,nparallel=None,cpus=64,ppn=None,account='priori
             success = False
             tb = traceback.format_exc()
             logger.info(tb)
+
+    return slurmdir,key
