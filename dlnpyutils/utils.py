@@ -929,7 +929,7 @@ def numlines(fil=None):
             return (sum(bl.count("\n") for bl in blocks(f)))
     except UnicodeDecodeError:
         with open(fil,"rb") as f:
-            return f.read.count(b'\n')
+            return f.read().count(b'\n')
     except:
         traceback.print_exc()
         
