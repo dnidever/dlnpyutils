@@ -579,10 +579,22 @@ def launcher(tasks,label,nodes=1,nparallel=None,cpus=64,ppn=None,account='priori
         try:
             res = subprocess.check_output(['sbatch',os.path.join(jobdir,masterfile)])
             success = True
+
+            if type(res)==bytes: res = res.decode()
+            res = res.strip()  # remove \n
+            logger.info(res)
+            # Get jobid
+            #  Submitted batch job 5937773 on cluster notchpeak
+            jobid = res.split()[3]
+            logger.info('jobid = '+jobid)
+
         except:
             logger.info('Submitting job to SLURM failed with sbatch.')
             success = False
             tb = traceback.format_exc()
             logger.info(tb)
+            jobid = -1
+
+        return slurmdir,key,jobid
 
     return slurmdir,key
