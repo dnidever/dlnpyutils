@@ -586,6 +586,7 @@ def launcher(tasks,label,nodes=1,nparallel=None,cpus=64,ppn=None,account='priori
                 logger.info(res)
             # Get jobid
             #  Submitted batch job 5937773 on cluster notchpeak
+            res = res.split('\n')[-1]
             jobid = res.split()[3]
             if verbose:
                 logger.info('jobid = '+jobid)
