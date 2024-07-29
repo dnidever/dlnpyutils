@@ -509,7 +509,7 @@ def status_update(jobs=None):
 
 
 def job_daemon(inp=None,dirs=None,inpname=None,nmulti=4,prefix="job",hyperthread=True,idle=False,
-               waittime=0.2,statustime=60):
+               waittime=0.2,statustime=60,staggertime=0):
     """This program is a simple batch job manager
 
     NOTE:  If you want to "kill" all of the jobs create a file "killjobs"
@@ -541,6 +541,8 @@ def job_daemon(inp=None,dirs=None,inpname=None,nmulti=4,prefix="job",hyperthread
            Default is 60.
     waittime : float or int, optional
            Time to wait between checking the running jobs.  Default is 0.2 sec.
+    staggertime : float or int, optional
+           The time to wait between submitting jobs.  Default is 0 sec.
 
     Results
     -------
@@ -685,7 +687,9 @@ def job_daemon(inp=None,dirs=None,inpname=None,nmulti=4,prefix="job",hyperthread
                 jobs['scriptname'][newind[i]] = scriptname
                 jobs['logfile'][newind[i]] = logfile
                 jobs['begtime'][newind[i]] = time.time()/3600/24   # in days
-
+                if staggertime > 0:
+                    time.sleep(staggertime)
+                
         # Are we done?
         #-------------
         ndone = np.sum(jobs['done']==True)
