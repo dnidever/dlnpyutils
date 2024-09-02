@@ -670,6 +670,9 @@ def lmcvelmodel(ra,dec,halo=False,hicenter=False,alpha=81.9000,
     # (1) center of mass, (2) time variation in the viewing angles, and
     # (3) internal rotation
 
+    if lineofnodes is not None:
+        bigtheta = lineofnodes
+    
     # Inclination & Line of Nodes
     #inc = 34.75
     if halo:

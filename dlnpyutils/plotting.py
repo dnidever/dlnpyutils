@@ -131,7 +131,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
            figsize=(8,8),xtitle=None,ytitle=None,title=None,colorlabel=None,charsize=12,
            origin='lower',aspect='auto',interpolation='none',bright=None,minhue=0.0,
            maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9,noplot=False,save=None,
-           nocolorbar=False):
+           colorbar=True):
     """
     Make a 2D histogram of points.
     
@@ -210,8 +210,8 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
        Do not plot anything.  Just return the data.
     save : str, optional
        Save the figure to this file.
-    nocolorbar : bool, optional
-       Do not add a colorbar.  Default is False.
+    colorbar : bool, optional
+       Shows a colorbar.  Default is True.
 
     Returns
     -------
@@ -542,7 +542,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
                     colorlabel = statistic+'(Z)'
                 else:
                     colorlabel = 'function(Z)'
-        if not nocolorbar:
+        if colorbar:
             plt.colorbar(label=colorlabel)
 
         # Save the figure
@@ -555,7 +555,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
 def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=False,norm=None,
             vmin=None,vmax=None,xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',
             xflip=False,yflip=False,cmap=None,figure=None,figsize=(8,8),save=None,colorlabel=None,
-            charsize=12,interpolation='none'):
+            charsize=12,interpolation='none',colorbar=True):
     """
     Display an image.  The usual python convention is used where the image is [NY,NX]
 
@@ -614,6 +614,8 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
        Character size.  Default is 12.
     interpolation : str, optional
        The type of interpolation.  Default is 'none'.
+    colorbar : bool, optional
+       Show a colorbar.  Default is True.
 
     Returns
     -------
@@ -715,7 +717,8 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     # Add the colorbar
     if colorlabel is None:
         colorlabel = ''
-    plt.colorbar(label=colorlabel)
+    if colorbar:
+        plt.colorbar(label=colorlabel)
 
     # Save the figure
     if save is not None:

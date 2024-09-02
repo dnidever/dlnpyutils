@@ -566,6 +566,11 @@ def launcher(tasks,label,nodes=1,nparallel=None,cpus=64,ppn=None,account='priori
     lines += ['#SBATCH --output='+label+'-%j.out']
     lines += ['#SBATCH --err='+label+'-%j.err']
     lines += ['']
+    # Adding extra command to execute
+    if precommands is not None:
+        if type(precommands) is not list:
+            precommands = [precommands]
+        lines += precommands
     lines += ['module load launcher']
     lines += ['']
     lines += ['export LAUNCHER_WORKDIR='+jobdir]
