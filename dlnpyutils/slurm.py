@@ -225,7 +225,7 @@ def queue_wait(label,key,jobid,sleeptime=60,logger=None,verbose=True):
 def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
            partition='priority',shared=True,walltime='12-00:00:00',notification=False,
            memory=7500,numpy_num_threads=2,stagger=True,nodelist=None,precommands=None,
-           slurmroot='/tmp',verbose=True,logger=None):
+           postcommands=None,slurmroot='/tmp',verbose=True,logger=None):
     """
     Submit a bunch of jobs
 
@@ -408,6 +408,14 @@ def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
     lines += ['SBATCH_NODE=$( printf "%02d']
     lines += ['" "$SLURM_ARRAY_TASK_ID" )']
     lines += ['source '+jobdir+'/node${SBATCH_NODE}.slurm']
+
+    # Adding extra command to execute at end
+    if postcommands is not None:
+        if type(postcommands) is not list:
+            postcommands = [postcommands]
+        lines += postcommands
+    lines += [' ']
+
     if verbose:
         logger.info('Writing '+os.path.join(jobdir,masterfile))
     dln.writelines(os.path.join(jobdir,masterfile),lines)
@@ -472,7 +480,7 @@ def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
 def launcher(tasks,label,nodes=1,nparallel=None,cpus=64,ppn=None,account='priority-davidnidever',
              partition='priority',shared=True,walltime='12-00:00:00',notification=False,
              memory=7500,numpy_num_threads=2,stagger=True,nodelist=None,precommands=None,
-             slurmroot='/tmp',verbose=True,nosubmit=False,logger=None):
+             postcommands=None,slurmroot='/tmp',verbose=True,nosubmit=False,logger=None):
     """
     Submit a Launcher slurm job with many serial tasks
 
@@ -571,6 +579,13 @@ def launcher(tasks,label,nodes=1,nparallel=None,cpus=64,ppn=None,account='priori
     lines += ['export LAUNCHER_JOB_FILE='+jobsfile]
     lines += ['']
     lines += ['${LAUNCHER_DIR}/paramrun']
+    # Adding extra command to execute at end
+    if postcommands is not None:
+        if type(postcommands) is not list:
+            postcommands = [postcommands]
+        lines += postcommands
+    lines += [' ']
+    lines += ['echo "Done"']
     if verbose:
         logger.info('Writing '+os.path.join(jobdir,masterfile))
     dln.writelines(os.path.join(jobdir,masterfile),lines)
