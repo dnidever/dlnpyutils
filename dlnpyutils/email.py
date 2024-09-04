@@ -6,7 +6,7 @@ from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
 
 
-def send(send_to, subject='', message='', msgtype='html', files=None, send_from='noreply.dailyapogee'):
+def send(send_to, subject='', message='', msgtype='html', files=None, send_from='noreply.dailyapogee',hostname=None):
     """
     Send an email message.
 
@@ -36,7 +36,8 @@ def send(send_to, subject='', message='', msgtype='html', files=None, send_from=
     if isinstance(send_to, list)==False:
         send_to = [send_to]
 
-    hostname = 'sdss.org'
+    if hostname is none:
+        hostname = 'sdss.org'
     send_from = '%s@%s' % (send_from,hostname)
 
     msg = MIMEMultipart()
