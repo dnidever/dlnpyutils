@@ -3113,3 +3113,29 @@ def nanmedfilt(x,size,mode='reflect'):
     Median filter than handles NaNs.
     """
     return generic_filter(x, np.nanmedian, size=size)
+
+def roots(x,y=None):
+    """ Find roots, i.e. where array should be zero."""
+    if y is None:
+        yy = x
+        xx = np.arange(len(x))
+    else:
+        si = np.argsort(x)
+        xx = x[si]
+        yy = y[si]        
+    rootind = np.array([],float)
+    gddwn, = np.where((yy[:-1]>=0) & (yy[1:]<0))
+    for i in range(len(gddwn)):
+        coef = (yy[gddwn[i]+1]-yy[gddwn[i]]) / (xx[gddwn[i]+1]-xx[gddwn[i]])
+        rt = -yy[gddwn[i]]/coef + xx[gddwn[i]]
+        rootind = np.append(rootind,rt)
+    gdup, = np.where((yy[:-1]<0) & (yy[1:]>=0))
+    for i in range(len(gdup)):
+        coef = (yy[gdup[i]+1]-yy[gdup[i]]) / (xx[gdup[i]+1]-xx[gdup[i]])
+        rt = -yy[gdup[i]]/coef + xx[gdup[i]]
+        rootind = np.append(rootind,rt)
+    # Ones that are exactly zero
+    gdzero, = np.where(array==0)
+    if len(gdzero)>0:
+        rootind = np.append(rootind,xx[gdzero])
+    return np.unique(rootind)
