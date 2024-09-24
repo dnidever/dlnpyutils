@@ -3135,7 +3135,7 @@ def roots(x,y=None):
         rt = -yy[gdup[i]]/coef + xx[gdup[i]]
         rootind = np.append(rootind,rt)
     # Ones that are exactly zero
-    gdzero, = np.where(array==0)
+    gdzero, = np.where(yy==0)
     if len(gdzero)>0:
         rootind = np.append(rootind,xx[gdzero])
     return np.unique(rootind)
