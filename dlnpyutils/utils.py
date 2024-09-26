@@ -999,6 +999,7 @@ def gt(x,limit):
 
 def limit(x,llimit,ulimit):
     """Require x to be within upper and lower limits"""
+    # np.clip() does this
     return lt(gt(x,llimit),ulimit)
 
 def valrange(array):
