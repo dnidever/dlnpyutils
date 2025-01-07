@@ -131,7 +131,7 @@ if __name__ == "__main__":
                 cversion = getversion(line)
                 # Check that the two version are the same
                 if cversion != version:
-                    print('Versions do not match.  setup.py version='+version+' setup.cfg version='+cversion)
+                    print('Versions do not match.  setup.cfg version='+version+' setup.cfg version='+cversion)
                     sys.exit()
                 # Stick the new version in the line
                 newline = subverstring(line,cversion,newversion)
@@ -145,6 +145,31 @@ if __name__ == "__main__":
     
     else:
         print('No setup.cfg file found')
+
+    # Modify the pyproject.toml file (if it exists)
+    if os.path.exists('pyproject.toml'):
+        lines = dln.readlines('pyproject.toml')
+        newlines = lines.copy()
+        for l,line in enumerate(lines):
+            # Get version
+            if line.find('version')>-1 and line.find('=')>-1:
+                cversion = getversion(line)
+                # Check that the two version are the same
+                if cversion != version:
+                    print('Versions do not match.  setup.cfg version='+version+' pyproject.toml version='+cversion)
+                    sys.exit()
+                # Stick the new version in the line
+                newline = subverstring(line,cversion,newversion)
+                newlines[l] = newline
+        # Write the updated setup.py file
+        if os.path.exists('pyproject.toml.orig'): os.remove('pyproject.toml.orig')
+        shutil.move('pyproject.toml','pyproject.toml.orig')
+        dln.writelines('pyproject.toml',newlines)
+        # git add the file
+        out = subprocess.run(['git','add','pyproject.toml'],shell=False)        
+    
+    else:
+        print('No pyproject.toml file found')
     
     # Modify the __init__.py file (if it exists and has a __version__ in it)
     initfile = name+'/__init__.py'
