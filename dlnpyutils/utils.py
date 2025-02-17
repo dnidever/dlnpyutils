@@ -37,6 +37,7 @@ import matplotlib.pyplot as plt
 import dill as pickl
 import traceback
 import inspect
+import hashlib
 
 # Ignore these warnings, it's a bug
 #warnings.filterwarnings("ignore", message="numpy.dtype size changed")
@@ -3184,3 +3185,15 @@ def weighted_median(values, weights):
     # Return the smallest value for which the cumulative sum is greater
     # than or equal to the cutoff
     return values_sorted[cumsum >= cutoff][0]
+
+def md5sum(fname):
+    """ Compute md5sum of a file """
+    if os.path.exists(fname)==False:
+        raise FileNotFoundError(fname)
+    md5 = hashlib.md5()
+    # handle content in binary form
+    with open(fname, "rb") as f:
+        #for chunk in iter(lambda: f.read(4096), b''):
+        while chunk := f.read(4096):
+            md5.update(chunk)
+    return md5.hexdigest()
