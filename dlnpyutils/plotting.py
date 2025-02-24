@@ -901,7 +901,7 @@ def oplot(*args,**kwargs):
 def scatter(*args,marker='o',**kwargs):
     plot(*args,marker=marker,**kwargs)
 
-def hist(*args,bins=20,figure=None,noerase=False,charsize=12,**kwargs):
+def hist(*args,bins=20,figure=None,figsize=(8,8),noerase=False,charsize=12,**kwargs):
 
     # Getting the current figure, creating a new one if necessary
     if figure is None:

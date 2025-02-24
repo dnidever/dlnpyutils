@@ -33,10 +33,11 @@ from scipy.signal import savgol_filter
 import astropy.stats
 from matplotlib.backend_bases import MouseButton
 import pandas as pd
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import dill as pickl
 import traceback
 import inspect
+import hashlib
 
 # Ignore these warnings, it's a bug
 #warnings.filterwarnings("ignore", message="numpy.dtype size changed")
@@ -999,6 +1000,7 @@ def gt(x,limit):
 
 def limit(x,llimit,ulimit):
     """Require x to be within upper and lower limits"""
+    # np.clip() does this
     return lt(gt(x,llimit),ulimit)
 
 def valrange(array):
@@ -3113,3 +3115,85 @@ def nanmedfilt(x,size,mode='reflect'):
     Median filter than handles NaNs.
     """
     return generic_filter(x, np.nanmedian, size=size)
+
+def roots(x,y=None):
+    """ Find roots, i.e. where array should be zero."""
+    if y is None:
+        yy = x
+        xx = np.arange(len(x))
+    else:
+        si = np.argsort(x)
+        xx = x[si]
+        yy = y[si]        
+    rootind = np.array([],float)
+    gddwn, = np.where((yy[:-1]>=0) & (yy[1:]<0))
+    for i in range(len(gddwn)):
+        coef = (yy[gddwn[i]+1]-yy[gddwn[i]]) / (xx[gddwn[i]+1]-xx[gddwn[i]])
+        rt = -yy[gddwn[i]]/coef + xx[gddwn[i]]
+        rootind = np.append(rootind,rt)
+    gdup, = np.where((yy[:-1]<0) & (yy[1:]>=0))
+    for i in range(len(gdup)):
+        coef = (yy[gdup[i]+1]-yy[gdup[i]]) / (xx[gdup[i]+1]-xx[gdup[i]])
+        rt = -yy[gdup[i]]/coef + xx[gdup[i]]
+        rootind = np.append(rootind,rt)
+    # Ones that are exactly zero
+    gdzero, = np.where(yy==0)
+    if len(gdzero)>0:
+        rootind = np.append(rootind,xx[gdzero])
+    return np.unique(rootind)
+
+def weighted_median(values, weights):
+    """
+    Compute the weighted median of an array of values.
+    
+    This implementation sorts values and computes the cumulative
+    sum of the weights. The weighted median is the smallest value for
+    which the cumulative sum is greater than or equal to half of the
+    total sum of weights.
+
+    Parameters
+    ----------
+    values : array-like
+        List or array of values on which to calculate the weighted median.
+    weights : array-like
+        List or array of weights corresponding to the values.
+
+    Returns
+    -------
+    float
+        The weighted median of the input values.
+
+    https://gist.github.com/robbibt/c7ec5f0cb3e4e0cee5ed3156bcb666de
+    """
+    # Convert input values and weights to numpy arrays
+    values = np.array(values)
+    weights = np.array(weights)
+    
+    # Get the indices that would sort the array
+    sort_indices = np.argsort(values)
+    
+    # Sort values and weights according to the sorted indices
+    values_sorted = values[sort_indices]
+    weights_sorted = weights[sort_indices]  
+
+    # Compute the cumulative sum of the sorted weights
+    cumsum = weights_sorted.cumsum()
+    
+    # Calculate the cutoff as half of the total weight sum
+    cutoff = weights_sorted.sum() / 2.
+    
+    # Return the smallest value for which the cumulative sum is greater
+    # than or equal to the cutoff
+    return values_sorted[cumsum >= cutoff][0]
+
+def md5sum(fname):
+    """ Compute md5sum of a file """
+    if os.path.exists(fname)==False:
+        raise FileNotFoundError(fname)
+    md5 = hashlib.md5()
+    # handle content in binary form
+    with open(fname, "rb") as f:
+        #for chunk in iter(lambda: f.read(4096), b''):
+        while chunk := f.read(4096):
+            md5.update(chunk)
+    return md5.hexdigest()

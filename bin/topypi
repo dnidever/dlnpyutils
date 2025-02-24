@@ -11,22 +11,50 @@ done
 mv -f setup.py setup.py.orig >& /dev/null
 rm -f setup.py >& /dev/null
 pypiname=`grep pypiname setup.py.orig | awk '{print $3}' | sed 's|["'\'']||g'`
-name=`grep name setup.py.orig | grep -v pypiname | sed -nE 's/.*=\s*"(.*)".*/\1/p'`
+name=`grep name setup.py.orig | grep -v pypiname | grep -v python | sed -nE 's/.*=\s*"(.*)".*/\1/p'`
 if [ -z $pypiname ] || [ $pypiname == '' ]
 then
-  name=`grep name setup.py.orig | grep -v pypiname | sed -nE "s/.*=\s*'(.*)'.*/\1/p"`
+  name=`grep name setup.py.orig | grep -v pypiname | grep -v python | sed -nE "s/.*=\s*'(.*)'.*/\1/p"`
 fi
 dirname=${PWD##*/}
-echo "pypiname" ${pypiname}
+echo "name =" ${name}
+echo "pypiname =" ${pypiname}
 if [ -z $pypiname ] || [ $pypiname == '' ]
 then
-  echo "using original name"
+  echo "using original name '"${name}"'"
   pypiname=${name}
   cp -f setup.py.orig setup.py >& /dev/null
 else
-  echo "using new pypiname"
+  echo "using new pypiname '"${pypiname}"'"
   cat setup.py.orig | sed 's/name="'${name}'"/name="'${pypiname}'"/g' > setup.py
 fi
+#
+# Fix project name in setup.cfg
+mv -f setup.cfg setup.cfg.orig >& /dev/null
+rm -f setup.cfg >& /dev/null
+if [ -z $pypiname ] || [ $pypiname == '' ]
+then
+  echo "using original name '"${name}"'"
+  pypiname=${name}
+  cp -f setup.cfg.orig setup.py >& /dev/null
+else
+  echo "using new pypiname '"${pypiname}"'"
+  cat setup.cfg.orig | sed 's/name = '${name}'/name = '${pypiname}'/g' > setup.cfg
+fi
+#
+# Fix project name in pyproject.toml
+mv -f pyproject.toml pyproject.toml.orig >& /dev/null
+rm -f pyproject.toml >& /dev/null
+if [ -z $pypiname ] || [ $pypiname == '' ]
+then
+  echo "using original name '"${name}"'"
+  pypiname=${name}
+  cp -f pyproject.toml.orig pyproject.toml >& /dev/null
+else
+  echo "using new pypiname '"${pypiname}"'"
+  cat pyproject.toml.orig | sed 's/name = "'${name}'"/name = "'${pypiname}'"/g' > pyproject.toml
+fi
+#
 printf '%s\n' "Uploading new version to pypi as package '${pypiname}'"
 \rm -R dist build ${pypiname}.egg-info ${name}.egg-info >& /dev/null
 python setup.py sdist
@@ -36,5 +64,7 @@ then
     python setup.py bdist_wheel --universal
 fi
 twine upload dist/*
-# change setup.py back
+# put original files back
 mv -f setup.py.orig setup.py >& /dev/null
+mv -f setup.cfg.orig setup.cfg >& /dev/null
+mv -f pyproject.toml.orig pyproject.toml >& /dev/null
