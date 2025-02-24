@@ -33,7 +33,7 @@ from scipy.signal import savgol_filter
 import astropy.stats
 from matplotlib.backend_bases import MouseButton
 import pandas as pd
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import dill as pickl
 import traceback
 import inspect
