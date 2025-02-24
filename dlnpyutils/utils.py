@@ -3193,7 +3193,7 @@ def md5sum(fname):
     md5 = hashlib.md5()
     # handle content in binary form
     with open(fname, "rb") as f:
-        #for chunk in iter(lambda: f.read(4096), b''):
-        while chunk := f.read(4096):
+        for chunk in iter(lambda: f.read(4096), b''):
+        #while chunk := f.read(4096):
             md5.update(chunk)
     return md5.hexdigest()
