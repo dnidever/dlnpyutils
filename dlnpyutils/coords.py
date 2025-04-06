@@ -16,7 +16,25 @@ from astropy.coordinates import frame_transform_graph,SkyCoord
 from astropy.coordinates.matrix_utilities import rotation_matrix, matrix_transpose
 import astropy.coordinates as coord
 import astropy.units as u
+from functools import reduce
 from . import utils,ladfit
+
+#@deprecated("5.2", alternative="@")
+def matrix_product(*matrices):
+    """Matrix multiply all arguments together.
+
+    Arguments should have dimension 2 or larger. Larger dimensional objects
+    are interpreted as stacks of matrices residing in the last two dimensions.
+
+    This function mostly exists for readability: using `~numpy.matmul`
+    directly, one would have ``matmul(matmul(m1, m2), m3)``, etc. For even
+    better readability, one might consider using `~numpy.matrix` for the
+    arguments (so that one could write ``m1 * m2 * m3``), but then it is not
+    possible to handle stacks of matrices. Once only python >=3.5 is supported,
+    this function can be replaced by ``m1 @ m2 @ m3``.
+    """
+    # This was removed in v6.1.13
+    return reduce(np.matmul, matrices)
 
 def rotsph(lon,lat,clon,clat,anode=None,reverse=False,original=False):
     '''
@@ -1058,23 +1076,6 @@ C = rotation_matrix(MS_THETA, "x")
 B = rotation_matrix(MS_PSI, "z")
 A = np.diag([1., 1., 1.])
 MS_MATRIX = matrix_product(A, B, C, D)
-
-#@deprecated("5.2", alternative="@")
-def matrix_product(*matrices):
-    """Matrix multiply all arguments together.
-
-    Arguments should have dimension 2 or larger. Larger dimensional objects
-    are interpreted as stacks of matrices residing in the last two dimensions.
-
-    This function mostly exists for readability: using `~numpy.matmul`
-    directly, one would have ``matmul(matmul(m1, m2), m3)``, etc. For even
-    better readability, one might consider using `~numpy.matrix` for the
-    arguments (so that one could write ``m1 * m2 * m3``), but then it is not
-    possible to handle stacks of matrices. Once only python >=3.5 is supported,
-    this function can be replaced by ``m1 @ m2 @ m3``.
-    """
-    # This was removed in v6.1.13
-    return reduce(np.matmul, matrices)
 
 @frame_transform_graph.transform(coord.StaticMatrixTransform, coord.Galactic, MagellanicStream)
 def galactic_to_MS():
