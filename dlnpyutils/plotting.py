@@ -297,7 +297,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
         if yr[1]<yr[0]:
             yr = np.flip(yr)
             yflip = 1
-
+            
     # Cutting based on the xrange/yrange if set
     #   Otherwise the image size might get too large if there are
     #   points far outside the xrange/yrange
@@ -313,10 +313,10 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
             raise ValueError('No points left')
 
         # Min and Max's
-        ymin = np.min(y)
-        ymax = np.max(y)
-        xmin = np.min(x)
-        xmax = np.max(x)
+        ymin = np.nanmin(y)
+        ymax = np.nanmax(y)
+        xmin = np.nanmin(x)
+        xmax = np.nanmax(x)
 
         # Setting DX/DY if not input
         if dx0 is None: dx=(xmax-xmin)/(nx-1)
@@ -333,10 +333,10 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
             raise ValueError('No points left')
 
         # Min and Max's
-        ymin = np.min(y)
-        ymax = np.max(y)
-        xmin = np.min(x)
-        xmax = np.max(x)
+        ymin = np.nanmin(y)
+        ymax = np.nanmax(y)
+        xmin = np.nanmin(x)
+        xmax = np.nanmax(x)
 
         # Setting DX/DY if not input
         if dx0 is None: dx=(xmax-xmin)/(nx-1)
