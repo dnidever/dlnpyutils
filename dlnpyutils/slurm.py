@@ -405,10 +405,14 @@ def submit(tasks,label,nodes=1,cpus=64,ppn=None,account='priority-davidnidever',
     lines += ['export VECLIB_MAXIMUM_THREADS=2']
     lines += ['export NUMEXPR_NUM_THREADS=2']
     lines += ['# ------------------------------------------------------------------------------']
+    # Adding extra command to execute at beginning
+    if precommands is not None:
+        if type(precommands) is not list:
+            precommands = [precommands]
+        lines += precommands
     lines += ['SBATCH_NODE=$( printf "%02d']
     lines += ['" "$SLURM_ARRAY_TASK_ID" )']
     lines += ['source '+jobdir+'/node${SBATCH_NODE}.slurm']
-
     # Adding extra command to execute at end
     if postcommands is not None:
         if type(postcommands) is not list:
