@@ -3197,3 +3197,46 @@ def md5sum(fname):
         #while chunk := f.read(4096):
             md5.update(chunk)
     return md5.hexdigest()
+
+def random_distribution(array,n,integer=False):
+    """ Generate a random set of points drawn from the input distribution."""
+    # Array can be 1-D or higher dimensions
+    pdf = np.atleast_1d(array)
+    shape = pdf.shape
+    ndim = pdf.ndim
+    # Unravel any higher dimensions to 1D
+    if ndim > 1:
+        pdf = pdf.flatten()
+    # Make sure all values are non-negative
+    pdf = np.maximum(pdf,1e-20)
+    #pdf2d = array.copy()
+    #pdf1d = np.maximum(result.ravel(),1e-5)
+    cdf = np.cumsum(pdf)
+    cdf /= np.max(cdf)
+    index = np.arange(len(cdf)).astype(float)/(len(cdf)-1)
+    rnd = np.random.rand(n)
+    newindex = interp1d(cdf,index)(rnd)
+    out = newindex * (len(cdf)-1)
+    # 1-D
+    if ndim == 1:
+        if integer:
+            out = np.round(out).astype(int)
+    # Multi-D
+    else:
+        outint = np.round(out).astype(int)
+        dout = out-outint
+        unravel_out = np.unravel_index(outint,shape)
+        out = np.zeros((n,ndim),float)
+        for i in range(ndim):
+            out[:,i] = unravel_out[i]
+        # out is currently integers, but want it to be a "real"
+        # take the leftover "dout" and distribution it to each dimension
+        if integer==False:
+            rndvec = np.random.rand(n,ndim)*2-1        # -1 to +1
+            totrndvec = np.sqrt(np.sum(rndvec**2,axis=1))
+            rndvec /= totrndvec.reshape(-1,1)
+            err = np.abs(dout).reshape(-1,1) * rndvec
+            out += err
+            
+    return out
+        
