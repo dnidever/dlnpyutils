@@ -273,7 +273,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
     if (dx is None):
         # XRANGE set
         if xr is not None:
-            dx = (xr[1]-x[0])/(nx-1)
+            dx = (xr[1]-xr[0])/(nx-1)
         # XRANGE not set
         else:
             dx = (xmax-xmin)/(nx-1)
@@ -374,7 +374,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
 
         # Don't force the xrange
         else:
-            if ((x[0]-off) < xmin) | ((xr[1]+off) > xmax):
+            if ((xr[0]-off) < xmin) | ((xr[1]+off) > xmax):
                 xmin = np.minimum((xr[0]-off), xmin)
                 xmax = np.maximum((xr[1]+off), xmax)
 
