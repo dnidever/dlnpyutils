@@ -22,7 +22,6 @@ maintainers = [
 ]
 description = "A package of useful python utility functions"
 readme = "README.rst"
-license = {file = "LICENSE"}
 keywords = ["utility", "astronomy"]
 classifiers = [
   "Development Status :: 3 - Alpha",
