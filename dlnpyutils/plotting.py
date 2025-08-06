@@ -730,7 +730,7 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
 def plot(x,y=None,c=None,fmt=None,marker=None,fill=True,size=None,log=False,noerase=False,
          vmin=None,vmax=None,linewidth=None,xtitle=None,ytitle=None,title=None,
          xr=None,yr=None,cmap=None,alpha=None,figure=None,figsize=(8,8),xlog=False,ylog=False,
-         xflip=False,yflip=False,save=None,colorlabel=None,charsize=12):
+         xflip=False,yflip=False,save=None,colorlabel=None,charsize=12,label=None):
     """
     Create a line or scatter plot.  like plotc.pro
 
@@ -792,6 +792,8 @@ def plot(x,y=None,c=None,fmt=None,marker=None,fill=True,size=None,log=False,noer
        The colorbar label.  Default is statistic+'(Z)'.
     charsize : int, optional
        Character size.  Default is 12.
+    label : str, optional
+       Label for the first plot.
 
     Returns
     -------
@@ -837,9 +839,9 @@ def plot(x,y=None,c=None,fmt=None,marker=None,fill=True,size=None,log=False,noer
     # Line plot
     if (c is None or type(c) is str) and marker is None:
         if fmt is not None:
-            plt.plot(x,y,fmt,c=c,linewidth=linewidth)
+            plt.plot(x,y,fmt,c=c,linewidth=linewidth,label=label)
         else:
-            plt.plot(x,y,c=c,linewidth=linewidth)
+            plt.plot(x,y,c=c,linewidth=linewidth,label=label)
         
     # Scatter plot
     else:
@@ -848,11 +850,11 @@ def plot(x,y=None,c=None,fmt=None,marker=None,fill=True,size=None,log=False,noer
             norm = colors.LogNorm(vmin=vmin,vmax=vmax)
             plt.scatter(x,y,c=c,marker=marker,s=size,cmap=cmap,norm=norm,
                         alpha=alpha,edgecolor=edgecolor,facecolor=facecolor,
-                        linewidth=linewidth)        
+                        linewidth=linewidth,label=label)
         else:
             plt.scatter(x,y,c=c,marker=marker,s=size,cmap=cmap,norm=norm,
                         edgecolor=edgecolor,facecolor=facecolor,vmin=vmin,
-                        vmax=vmax,alpha=alpha,linewidth=linewidth)
+                        vmax=vmax,alpha=alpha,linewidth=linewidth,label=label)
 
     
     # Axis titles
