@@ -36,7 +36,7 @@ def send(send_to, subject='', message='', msgtype='html', files=None, send_from=
     if isinstance(send_to, list)==False:
         send_to = [send_to]
 
-    if hostname is none:
+    if hostname is None:
         hostname = 'sdss.org'
     send_from = '%s@%s' % (send_from,hostname)
 
