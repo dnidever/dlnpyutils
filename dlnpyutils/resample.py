@@ -3,7 +3,7 @@ import numpy as np
 from numba import njit
 from . import utils,robust
 
-# Sinc resample spectra.  Can since resample and average multiple
+# Sinc resample spectra.  Can sinc resample and average multiple
 # spectra at the same time.
 
 def standardize(x,y,yerr,res):
@@ -468,7 +468,7 @@ def doresample(mx,my,myerr,mres,mscales,xout,indexes,resout,
             kernel /= np.sum(kernel)  # normalize
 
         # Lanczos kernel
-        #   sinc mulitiplied by Lanczos windew function, wider sinc
+        #   sinc mulitiplied by Lanczos window function, wider sinc
         elif kind=='lanczos':
             # Lanczos interpolation
             # https://en.wikipedia.org/wiki/Lanczos_resampling
