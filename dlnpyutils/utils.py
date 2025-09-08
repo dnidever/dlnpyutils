@@ -207,6 +207,10 @@ def mad(data, axis=None, func=None, ignore_nan=True, zero=False):
 
     return result * 1.482602218505602
 
+def rms(data):
+    """ Calculate the root-mean-squared value """
+    return np.sqrt(np.mean(data**2))
+
 def median(data,axis=None,even=False,high=True,nan=False):
     """
     Return the median of the data.
