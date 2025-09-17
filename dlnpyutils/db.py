@@ -86,7 +86,7 @@ def query(dbfile,table='meas',cols='*',where=None,groupby=None,raw=False,verbose
     cur = db.cursor()
 
     # Convert numpy data types to sqlite3 data types
-    d2d = {"TEXT":(np.str,200), "INTEGER":np.int, "REAL":np.float}
+    d2d = {"TEXT":(str,200), "INTEGER":np.int, "REAL":np.float}
 
     # Start the SELECT statement
     cmd = 'SELECT '+cols+' FROM '+table
