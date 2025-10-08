@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dlnpyutils"
-version = "1.0.80"
+version = "1.0.81"
 dependencies = [
   "scipy",
   "numpy",
