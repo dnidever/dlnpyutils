@@ -20,7 +20,8 @@ import warnings
 from astropy.io import fits
 from astropy.table import Table, Column
 from astropy import modeling
-from astropy.convolution import Gaussian1DKernel, Gaussian2DKernel, convolve
+from astropy.convolution import convolve
+from astropy.convolution.kernels import Gaussian1DKernel, Gaussian2DKernel
 from glob import glob as glb
 from scipy.signal import medfilt
 from scipy.stats import mstats
