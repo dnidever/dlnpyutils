@@ -10,11 +10,12 @@ from numpy import (atleast_1d, dot, take, triu, shape, eye,
                    all, where, isscalar, asarray, inf, abs,
                    finfo, inexact, issubdtype, dtype)
 from scipy.linalg import svd, cholesky, solve_triangular, LinAlgError
-from scipy._lib._util import _asarray_validated, _lazywhere
+#from scipy._lib._util import _asarray_validated, _lazywhere
 try:
     from scipy.optimize.optimize import OptimizeResult, _check_unknown_options, OptimizeWarning
 except ImportError:
     from scipy.optimize._optimize import OptimizeResult, _check_unknown_options, OptimizeWarning    
+from .scipy_lib_util.py import _asarray_validated, _lazywhere
 from .least_squares import least_squares
 from .mpcommon import make_strictly_feasible
 from .least_squares import prepare_bounds
