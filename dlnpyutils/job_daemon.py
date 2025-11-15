@@ -207,6 +207,8 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
             tid,tfile = tempfile.mkstemp(prefix=pre,dir=indir[i])
             os.close(tid)   # mkstemp opens the file, close it
             name[i] = os.path.basename(tfile)
+    else:
+        name = np.array([name])
 
     # Make scriptnames
     scriptname = np.array(dln.strjoin(dln.pathjoin(indir,name),'.sh'),ndmin=1)
@@ -674,7 +676,7 @@ def job_daemon(inp=None,dirs=None,inpname=None,nmulti=4,prefix="job",hyperthread
                 # Make script
                 name = None
                 if inpname is not None: name = inpname[newind[i]]  # use input name      
-                scriptname = makescript(jobs[newind[i]]['input'],indir=dirs[newind[i]],name=name,
+                scriptname = makescript(jobs['input'][newind[i]],indir=dirs[newind[i]],name=name,
                                         prefix=prefix,hyperthread=hyperthread,idle=idle)
                 name = os.path.basename(os.path.splitext(scriptname)[0])
                 # Submitting the job
