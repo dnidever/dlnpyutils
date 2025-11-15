@@ -20,7 +20,8 @@ import warnings
 from astropy.io import fits
 from astropy.table import Table, Column
 from astropy import modeling
-from astropy.convolution import Gaussian1DKernel, Gaussian2DKernel, convolve
+from astropy.convolution import convolve
+from astropy.convolution.kernels import Gaussian1DKernel, Gaussian2DKernel
 from glob import glob as glb
 from scipy.signal import medfilt
 from scipy.stats import mstats
@@ -206,6 +207,10 @@ def mad(data, axis=None, func=None, ignore_nan=True, zero=False):
     # NOTE: 1. / scipy.stats.norm.ppf(0.75) = 1.482602218505602
 
     return result * 1.482602218505602
+
+def rms(data):
+    """ Calculate the root-mean-squared value """
+    return np.sqrt(np.mean(data**2))
 
 def median(data,axis=None,even=False,high=True,nan=False):
     """
