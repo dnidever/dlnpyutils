@@ -128,7 +128,8 @@ def check_killfile(jobs=None,hyperthread=True):
     return False
 
 
-def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=False):
+def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,
+               idle=False,nobreak=False):
     """This makes job scripts for the job_daemon program.
 
     Parameters
@@ -151,6 +152,9 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
                    processors.
     idle : bool, optional
           This is an IDL command, otherwise a SHELL command.
+    nobreak : bool, optional
+          Do not break input command into separate lines if ";" is found.
+           Default is False.
 
     Returns
     -------
@@ -207,6 +211,8 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
             tid,tfile = tempfile.mkstemp(prefix=pre,dir=indir[i])
             os.close(tid)   # mkstemp opens the file, close it
             name[i] = os.path.basename(tfile)
+    else:
+        name = np.array([name])
 
     # Make scriptnames
     scriptname = np.array(dln.strjoin(dln.pathjoin(indir,name),'.sh'),ndmin=1)
@@ -231,7 +237,7 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
                 # The execution command
                 cmd = input1
                 # If there are commas in the line then break it up into multiple lines
-                if cmd.find(';') != -1:
+                if cmd.find(';') != -1 and nobreak==False:
                     cmd = cmd.replace(';','\n;')
                     cmd = cmd.split('j')
 
@@ -274,7 +280,7 @@ def makescript(inp=None,indir=None,name=None,prefix=None,hyperthread=True,idle=F
             # The execution command
             cmd = input1
             # If there are commas in the line then break it up into multiple lines
-            if cmd.find(';') != -1:
+            if cmd.find(';') != -1 and nobreak==False:
                 cmd = cmd.replace(';','\n;')
                 cmd = cmd.split(';')
             # IDL files should end in .batch
@@ -509,7 +515,7 @@ def status_update(jobs=None):
 
 
 def job_daemon(inp=None,dirs=None,inpname=None,nmulti=4,prefix="job",hyperthread=True,idle=False,
-               waittime=0.2,statustime=60,staggertime=0):
+               waittime=0.2,statustime=60,staggertime=0,nobreak=False):
     """This program is a simple batch job manager
 
     NOTE:  If you want to "kill" all of the jobs create a file "killjobs"
@@ -543,6 +549,9 @@ def job_daemon(inp=None,dirs=None,inpname=None,nmulti=4,prefix="job",hyperthread
            Time to wait between checking the running jobs.  Default is 0.2 sec.
     staggertime : float or int, optional
            The time to wait between submitting jobs.  Default is 0 sec.
+    nobreak : bool, optional
+          Do not break input command into separate lines if ";" is found.
+           Default is False.
 
     Results
     -------
@@ -674,8 +683,8 @@ def job_daemon(inp=None,dirs=None,inpname=None,nmulti=4,prefix="job",hyperthread
                 # Make script
                 name = None
                 if inpname is not None: name = inpname[newind[i]]  # use input name      
-                scriptname = makescript(jobs[newind[i]]['input'],indir=dirs[newind[i]],name=name,
-                                        prefix=prefix,hyperthread=hyperthread,idle=idle)
+                scriptname = makescript(jobs['input'][newind[i]],indir=dirs[newind[i]],name=name,
+                                        prefix=prefix,hyperthread=hyperthread,idle=idle,nobreak=nobreak)
                 name = os.path.basename(os.path.splitext(scriptname)[0])
                 # Submitting the job
                 jobid, logfile = submitjob(scriptname,dirs[newind[i]],hyperthread=hyperthread,idle=idle)
