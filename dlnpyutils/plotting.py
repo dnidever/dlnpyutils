@@ -131,7 +131,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
            figsize=(8,8),xtitle=None,ytitle=None,title=None,colorlabel=None,charsize=12,
            origin='lower',aspect='auto',interpolation='none',bright=None,minhue=0.0,
            maxhue=0.7,minbright=0.1,maxbright=0.7,saturation=0.9,noplot=False,save=None,
-           colorbar=True):
+           colorbar=True,invertcolorbar=False,barorientation='vertical'):
     """
     Make a 2D histogram of points.
     
@@ -212,6 +212,10 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
        Save the figure to this file.
     colorbar : bool, optional
        Shows a colorbar.  Default is True.
+    invertcolorbar : bool, optional
+       Invert the numbers on the colorbar.  Default is False.
+    barorientation : str, optional
+       The orientation of the colorbar.  Default is "vertical".
 
     Returns
     -------
@@ -543,8 +547,11 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
                 else:
                     colorlabel = 'function(Z)'
         if colorbar:
-            plt.colorbar(label=colorlabel)
+            cbar = plt.colorbar(label=colorlabel,orientation=barorientation)
+            if invertcolorbar:
+                cbar.ax.invert_yaxis()
 
+            
         # Save the figure
         if save is not None:
             plt.savefig(save,bbox_inches='tight')
@@ -555,7 +562,7 @@ def hist2d(x,y,z=None,statistic=None,xr=None,yr=None,dx=None,dy=None,nx=200,ny=2
 def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=False,norm=None,
             vmin=None,vmax=None,xtitle=None,ytitle=None,title=None,origin='lower',aspect='auto',
             xflip=False,yflip=False,cmap=None,figure=None,figsize=(8,8),save=None,colorlabel=None,
-            charsize=12,interpolation='none',colorbar=True):
+            charsize=12,interpolation='none',colorbar=True,invertcolorbar=False,barorientation='vertical'):
     """
     Display an image.  The usual python convention is used where the image is [NY,NX]
 
@@ -616,7 +623,11 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
        The type of interpolation.  Default is 'none'.
     colorbar : bool, optional
        Show a colorbar.  Default is True.
-
+    invertcolorbar : bool, optional
+       Invert the numbers on the colorbar.  Default is False.
+    barorientation : str, optional
+       The orientation of the colorbar.  Default is "vertical".
+    
     Returns
     -------
     A plot is made in the figure window.
@@ -718,8 +729,10 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
     if colorlabel is None:
         colorlabel = ''
     if colorbar:
-        plt.colorbar(label=colorlabel)
-
+        cbar = plt.colorbar(label=colorlabel,orientation=barorientation)
+        if invertcolorbar:
+            cbar.ax.invert_yaxis()
+        
     # Save the figure
     if save is not None:
         plt.savefig(save,bbox_inches='tight')
@@ -730,7 +743,8 @@ def display(im,x=None,y=None,log=False,xr=None,yr=None,noerase=False,zscale=Fals
 def plot(x,y=None,c=None,fmt=None,marker=None,fill=True,size=None,log=False,noerase=False,
          vmin=None,vmax=None,linewidth=None,xtitle=None,ytitle=None,title=None,
          xr=None,yr=None,cmap=None,alpha=None,figure=None,figsize=(8,8),xlog=False,ylog=False,
-         xflip=False,yflip=False,save=None,colorlabel=None,charsize=12,label=None):
+         xflip=False,yflip=False,save=None,colorlabel=None,charsize=12,label=None,
+         colorbar=True,invertcolorbar=False,barorientation='vertical'):
     """
     Create a line or scatter plot.  like plotc.pro
 
@@ -794,6 +808,12 @@ def plot(x,y=None,c=None,fmt=None,marker=None,fill=True,size=None,log=False,noer
        Character size.  Default is 12.
     label : str, optional
        Label for the first plot.
+    colorbar : bool, optional
+       Shows a colorbar.  Default is True.
+    invertcolorbar : bool, optional
+       Invert the numbers on the colorbar.  Default is False.
+    barorientation : str, optional
+       The orientation of the colorbar.  Default is "vertical".
 
     Returns
     -------
@@ -886,11 +906,14 @@ def plot(x,y=None,c=None,fmt=None,marker=None,fill=True,size=None,log=False,noer
         plt.ylim(np.flip(yr))
                          
     # Add the colorbar
-    if c is not None and len(c)==len(x):
+    if c is not None and len(c)==len(x) and colorbar:
         if colorlabel is None:
             colorlabel = ''
-        plt.colorbar(label=colorlabel)
+        cbar = plt.colorbar(label=colorlabel,orientation=barorientation)
+        if invertcolorbar:
+            cbar.ax.invert_yaxis()
 
+        
     # Save the figure
     if save is not None:
         plt.savefig(save,bbox_inches='tight')

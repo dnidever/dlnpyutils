@@ -174,7 +174,7 @@ if __name__ == "__main__":
     # Modify the __init__.py file (if it exists and has a __version__ in it)
     initfile = name+'/__init__.py'
     if os.path.exists(initfile)==False:  
-        initfile = 'python/'+name+'/__init__.py'      
+        initfile = 'python/'+name+'/__init__.py'
     if os.path.exists(initfile):
         lines = dln.readlines(initfile)
         newlines = lines.copy()
