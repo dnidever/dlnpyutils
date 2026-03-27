@@ -1173,35 +1173,72 @@ def clicker(over=False,connect=False):
 
     """
 
+    #fig = plt.gcf()
+    #
+    #curs.coords = []
+    #curs.binding_id = None
+    # 
+    #def on_click(event):
+    #    if event.button is MouseButton.LEFT:
+    #        if event.inaxes:
+    #            ax = event.inaxes  # the axes instance
+    #            print('data coords: %f %f' % (event.xdata, event.ydata))
+    #            curs.coords += [[event.xdata,event.ydata]]
+    #            if over:
+    #                plt.scatter([event.xdata],[event.ydata],marker='+',c='r')
+    #            if connect and len(curs.coords)>1:
+    #                x1,y1 = curs.coords[-2]
+    #                x2,y2 = curs.coords[-1]
+    #                plt.plot([x1,x2],[y1,y2],c='lightsalmon')
+    #            if connect or over:
+    #                fig.canvas.draw()
+    #        else:
+    #            plt.disconnect(curs.binding_id)
+    #
+    #    if event.button is MouseButton.RIGHT:
+    #        plt.disconnect(curs.binding_id)
+    #        
+    #binding_id = plt.connect('button_press_event', on_click)
+    #curs.binding_id = binding_id
+    #
+    #return curs.coords
+
     fig = plt.gcf()
+    ax = plt.gca()
 
-    curs.coords = []
-    curs.binding_id = None
-    
-    def on_click(event):
+    coords = []
+
+    # create a line object ONCE (empty initially)
+    line, = ax.plot([], [], 'r-o' if connect else 'ro')
+
+    def onclick(event):
+        nonlocal cid
+
+        if event.inaxes != ax:
+            return
+
         if event.button is MouseButton.LEFT:
-            if event.inaxes:
-                ax = event.inaxes  # the axes instance
-                print('data coords: %f %f' % (event.xdata, event.ydata))
-                curs.coords += [[event.xdata,event.ydata]]
-                if over:
-                    plt.scatter([event.xdata],[event.ydata],marker='+',c='r')
-                if connect and len(curs.coords)>1:
-                    x1,y1 = curs.coords[-2]
-                    x2,y2 = curs.coords[-1]
-                    plt.plot([x1,x2],[y1,y2],c='lightsalmon')
-                if connect or over:
-                    fig.canvas.draw()
+            coords.append((event.xdata, event.ydata))
+
+            xs, ys = zip(*coords)
+
+            if connect:
+                line.set_data(xs, ys)
             else:
-                plt.disconnect(curs.binding_id)
+                line.set_data(xs, ys)  # just points
 
-        if event.button is MouseButton.RIGHT:
-            plt.disconnect(curs.binding_id)
-            
-    binding_id = plt.connect('button_press_event', on_click)
-    curs.binding_id = binding_id
+            fig.canvas.draw_idle()
 
-    return curs.coords
+        elif event.button is MouseButton.RIGHT:
+            fig.canvas.mpl_disconnect(cid)
+            fig.canvas.stop_event_loop()
+
+    cid = fig.canvas.mpl_connect('button_press_event', onclick)
+
+    plt.show(block=False)
+    fig.canvas.start_event_loop()
+
+    return coords
 
 
 def selector(xdata,ydata,over=False,verbose=True,color='r',backcolor='white'):
