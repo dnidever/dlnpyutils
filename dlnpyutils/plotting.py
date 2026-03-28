@@ -1126,7 +1126,7 @@ def curpdiff(spherical=False,arcsec=False):
     return curs.coords
 
     
-def clicker(over=False,connect=False):
+def clicker(over=False,connect=False,verbose=True):
     """
     This returns the position of mulitple cursor click on a matplotlib figure window.
     Click outside the data axes or right-click to stop.
@@ -1209,17 +1209,30 @@ def clicker(over=False,connect=False):
     coords = []
 
     # create a line object ONCE (empty initially)
-    line, = ax.plot([], [], 'r-o' if connect else 'ro')
+    if connect:
+        line, = ax.plot([], [], 'r-o')
+    elif over:
+        line, = ax.plot([], [], 'r+')
+    else:
+        line = None
 
+    def finish():
+        fig.canvas.mpl_disconnect(cid_click)
+        fig.canvas.mpl_disconnect(cid_key)
+        fig.canvas.stop_event_loop()
+    
     def onclick(event):
-        nonlocal cid
-
         if event.inaxes != ax:
+            finish()
             return
 
         if event.button is MouseButton.LEFT:
-            coords.append((event.xdata, event.ydata))
-
+            x, y = event.xdata, event.ydata
+            coords.append((x, y))
+            
+            if verbose:
+                print(f"data coords: {x:.6f} {y:.6f}")
+            
             xs, ys = zip(*coords)
 
             if connect:
@@ -1230,10 +1243,15 @@ def clicker(over=False,connect=False):
             fig.canvas.draw_idle()
 
         elif event.button is MouseButton.RIGHT:
-            fig.canvas.mpl_disconnect(cid)
-            fig.canvas.stop_event_loop()
+            finish()
 
-    cid = fig.canvas.mpl_connect('button_press_event', onclick)
+    def onkey(event):
+        if event.key == 'enter':
+            finish()
+            
+    # connect both handlers
+    cid_click = fig.canvas.mpl_connect('button_press_event', onclick)
+    cid_key   = fig.canvas.mpl_connect('key_press_event', onkey)
 
     plt.show(block=False)
     fig.canvas.start_event_loop()
