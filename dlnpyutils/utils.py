@@ -1641,9 +1641,14 @@ def smooth(y, width, fillvalue=np.nan):
         # https://gist.github.com/kwinkunks/769e39e8314b5479842a77b18e4e3eda
         kernel = np.ones(width) / width
         def convfunc(arr1d):
-            return np.convolve(arr1d, kernel, mode='valid')   # was same until 4/17/26
+            return np.convolve(arr1d, kernel, mode='same')
         first_pass = np.apply_along_axis(convfunc, axis=0, arr=y)
         ma_vec = np.apply_along_axis(convfunc, axis=1, arr=first_pass)
+        # Fix the borders
+        corr1 = np.apply_along_axis(convfunc, axis=0, arr=y*0+1)
+        corr = np.apply_along_axis(convfunc, axis=1, arr=corr1)
+        mask = (corr>0)
+        ma_vec[mask] = ma_vec[mask]/corr[mask]
     return ma_vec
 
 def boxcar(y, box_pts,boundary='wrap'):
